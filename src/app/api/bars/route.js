@@ -35,7 +35,7 @@ export async function GET(request) {
         { status: 400 }
       );
     }
-    const { symbols, days } = parsed.data;
+    const { symbols, days, timeframe } = parsed.data;
 
   // Alpaca's free data feed is delayed, so end the window yesterday to avoid
   // requesting bars that do not exist yet.
@@ -46,7 +46,7 @@ export async function GET(request) {
 
   const query = new URLSearchParams({
     symbols: symbols.join(','),
-    timeframe: '1Day',
+    timeframe,
     start: start.toISOString().slice(0, 10),
     end: end.toISOString().slice(0, 10),
     limit: '10000',
@@ -90,6 +90,8 @@ export async function GET(request) {
       symbols: summary.map((s) => s.symbol),
       summary,
       series,
+      correlation,
+      timeframe,
       window: { start: query.get('start'), end: query.get('end') },
     });
 
