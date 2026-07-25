@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import {
   LineChart,
@@ -13,8 +13,17 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import CorrelationHeatmap from './CorrelationHeatmap';
+import { TIMEFRAMES, windowsFor } from '@/lib/timeframes';
 
 const COLORS = ['#2563eb', '#dc2626', '#059669', '#d97706', '#7c3aed'];
+
+// Group timeframes for <optgroup> rendering, preserving table order.
+const TIMEFRAME_GROUPS = TIMEFRAMES.reduce((groups, tf) => {
+  const g = groups.find((x) => x.label === tf.group);
+  if (g) g.options.push(tf);
+  else groups.push({ label: tf.group, options: [tf] });
+  return groups;
+}, []);
 
 const fetcher = async (url) => {
   const res = await fetch(url);
@@ -26,7 +35,18 @@ const fetcher = async (url) => {
 export default function PriceChart() {
   const [input, setInput] = useState('AAPL,MSFT,SPY');
   const [symbols, setSymbols] = useState('AAPL,MSFT,SPY');
+  const [timeframe, setTimeframe] = useState('1Day');
   const [days, setDays] = useState(90);
+
+  const validWindows = windowsFor(timeframe);
+
+  // If the current window exceeds the new timeframe's cap, snap it down to
+  // the largest that fits. Keeps the picker and request always valid.
+  useEffect(() => {
+    if (!validWindows.some((w) => w.days === days)) {
+      setDays(validWindows[validWindows.length - 1].days);
+    }
+  }, [timeframe]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data, error, isLoading } = useSWR(
     `/api/bars?symbols=${encodeURIComponent(symbols)}&days=${days}`,
@@ -55,6 +75,25 @@ export default function PriceChart() {
         </div>
 
         <div className="flex flex-col gap-1">
+          <label htmlFor="timeframe" className="text-xs font-medium text-gray-500">Timeframe</label>
+          <select
+            id="timeframe"
+            suppressHydrationWarning
+            value={timeframe}
+            onChange={(e) => setTimeframe(e.target.value)}
+            className="rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
+          >
+            {TIMEFRAME_GROUPS.map((group) => (
+              <optgroup key={group.label} label={group.label}>
+                {group.options.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-1">
           <label htmlFor="days" className="text-xs font-medium text-gray-500">
             Window
           </label>
@@ -65,10 +104,9 @@ export default function PriceChart() {
             onChange={(e) => setDays(Number(e.target.value))}
             className="rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
           >
-            <option value={30}>30 days</option>
-            <option value={90}>90 days</option>
-            <option value={180}>180 days</option>
-            <option value={365}>1 year</option>
+            {validWindows.map((w) => (
+              <option key={w.days} value={w.days}>{w.label}</option>
+            ))}
           </select>
         </div>
 
@@ -91,31 +129,21 @@ export default function PriceChart() {
       )}
 
       {data?.summary?.length > 0 && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {data.summary.map((s) => (
-            <div
-              key={s.symbol}
-              className="rounded-lg border border-gray-200 bg-white p-3"
-            >
-              <div className="text-xs font-medium text-gray-500">{s.symbol}</div>
-              <div className="mt-1 text-lg font-semibold tabular-nums">
-                ${s.last.toFixed(2)}
-              </div>
-              <div
-                className={`text-xs tabular-nums ${
-                  s.changePct >= 0 ? 'text-green-600' : 'text-red-600'
-                }`}
-              >
-                {s.changePct >= 0 ? '+' : ''}
-                {s.changePct.toFixed(2)}% over window
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+           {data.summary.map((s) => (
+             <div key={s.symbol} className="rounded-lg border border-gray-200 bg-white p-3">
+               <div className="text-xs font-medium text-gray-500">{s.symbol}</div>
+               <div className="mt-1 text-lg font-semibold tabular-nums">${s.last.toFixed(2)}</div>
+               <div className={`text-xs tabular-nums ${s.changePct >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                 {s.changePct >= 0 ? '+' : ''}{s.changePct.toFixed(2)}% over window
+               </div>
+             </div>
+           ))}
+          </div>
+       )}
 
       {data?.correlation && Object.keys(data.correlation).length > 1 && (
-        <CorrelationHeatmap matrix={data.correlation} />
+        <CorrelationHeatmap matrix={data.correlation} timeframe={data.timeframe} />
       )}
 
       {data?.series?.length > 0 && (
