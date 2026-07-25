@@ -49,7 +49,7 @@ export default function PriceChart() {
   }, [timeframe]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data, error, isLoading } = useSWR(
-    `/api/bars?symbols=${encodeURIComponent(symbols)}&days=${days}`,
+    `/api/bars?symbols=${encodeURIComponent(symbols)}&days=${days}&timeframe=${timeframe}`,
     fetcher,
     { revalidateOnFocus: false }
   );
@@ -186,7 +186,7 @@ export default function PriceChart() {
 
       {data?.window && (
         <p className="text-xs text-gray-400">
-          Daily closes from Alpaca IEX feed · {data.window.start} to {data.window.end}
+          {data.timeframe} bars from Alpaca IEX feed · {data.window.start} to {data.window.end}
         </p>
       )}
     </div>
