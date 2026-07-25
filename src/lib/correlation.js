@@ -1,4 +1,6 @@
-// Period-over-period simple returns from a close-price series.
+// Period-over-period simple returns from a close-price series. "Period" is
+// whatever bar timeframe was requested (minute, hour, day, week, month),
+// so any correlation computed from these is on that same timeframe.
 export function dailyReturns(closes) {
   const out = [];
   for (let i = 1; i < closes.length; i++) {
@@ -29,7 +31,7 @@ function pearson(a, b) {
 export function correlationMatrix(closesBySymbol) {
   const symbols = Object.keys(closesBySymbol);
   const returns = {};
-  for (const s of symbols) returns[s] = dailyReturns(closesBySymbol[s]);
+  for (const s of symbols) returns[s] = periodReturns(closesBySymbol[s]);
 
   const matrix = {};
   for (const a of symbols) {
