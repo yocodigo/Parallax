@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { getTimeframe, maxDaysFor } from './timeframes';
+
 
 const schema = z.object({
   symbols: z
@@ -11,17 +13,22 @@ const schema = z.object({
       (arr) => arr.every((s) => /^[A-Z.]{1,6}$/.test(s)),
       'Invalid symbol format'
     ),
-  days: z
-    .preprocess((v) => {
-      const n = Number(v);
-      if (!Number.isFinite(n)) return 90;
-      return Math.min(Math.max(Math.trunc(n), 1), 365);
-    }, z.number().int().min(1).max(365)),
+  timeframe: z
+    .string()
+    .refine((tf) => getTimeframe(tf) !== null, 'Unsupported timeframe'),
+  days: z.coerce.number().int().positive(),
+    })
+    // Clamp the window to the chosen timeframe's cap rather than rejecting,
+    // so an over-long request returns the max valid window instead of an error.
+    .transform((data) => {
+      const cap = maxDaysFor(data.timeframe);
+    return { ...data, days: Math.min(data.days, cap) };
 });
 
 export function parseBarsParams(searchParams) {
   return schema.safeParse({
     symbols: searchParams.get('symbols') || 'AAPL,MSFT,SPY',
+    timeframe: searchParams.get('timeframe') || '1Day',
     days: searchParams.get('days') || 90,
   });
 }

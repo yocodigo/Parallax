@@ -1,7 +1,7 @@
 // Period-over-period simple returns from a close-price series. "Period" is
 // whatever bar timeframe was requested (minute, hour, day, week, month),
 // so any correlation computed from these is on that same timeframe.
-export function dailyReturns(closes) {
+export function periodReturns(closes) {
   const out = [];
   for (let i = 1; i < closes.length; i++) {
     out.push((closes[i] - closes[i - 1]) / closes[i - 1]);
