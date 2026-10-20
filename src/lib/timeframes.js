@@ -55,3 +55,12 @@ export function isAllowed(value, days) {
   if (cap == null) return false;
   return Number.isInteger(days) && days >= 1 && days <= cap;
 }
+
+// The window to keep after switching timeframes: the current one if the new
+// timeframe offers it, otherwise the largest window that fits.
+export function clampWindow(value, days) {
+  const allowed = windowsFor(value);
+  return allowed.some((w) => w.days === days)
+    ? days
+    : allowed[allowed.length - 1].days;
+}

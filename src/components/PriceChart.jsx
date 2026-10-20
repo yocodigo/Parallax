@@ -13,7 +13,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import CorrelationHeatmap from './CorrelationHeatmap';
-import { TIMEFRAMES, windowsFor } from '@/lib/timeframes';
+import { TIMEFRAMES, windowsFor, clampWindow} from '@/lib/timeframes';
 
 const COLORS = ['#2563eb', '#dc2626', '#059669', '#d97706', '#7c3aed'];
 
@@ -43,9 +43,7 @@ export default function PriceChart() {
   // If the current window exceeds the new timeframe's cap, snap it down to
   // the largest that fits. Keeps the picker and request always valid.
   useEffect(() => {
-    if (!validWindows.some((w) => w.days === days)) {
-      setDays(validWindows[validWindows.length - 1].days);
-    }
+    setDays(clampWindow(timeframe, days));
   }, [timeframe]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data, error, isLoading } = useSWR(

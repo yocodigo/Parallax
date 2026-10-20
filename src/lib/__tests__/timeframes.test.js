@@ -5,6 +5,7 @@ import {
   maxDaysFor,
   windowsFor,
   isAllowed,
+  clampWindow,
 } from '../timeframes';
 
 describe('getTimeframe', () => {
@@ -51,6 +52,16 @@ describe('isAllowed', () => {
   });
   it('rejects unknown timeframes', () => {
     expect(isAllowed('2Day', 5)).toBe(false);
+  });
+});
+
+describe('clampWindow', () => {
+  it('keeps the current window when the timeframe offers it', () => {
+    expect(clampWindow('1Day', 90)).toBe(90);
+  });
+  it('snaps to the largest window that fits when the current one is too long', () => {
+    expect(clampWindow('1Min', 90)).toBe(5);
+    expect(clampWindow('1Hour', 1825)).toBe(365);
   });
 });
 
