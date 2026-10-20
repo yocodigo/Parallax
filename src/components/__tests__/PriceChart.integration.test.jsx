@@ -100,4 +100,21 @@ describe('PriceChart request parameters', () => {
     expect(windowSelect).not.toHaveTextContent('5 years');
     expect(windowSelect).toHaveTextContent('5 days');
   });
+
+  it('never requests a window the new timeframe does not allow', async () => {
+    const urls = captureBarsRequests();
+    renderChart();
+    await waitFor(() => expect(urls.length).toBeGreaterThan(0));
+
+    // Default window is 90 days; 1-minute bars allow at most 5.
+    await userEvent.selectOptions(screen.getByLabelText('Timeframe'), '1Min');
+
+    await waitFor(() => {
+    expect(urls.some((u) => u.searchParams.get('timeframe') === '1Min')).toBe(true);
+    });
+    const minuteDays = urls
+    .filter((u) => u.searchParams.get('timeframe') === '1Min')
+    .map((u) => u.searchParams.get('days'));
+    expect(minuteDays).toEqual(['5']);
+  });
 });

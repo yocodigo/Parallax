@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import useSWR from 'swr';
 import {
   LineChart,
@@ -40,11 +40,12 @@ export default function PriceChart() {
 
   const validWindows = windowsFor(timeframe);
 
-  // If the current window exceeds the new timeframe's cap, snap it down to
-  // the largest that fits. Keeps the picker and request always valid.
-  useEffect(() => {
-    setDays(clampWindow(timeframe, days));
-  }, [timeframe]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Update timeframe and window together so no render (and no request) ever
+  // pairs a timeframe with a window it doesn't allow.
+  const changeTimeframe = (next) => {
+    setTimeframe(next);
+    setDays((current) => clampWindow(next, current));
+  };
 
   const { data, error, isLoading } = useSWR(
     `/api/bars?symbols=${encodeURIComponent(symbols)}&days=${days}&timeframe=${timeframe}`,
@@ -78,7 +79,7 @@ export default function PriceChart() {
             id="timeframe"
             suppressHydrationWarning
             value={timeframe}
-            onChange={(e) => setTimeframe(e.target.value)}
+            onChange={(e) => changeTimeframe(e.target.value)}
             className="rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
           >
             {TIMEFRAME_GROUPS.map((group) => (
