@@ -52,11 +52,12 @@ Unit tests cover the deterministic core (bar reshaping, correlation, risk, param
 
 ## Setup
 
-Requires Node 20.9+, and an Alpaca account. Paper trading keys are free and work for both market data and positions.
+Requires Node 20.9+, Docker, and an Alpaca account. Paper trading keys are free and work for both market data and positions.
 
 ```bash
 npm install
 cp .env.example .env.local   # then add your keys
+docker compose up -d         # start Postgres
 npm run dev
 ```
 
@@ -69,6 +70,7 @@ Open http://localhost:3000.
 | `ALPACA_KEY_ID` | Alpaca API key ID. Paper keys start with `PK`. |
 | `ALPACA_SECRET_KEY` | Alpaca API secret. |
 | `ALPACA_TRADING_HOST` | Trading host. `https://paper-api.alpaca.markets` (paper) or `https://api.alpaca.markets` (live). Must match the keys above. |
+| `DATABASE_URL` | Postgres connection string. The `.env.example` default points at the local Docker database. |
 
 Generate keys at https://app.alpaca.markets/ under "API Keys". Paper and live are separate environments with separate keys — a key/host mismatch returns HTTP 401.
 
