@@ -39,3 +39,5 @@ next-env.d.ts
 
 # Where you store your API keys locally
 .env.local
+
+.idea/
