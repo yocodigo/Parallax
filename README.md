@@ -4,12 +4,12 @@ A portfolio-aware market data dashboard built on the [Alpaca APIs](https://docs.
 
 The emphasis is analytical, not advisory: the app describes properties of the data and the portfolio (returns, correlation, concentration, unrealized P&L). It does not generate trade signals or recommendations.
 
-Built with Next.js 14 (App Router), Tailwind, SWR, and Recharts. Core logic is covered by unit tests (Vitest).
+Built with Next.js 16 (App Router), Tailwind, SWR, and Recharts. Tested with Vitest, React Testing Library, and MSW, with lint, tests, and build running in CI on every push.
 
 ## What works today
 
 **Market data**
-- **`/api/bars`** — server-side route that authenticates against Alpaca and pulls daily bars for up to 10 symbols. Credentials stay server-side and are never exposed to the browser. Request parameters are validated with a Zod schema; responses are cached with a revalidation window to reduce load on the upstream API.
+- **`/api/bars`** — server-side route that authenticates against Alpaca and pulls bars for up to 10 symbols at the selected timeframe, from 1-minute to monthly. Credentials stay server-side and are never exposed to the browser. Request parameters are validated with a Zod schema; responses are cached with a revalidation window to reduce load on the upstream API.
 - **Multi-symbol chart** — per-symbol closes merged into a single time-ordered series and rendered as an overlaid line chart.
 - **Summary cards** — latest close and percent change over the selected window for each symbol.
 - **Return correlation heatmap** — pairwise Pearson correlation of daily returns across the selected symbols, so you can see which names move together over the window.
@@ -34,6 +34,7 @@ Pure logic lives in `src/lib/` and is unit-tested in isolation from the routes a
 - `positions.js` — maps Alpaca's string-typed position fields into a numeric, camelCase shape.
 - `params.js` — request parameter validation.
 - `rateLimit.js` — fixed-window rate limiter.
+- `timeframes.js` — supported timeframes, their maximum windows, and window clamping.
 
 Route handlers in `src/app/api/` stay thin: authenticate, fetch, delegate to `lib/`, return JSON. Components in `src/components/` are presentational and fetch through SWR.
 
@@ -42,13 +43,14 @@ Route handlers in `src/app/api/` stay thin: authenticate, fetch, delegate to `li
 ```bash
 npm test          # watch mode
 npm run test:run  # single run
+npm run lint      # ESLint
 ```
 
-Tests focus on the deterministic core — bar reshaping, correlation, risk, and parameter validation — where they carry the most signal.
+Unit tests cover the deterministic core (bar reshaping, correlation, risk, parameter validation, and timeframes). An integration test drives the chart component against MSW-mocked API responses to verify what it actually requests and renders.
 
 ## Setup
 
-Requires Node 18+ and an Alpaca account. Paper trading keys are free and work for both market data and positions.
+Requires Node 20.9+, and an Alpaca account. Paper trading keys are free and work for both market data and positions.
 
 ```bash
 npm install
@@ -75,7 +77,7 @@ Generate keys at https://app.alpaca.markets/ under "API Keys". Paper and live ar
 - Order submission and lifecycle tracking
 - Persistence (no database — every request hits Alpaca live)
 - Correlation weighted by actual position sizes (portfolio-weighted, not just symbol-level)
-- Intraday timeframes and watchlists
+- Watchlists
 - Backtesting
 - Financial news and geopolitical feeds
 
