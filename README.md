@@ -1,4 +1,4 @@
-# Financial Dashboard
+# Parallax
 
 [![CI](https://github.com/yocodigo/Parallax/actions/workflows/ci.yml/badge.svg)](https://github.com/yocodigo/Parallax/actions/workflows/ci.yml)
 
