@@ -1,5 +1,7 @@
 # Financial Dashboard
 
+[![CI](https://github.com/yocodigo/Parallax/actions/workflows/ci.yml/badge.svg)](https://github.com/yocodigo/Parallax/actions/workflows/ci.yml)
+
 A portfolio-aware market data dashboard built on the [Alpaca APIs](https://docs.alpaca.markets/). It charts price history for a set of symbols, surfaces how those symbols move together, and — when connected to an account with open positions — describes the concentration and risk profile of the portfolio itself.
 
 The emphasis is analytical, not advisory: the app describes properties of the data and the portfolio (returns, correlation, concentration, unrealized P&L). It does not generate trade signals or recommendations.
