@@ -1,5 +1,6 @@
 import JournalEntries from '@/components/JournalEntries';
 import PlanForm from '@/components/PlanForm';
+import ReviewForm from '@/components/ReviewForm';
 
 export const metadata = {
   title: 'Journal',
@@ -15,8 +16,9 @@ export default function JournalPage() {
         </p>
       </header>
 
-      <div className="mb-8">
+      <div className="mb-8 space-y-6">
         <PlanForm />
+        <ReviewForm />
       </div>
 
       <JournalEntries />

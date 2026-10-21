@@ -10,10 +10,10 @@ const fetcher = async (url) => {
   return json;
 };
 
-const capitalize = (word) => word.charAt(0).toUpperCase() + word.slice(1);
+export const capitalize = (word) => word.charAt(0).toUpperCase() + word.slice(1);
 
 // "Long 100 AAPL": enough to recognize the trade without opening it.
-const describeTrade = (trade) => `${capitalize(trade.direction)} ${trade.quantity} ${trade.symbol}`;
+export const describeTrade = (trade) => `${capitalize(trade.direction)} ${trade.quantity} ${trade.symbol}`;
 
 export default function JournalEntries() {
   const { data, error, isLoading } = useSWR('/api/journal', fetcher, {
