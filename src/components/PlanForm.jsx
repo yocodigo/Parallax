@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useSWRConfig } from 'swr';
 import { EMOTION_LABELS, EMOTIONS } from '@/lib/journalEntry';
+import Field, { inputClass } from './Field';
 
 const EMPTY_FORM = {
   mode: 'paper',
@@ -23,25 +24,6 @@ const NO_ERRORS = { plan: {}, entry: {} };
 // out, so the server reports a missing field instead of a price of 0.
 const toNumber = (value) => (value === '' ? undefined : Number(value));
 const orUndefined = (value) => (value === '' ? undefined : value);
-
-const inputClass =
-  'w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none aria-[invalid=true]:border-red-400';
-
-function Field({ id, label, error, className = '', children }) {
-  return (
-    <div className={`flex flex-col gap-1 ${className}`}>
-      <label htmlFor={id} className="text-xs font-medium text-gray-500">
-        {label}
-      </label>
-      {children}
-      {error && (
-        <p id={`${id}-error`} className="text-xs text-red-700">
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
 
 export default function PlanForm() {
   const { mutate } = useSWRConfig();
