@@ -49,6 +49,12 @@ Vitest, JavaScript (not TypeScript).
     per run, tables truncated before each test), in a single fork.
   - Route tests call the handlers directly and swap in the test database with `vi.mock('@/db', ...)`.
   - Component tests use Testing Library and MSW; see `PriceChart.integration.test.jsx`.
+  - Tests of code that runs on the server without a database (voice routes, `FormData` parsing)
+    start with `// @vitest-environment node`, so they get Node's `Request`, `File`, and `FormData`.
+- Voice journal: `VoiceNote.jsx` records, `POST /api/voice/transcribe` calls ElevenLabs Scribe
+  (`scribe_v2`, journal tickers as keyterms), `POST /api/voice/draft` asks Claude (`claude-opus-5-5`,
+  structured output in `src/lib/voiceDraft.js`) for a draft, and the plan or review form opens
+  prefilled for confirmation. Needs `ELEVENLABS_API_KEY` and `ANTHROPIC_API_KEY` in `.env.local`.
 
 ## Domain rules
 
@@ -68,7 +74,7 @@ Vitest, JavaScript (not TypeScript).
 
 1. Done: journal page (`/journal`) listing entries with their linked trade, plus forms to log a
    plan and a review.
-2. Voice journal: record in the browser, transcribe with ElevenLabs speech-to-text (Scribe, with
+2. Done except the weekly audio review: voice journal. Record in the browser, transcribe with ElevenLabs speech-to-text (Scribe, with
    watchlist tickers as keyterms), structure the transcript into a plan or review, validate it with
    `parseTradePlan` / `parseJournalEntry`, let me confirm, then save. Later: a weekly audio review
    read back with ElevenLabs text-to-speech.
@@ -97,5 +103,7 @@ Vitest, JavaScript (not TypeScript).
 - "No test files found" from `npm run test:db` usually means the global setup could not reach
   Postgres. Check `docker compose ps`.
 - Docker runs on Colima, not Docker Desktop.
+- In jsdom tests, an upload with a `Blob` hangs: jsdom's `Blob` and `FormData` can't be read by
+  Node's `fetch`. Stub both with Node's, as `VoiceNote.test.jsx` does.
 - ESLint stays on 9: `eslint-config-next` 16 crashes on ESLint 10. Next 16 removed `next lint`,
   so the lint script runs `eslint .`.
