@@ -58,6 +58,7 @@ Requires Node 20.9+, Docker, and an Alpaca account. Paper trading keys are free 
 npm install
 cp .env.example .env.local   # then add your keys
 docker compose up -d         # start Postgres
+npm run db:migrate          # create tables
 npm run dev
 ```
 
