@@ -1,0 +1,65 @@
+'use client';
+
+import useSWR from 'swr';
+
+const fetcher = async (url) => {
+  const res = await fetch(url);
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error || 'Request failed');
+  return json;
+};
+
+const capitalize = (word) => word.charAt(0).toUpperCase() + word.slice(1);
+
+// "Long 100 AAPL": enough to recognize the trade without opening it.
+const describeTrade = (trade) => `${capitalize(trade.direction)} ${trade.quantity} ${trade.symbol}`;
+
+export default function JournalEntries() {
+  const { data, error, isLoading } = useSWR('/api/journal', fetcher, {
+    revalidateOnFocus: false,
+  });
+
+  if (isLoading) {
+    return <div className="text-sm text-gray-500">Loading journal…</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        {error.message}
+      </div>
+    );
+  }
+
+  const entries = data?.entries || [];
+  if (entries.length === 0) {
+    return (
+      <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-500">
+        No journal entries yet.
+      </div>
+    );
+  }
+
+  return (
+    <ul className="space-y-3">
+      {entries.map((entry) => (
+        <li key={entry.id} className="rounded-lg border border-gray-200 bg-white p-4">
+          <div className="flex flex-wrap items-baseline gap-2 text-xs text-gray-500">
+            <span className="font-semibold text-gray-700">{capitalize(entry.kind)}</span>
+            {entry.symbol && <span className="font-medium text-gray-800">{entry.symbol}</span>}
+            <time dateTime={entry.createdAt}>{new Date(entry.createdAt).toLocaleString()}</time>
+          </div>
+
+          {entry.trade && (
+            <div className="mt-2 flex gap-2 text-xs tabular-nums text-gray-600">
+              <span>{describeTrade(entry.trade)}</span>
+              <span className="rounded bg-gray-100 px-1.5">{capitalize(entry.trade.mode)}</span>
+            </div>
+          )}
+
+          <p className="mt-2 whitespace-pre-wrap text-sm text-gray-800">{entry.notes}</p>
+        </li>
+      ))}
+    </ul>
+  );
+}
