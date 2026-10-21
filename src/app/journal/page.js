@@ -1,6 +1,7 @@
 import JournalEntries from '@/components/JournalEntries';
 import PlanForm from '@/components/PlanForm';
 import ReviewForm from '@/components/ReviewForm';
+import VoiceNote from '@/components/VoiceNote';
 
 export const metadata = {
   title: 'Journal',
@@ -17,6 +18,7 @@ export default function JournalPage() {
       </header>
 
       <div className="mb-8 space-y-6">
+        <VoiceNote />
         <PlanForm />
         <ReviewForm />
       </div>
