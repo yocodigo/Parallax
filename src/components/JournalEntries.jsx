@@ -1,14 +1,8 @@
 'use client';
 
 import useSWR from 'swr';
+import { fetchJson } from '@/lib/fetchJson';
 import { EMOTION_LABELS, MISTAKE_LABELS } from '@/lib/journalEntry';
-
-const fetcher = async (url) => {
-  const res = await fetch(url);
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error || 'Request failed');
-  return json;
-};
 
 export const capitalize = (word) => word.charAt(0).toUpperCase() + word.slice(1);
 
@@ -16,7 +10,7 @@ export const capitalize = (word) => word.charAt(0).toUpperCase() + word.slice(1)
 export const describeTrade = (trade) => `${capitalize(trade.direction)} ${trade.quantity} ${trade.symbol}`;
 
 export default function JournalEntries() {
-  const { data, error, isLoading } = useSWR('/api/journal', fetcher, {
+  const { data, error, isLoading } = useSWR('/api/journal', fetchJson, {
     revalidateOnFocus: false,
   });
 

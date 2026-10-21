@@ -1,16 +1,10 @@
 'use client';
 
 import useSWR from 'swr';
-
-const fetcher = async (url) => {
-  const res = await fetch(url);
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error || 'Request failed');
-  return json;
-};
+import { fetchJson } from '@/lib/fetchJson';
 
 export default function PortfolioRisk() {
-  const { data, error, isLoading } = useSWR('/api/positions', fetcher, {
+  const { data, error, isLoading } = useSWR('/api/positions', fetchJson, {
     revalidateOnFocus: false,
   });
 

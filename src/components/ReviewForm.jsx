@@ -2,16 +2,10 @@
 
 import { useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
+import { fetchJson } from '@/lib/fetchJson';
 import { EMOTION_LABELS, EMOTIONS, MISTAKE_LABELS, MISTAKES } from '@/lib/journalEntry';
 import Field, { inputClass } from './Field';
 import { capitalize, describeTrade } from './JournalEntries';
-
-const fetcher = async (url) => {
-  const res = await fetch(url);
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error || 'Request failed');
-  return json;
-};
 
 const EMPTY_FORM = { tradeId: '', notes: '', emotion: '', mistakes: [] };
 
@@ -29,7 +23,7 @@ function tradesIn(entries = []) {
 
 export default function ReviewForm() {
   const { mutate } = useSWRConfig();
-  const { data } = useSWR('/api/journal', fetcher, { revalidateOnFocus: false });
+  const { data } = useSWR('/api/journal', fetchJson, { revalidateOnFocus: false });
   const [form, setForm] = useState(EMPTY_FORM);
   const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError] = useState(null);

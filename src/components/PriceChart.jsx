@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import useSWR from 'swr';
+import { fetchJson } from '@/lib/fetchJson';
 import {
   LineChart,
   Line,
@@ -25,13 +26,6 @@ const TIMEFRAME_GROUPS = TIMEFRAMES.reduce((groups, tf) => {
   return groups;
 }, []);
 
-const fetcher = async (url) => {
-  const res = await fetch(url);
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error || 'Request failed');
-  return json;
-};
-
 export default function PriceChart() {
   const [input, setInput] = useState('AAPL,MSFT,SPY');
   const [symbols, setSymbols] = useState('AAPL,MSFT,SPY');
@@ -49,7 +43,7 @@ export default function PriceChart() {
 
   const { data, error, isLoading } = useSWR(
     `/api/bars?symbols=${encodeURIComponent(symbols)}&days=${days}&timeframe=${timeframe}`,
-    fetcher,
+    fetchJson,
     { revalidateOnFocus: false }
   );
 
