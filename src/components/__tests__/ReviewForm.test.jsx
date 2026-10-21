@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -175,5 +175,56 @@ describe('ReviewForm', () => {
     expect(await screen.findByText('Exited early again.')).toBeInTheDocument();
     expect(screen.getByLabelText('Notes')).toHaveValue('');
     expect(screen.getByLabelText('Exited early')).not.toBeChecked();
+  });
+
+  it('sends the symbol when the review names one', async () => {
+    serveJournal([]);
+    const bodies = captureReviews();
+    renderForm();
+
+    await userEvent.type(screen.getByLabelText('Symbol'), 'NVDA');
+    await userEvent.type(screen.getByLabelText('Notes'), 'Sold the rip.');
+    await save();
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0]).toMatchObject({ symbol: 'NVDA', notes: 'Sold the rip.' });
+  });
+
+  it('starts from a draft and shows the errors it came with', async () => {
+    serveJournal([]);
+    renderForm(
+      <ReviewForm
+        draft={{
+          entry: {
+            notes: 'Moved my stop.',
+            symbol: 'NVDA',
+            emotion: 'frustrated',
+            mistakes: ['moved_stop', 'oversized'],
+          },
+        }}
+        draftErrors={{ plan: {}, entry: { symbol: ['Invalid symbol'] } }}
+      />
+    );
+
+    expect(screen.getByLabelText('Notes')).toHaveValue('Moved my stop.');
+    expect(screen.getByLabelText('Symbol')).toHaveValue('NVDA');
+    expect(screen.getByLabelText('Emotion')).toHaveValue('frustrated');
+    expect(screen.getByLabelText('Moved stop')).toBeChecked();
+    expect(screen.getByLabelText('Oversized')).toBeChecked();
+    expect(screen.getByLabelText('Entered late')).not.toBeChecked();
+    expect(screen.getByText('Invalid symbol')).toBeInTheDocument();
+  });
+
+  it('tells its parent once the review is saved', async () => {
+    serveJournal([]);
+    const saved = { entry: { id: 'e1' } };
+    captureReviews(() => HttpResponse.json(saved, { status: 201 }));
+    const onSaved = vi.fn();
+    renderForm(<ReviewForm onSaved={onSaved} />);
+
+    await userEvent.type(screen.getByLabelText('Notes'), 'Good day.');
+    await save();
+
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith(saved));
   });
 });

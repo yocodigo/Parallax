@@ -25,10 +25,22 @@ const NO_ERRORS = { plan: {}, entry: {} };
 const toNumber = (value) => (value === '' ? undefined : Number(value));
 const orUndefined = (value) => (value === '' ? undefined : value);
 
-export default function PlanForm() {
+// A draft (from a voice note) holds parsed values; the inputs want strings.
+function formFromDraft({ plan = {}, entry = {} }) {
+  const values = { ...plan, notes: entry.notes, emotion: entry.emotion };
+  const form = { ...EMPTY_FORM };
+  for (const [name, value] of Object.entries(values)) {
+    if (name in form && value != null) form[name] = String(value);
+  }
+  return form;
+}
+
+// `draft` and `draftErrors` prefill the form for confirming a voice note;
+// `onSaved` receives the saved { trade, entry }.
+export default function PlanForm({ draft, draftErrors = NO_ERRORS, onSaved }) {
   const { mutate } = useSWRConfig();
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [fieldErrors, setFieldErrors] = useState(NO_ERRORS);
+  const [form, setForm] = useState(() => (draft ? formFromDraft(draft) : EMPTY_FORM));
+  const [fieldErrors, setFieldErrors] = useState({ ...NO_ERRORS, ...draftErrors });
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -87,6 +99,7 @@ export default function PlanForm() {
       setFieldErrors(NO_ERRORS);
       // Reload the journal list so the new plan shows up in it.
       await mutate('/api/journal');
+      onSaved?.(json);
     } catch {
       setError('Could not save the plan');
     } finally {

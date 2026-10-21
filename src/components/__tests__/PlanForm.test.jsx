@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -146,5 +146,42 @@ describe('PlanForm', () => {
     expect(await screen.findByText('Long 100 AAPL')).toBeInTheDocument();
     expect(screen.getByLabelText('Notes')).toHaveValue('');
     expect(screen.getByLabelText('Symbol')).toHaveValue('');
+  });
+
+  it('starts from a draft and shows the errors it came with', async () => {
+    renderForm(
+      <PlanForm
+        draft={{
+          plan: { symbol: 'AAPL', direction: 'short', quantity: 100, plannedEntry: 210 },
+          entry: { notes: 'Fading the gap.', emotion: 'fomo', mistakes: [] },
+        }}
+        draftErrors={{ plan: { initialStop: ['Invalid input: expected number, received undefined'] }, entry: {} }}
+      />
+    );
+
+    expect(screen.getByLabelText('Symbol')).toHaveValue('AAPL');
+    expect(screen.getByLabelText('Direction')).toHaveValue('short');
+    expect(screen.getByLabelText('Quantity')).toHaveValue(100);
+    expect(screen.getByLabelText('Planned entry')).toHaveValue(210);
+    expect(screen.getByLabelText('Initial stop')).toHaveValue(null);
+    expect(screen.getByLabelText('Mode')).toHaveValue('paper');
+    expect(screen.getByLabelText('Notes')).toHaveValue('Fading the gap.');
+    expect(screen.getByLabelText('Emotion')).toHaveValue('fomo');
+    expect(
+      screen.getByText('Invalid input: expected number, received undefined')
+    ).toBeInTheDocument();
+  });
+
+  it('tells its parent once the plan is saved', async () => {
+    const saved = { trade: { id: 't1' }, entry: { id: 'e1' } };
+    capturePlanRequests(() => HttpResponse.json(saved, { status: 201 }));
+    server.use(http.get('*/api/journal', () => HttpResponse.json({ entries: [] })));
+    const onSaved = vi.fn();
+    renderForm(<PlanForm onSaved={onSaved} />);
+
+    await fillRequiredFields();
+    await save();
+
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith(saved));
   });
 });

@@ -7,7 +7,7 @@ import { EMOTION_LABELS, EMOTIONS, MISTAKE_LABELS, MISTAKES } from '@/lib/journa
 import Field, { inputClass } from './Field';
 import { capitalize, describeTrade } from './JournalEntries';
 
-const EMPTY_FORM = { tradeId: '', notes: '', emotion: '', mistakes: [] };
+const EMPTY_FORM = { tradeId: '', symbol: '', notes: '', emotion: '', mistakes: [] };
 
 const orUndefined = (value) => (value === '' ? undefined : value);
 
@@ -21,11 +21,25 @@ function tradesIn(entries = []) {
   return [...byId.values()];
 }
 
-export default function ReviewForm() {
+// A draft (from a voice note) holds parsed values; the inputs want strings.
+function formFromDraft({ entry = {} }) {
+  return {
+    ...EMPTY_FORM,
+    symbol: entry.symbol ?? '',
+    notes: entry.notes ?? '',
+    emotion: entry.emotion ?? '',
+    mistakes: MISTAKES.filter((m) => entry.mistakes?.includes(m)),
+  };
+}
+
+// `draft` and `draftErrors` prefill the form for confirming a voice note;
+// `onSaved` receives the saved { entry }.
+export default function ReviewForm({ draft, draftErrors, onSaved }) {
   const { mutate } = useSWRConfig();
   const { data } = useSWR('/api/journal', fetchJson, { revalidateOnFocus: false });
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [fieldErrors, setFieldErrors] = useState({});
+  const [form, setForm] = useState(() => (draft ? formFromDraft(draft) : EMPTY_FORM));
+  // This route's errors are flat; a draft's come as { plan, entry }.
+  const [fieldErrors, setFieldErrors] = useState(draftErrors?.entry ?? {});
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
 
@@ -66,6 +80,7 @@ export default function ReviewForm() {
     const body = {
       kind: 'review',
       tradeId: orUndefined(form.tradeId),
+      symbol: orUndefined(form.symbol),
       notes: form.notes,
       emotion: orUndefined(form.emotion),
       mistakes: form.mistakes,
@@ -89,6 +104,7 @@ export default function ReviewForm() {
       setFieldErrors({});
       // Reload the journal list so the new review shows up in it.
       await mutate('/api/journal');
+      onSaved?.(json);
     } catch {
       setError('Could not save the review');
     } finally {
@@ -109,6 +125,10 @@ export default function ReviewForm() {
             </option>
           ))}
         </select>
+      </Field>
+
+      <Field id="review-symbol" label="Symbol" error={errorFor('symbol')} className="w-48">
+        <input {...fieldProps('symbol')} placeholder="Optional" className={inputClass} />
       </Field>
 
       <Field id="review-notes" label="Notes" error={errorFor('notes')}>
