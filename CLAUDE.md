@@ -46,7 +46,7 @@ Vitest, JavaScript (not TypeScript).
   input (`Field.jsx`); after saving they call `mutate('/api/journal')` to reload the list.
 - Tests live in `__tests__` folders next to the code they test.
   - Database tests are named `*.db.test.js`, run against the `parallax_test` database (migrated once
-    per run, tables truncated before each test), in a single fork.
+    per run, tables truncated before each test), one file at a time (`fileParallelism: false`).
   - Route tests call the handlers directly and swap in the test database with `vi.mock('@/db', ...)`.
   - Component tests use Testing Library and MSW; see `PriceChart.integration.test.jsx`.
   - Tests of code that runs on the server without a database (voice routes, `FormData` parsing)
@@ -99,7 +99,8 @@ Vitest, JavaScript (not TypeScript).
 
 ## Gotchas
 
-- `fileParallelism` is ignored inside a Vitest project; the `db` project uses a single fork instead.
+- `npm install` of a vitest version crashes npm 10 with `Cannot read properties of null (reading
+  'edgesOut')`. Run that install with `npx npm@11.21.0 install ...`; `npm ci` with npm 10 is fine.
 - "No test files found" from `npm run test:db` usually means the global setup could not reach
   Postgres. Check `docker compose ps`.
 - Docker runs on Colima, not Docker Desktop.

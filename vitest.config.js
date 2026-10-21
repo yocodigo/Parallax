@@ -27,9 +27,9 @@ export default defineConfig({
           include: ['src/**/*.db.test.js'],
           globalSetup: ['./src/db/__tests__/global-setup.js'],
           // Database test files share one database, so they run one at a time
-          // in a single process instead of truncating each other's data.
-          pool: 'forks',
-          poolOptions: { forks: { singleFork: true } },
+          // instead of truncating each other's data. Each file still gets its
+          // own modules, and with them its own connection pool.
+          fileParallelism: false,
         },
       },
     ],
