@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { parseJournalEntry } from '../journalEntry';
+import {
+  EMOTION_LABELS,
+  EMOTIONS,
+  MISTAKE_LABELS,
+  MISTAKES,
+  parseJournalEntry,
+} from '../journalEntry';
 
 const review = { kind: 'review', notes: 'Held past my target and gave back half the move.' };
 
@@ -47,5 +53,13 @@ describe('parseJournalEntry', () => {
 
   it('rejects a trade link that is not a valid id', () => {
     expect(errorPaths(parseJournalEntry({ ...review, tradeId: 'abc' }))).toContain('tradeId');
+  });
+});
+
+describe('labels', () => {
+  // Adding an emotion or mistake without a label would show a blank on the page.
+  it('has exactly one label for every emotion and mistake', () => {
+    expect(Object.keys(EMOTION_LABELS)).toEqual(EMOTIONS);
+    expect(Object.keys(MISTAKE_LABELS)).toEqual(MISTAKES);
   });
 });

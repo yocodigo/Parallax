@@ -78,6 +78,21 @@ describe('JournalEntries', () => {
     expect(screen.getByText('Paper')).toBeInTheDocument();
   });
 
+  it('shows the emotion and mistakes with friendly labels', async () => {
+    serveJournal(
+      HttpResponse.json({
+        entries: [
+          entry({ notes: 'Chased it.', emotion: 'fomo', mistakes: ['entered_late', 'moved_stop'] }),
+        ],
+      })
+    );
+    renderEntries();
+
+    expect(await screen.findByText('FOMO')).toBeInTheDocument();
+    expect(screen.getByText('Entered late')).toBeInTheDocument();
+    expect(screen.getByText('Moved stop')).toBeInTheDocument();
+  });
+
   it('says so when the journal is empty', async () => {
     serveJournal(HttpResponse.json({ entries: [] }));
     renderEntries();

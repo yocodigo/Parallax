@@ -1,6 +1,7 @@
 'use client';
 
 import useSWR from 'swr';
+import { EMOTION_LABELS, MISTAKE_LABELS } from '@/lib/journalEntry';
 
 const fetcher = async (url) => {
   const res = await fetch(url);
@@ -58,6 +59,21 @@ export default function JournalEntries() {
           )}
 
           <p className="mt-2 whitespace-pre-wrap text-sm text-gray-800">{entry.notes}</p>
+
+          {(entry.emotion || entry.mistakes.length > 0) && (
+            <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
+              {entry.emotion && (
+                <span className="rounded bg-blue-50 px-1.5 text-blue-700">
+                  {EMOTION_LABELS[entry.emotion]}
+                </span>
+              )}
+              {entry.mistakes.map((mistake) => (
+                <span key={mistake} className="rounded bg-red-50 px-1.5 text-red-700">
+                  {MISTAKE_LABELS[mistake]}
+                </span>
+              ))}
+            </div>
+          )}
         </li>
       ))}
     </ul>

@@ -15,6 +15,27 @@ export const MISTAKES = [
   'exited_early',
 ];
 
+export const EMOTION_LABELS = {
+  calm: 'Calm',
+  hesitant: 'Hesitant',
+  fomo: 'FOMO',
+  fearful: 'Fearful',
+  greedy: 'Greedy',
+  frustrated: 'Frustrated',
+  overconfident: 'Overconfident',
+};
+
+export const MISTAKE_LABELS = {
+  entered_late: 'Entered late',
+  held_past_target: 'Held past target',
+  held_past_stop: 'Held past stop',
+  moved_stop: 'Moved stop',
+  skipped_gate: 'Skipped the gate',
+  oversized: 'Oversized',
+  revenge_trade: 'Revenge trade',
+  exited_early: 'Exited early',
+};
+
 const schema = z
   .object({
     kind: z.enum(['plan', 'review', 'thesis']),
