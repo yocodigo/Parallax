@@ -26,7 +26,10 @@ export default defineConfig({
           environment: 'node',
           include: ['src/**/*.db.test.js'],
           globalSetup: ['./src/db/__tests__/global-setup.js'],
-          fileParallelism: false,
+          // Database test files share one database, so they run one at a time
+          // in a single process instead of truncating each other's data.
+          pool: 'forks',
+          poolOptions: { forks: { singleFork: true } },
         },
       },
     ],
