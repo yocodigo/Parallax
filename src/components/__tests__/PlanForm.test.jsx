@@ -1,0 +1,150 @@
+import { describe, it, expect } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
+import { SWRConfig } from 'swr';
+import { server } from '@/mocks/server';
+import JournalEntries from '../JournalEntries';
+import PlanForm from '../PlanForm';
+
+// Record the body of each /api/plans request and answer with `response`.
+function capturePlanRequests(response = () => HttpResponse.json({}, { status: 201 })) {
+  const bodies = [];
+  server.use(
+    http.post('*/api/plans', async ({ request }) => {
+      const body = await request.json();
+      bodies.push(body);
+      return response(body);
+    })
+  );
+  return bodies;
+}
+
+function renderForm(children = <PlanForm />) {
+  return render(
+    <SWRConfig value={{ dedupingInterval: 0, provider: () => new Map() }}>{children}</SWRConfig>
+  );
+}
+
+async function fillRequiredFields() {
+  await userEvent.type(screen.getByLabelText('Symbol'), 'AAPL');
+  await userEvent.type(screen.getByLabelText('Quantity'), '100');
+  await userEvent.type(screen.getByLabelText('Planned entry'), '210');
+  await userEvent.type(screen.getByLabelText('Initial stop'), '205');
+  await userEvent.type(screen.getByLabelText('Notes'), 'Breakout over 210.');
+}
+
+const save = () => userEvent.click(screen.getByRole('button', { name: 'Save plan' }));
+
+describe('PlanForm', () => {
+  it('sends the plan and its notes with prices as numbers', async () => {
+    const bodies = capturePlanRequests();
+    renderForm();
+
+    await userEvent.selectOptions(screen.getByLabelText('Mode'), 'live');
+    await userEvent.selectOptions(screen.getByLabelText('Direction'), 'short');
+    await fillRequiredFields();
+    await userEvent.clear(screen.getByLabelText('Initial stop'));
+    await userEvent.type(screen.getByLabelText('Initial stop'), '215');
+    await userEvent.type(screen.getByLabelText('Target'), '200.5');
+    await userEvent.selectOptions(screen.getByLabelText('Emotion'), 'calm');
+    await save();
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0]).toEqual({
+      plan: {
+        mode: 'live',
+        symbol: 'AAPL',
+        assetClass: 'stock',
+        direction: 'short',
+        quantity: 100,
+        plannedEntry: 210,
+        initialStop: 215,
+        target: 200.5,
+      },
+      entry: { notes: 'Breakout over 210.', emotion: 'calm' },
+    });
+  });
+
+  it('leaves out the target and emotion when they are blank', async () => {
+    const bodies = capturePlanRequests();
+    renderForm();
+
+    await fillRequiredFields();
+    await save();
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0].plan).not.toHaveProperty('target');
+    expect(bodies[0].entry).not.toHaveProperty('emotion');
+  });
+
+  it('shows the field errors the server sends back', async () => {
+    capturePlanRequests(() =>
+      HttpResponse.json(
+        {
+          error: 'Invalid plan',
+          fieldErrors: {
+            plan: { initialStop: ['Stop must be below the entry for a long and above it for a short'] },
+            entry: { notes: ['Notes cannot be empty'] },
+          },
+        },
+        { status: 400 }
+      )
+    );
+    renderForm();
+
+    await fillRequiredFields();
+    await save();
+
+    expect(
+      await screen.findByText('Stop must be below the entry for a long and above it for a short')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Notes cannot be empty')).toBeInTheDocument();
+    expect(screen.getByLabelText('Initial stop')).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('shows the error when the plan cannot be saved', async () => {
+    capturePlanRequests(() => HttpResponse.json({ error: 'Database unavailable' }, { status: 500 }));
+    renderForm();
+
+    await fillRequiredFields();
+    await save();
+
+    expect(await screen.findByText('Database unavailable')).toBeInTheDocument();
+  });
+
+  it('adds the saved plan to the journal and clears the form', async () => {
+    // A tiny in-memory journal: saving a plan adds an entry the list can load.
+    const entries = [];
+    server.use(http.get('*/api/journal', () => HttpResponse.json({ entries })));
+    capturePlanRequests(({ plan, entry }) => {
+      const trade = { id: crypto.randomUUID(), multiplier: 1, ...plan };
+      entries.unshift({
+        id: crypto.randomUUID(),
+        tradeId: trade.id,
+        kind: 'plan',
+        symbol: null,
+        emotion: null,
+        mistakes: [],
+        createdAt: '2026-10-21T15:00:00.000Z',
+        ...entry,
+        trade,
+      });
+      return HttpResponse.json({ trade, entry: entries[0] }, { status: 201 });
+    });
+    renderForm(
+      <>
+        <PlanForm />
+        <JournalEntries />
+      </>
+    );
+    expect(await screen.findByText('No journal entries yet.')).toBeInTheDocument();
+
+    await fillRequiredFields();
+    await save();
+
+    expect(await screen.findByText('Long 100 AAPL')).toBeInTheDocument();
+    expect(screen.getByLabelText('Notes')).toHaveValue('');
+    expect(screen.getByLabelText('Symbol')).toHaveValue('');
+  });
+});

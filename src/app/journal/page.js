@@ -1,4 +1,5 @@
 import JournalEntries from '@/components/JournalEntries';
+import PlanForm from '@/components/PlanForm';
 
 export const metadata = {
   title: 'Journal',
@@ -13,6 +14,10 @@ export default function JournalPage() {
           Trade plans, reviews, and investment theses, newest first.
         </p>
       </header>
+
+      <div className="mb-8">
+        <PlanForm />
+      </div>
 
       <JournalEntries />
     </main>
