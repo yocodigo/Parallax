@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { symbolSchema } from './symbol';
 
 const price = z.number().positive();
 
@@ -16,11 +17,7 @@ const targetOnWinningSide = (plan) =>
 const schema = z
   .object({
     mode: z.enum(['live', 'paper', 'backtest']),
-    symbol: z
-      .string()
-      .trim()
-      .toUpperCase()
-      .regex(/^[A-Z0-9./-]{1,21}$/, 'Invalid symbol'),
+    symbol: symbolSchema,
     assetClass: z.enum(['stock', 'option', 'crypto']),
     direction: z.enum(['long', 'short']),
     quantity: z.number().positive(),
