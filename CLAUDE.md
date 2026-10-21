@@ -69,8 +69,22 @@ Vitest, JavaScript (not TypeScript).
    read back with ElevenLabs text-to-speech.
 3. Deploy: Vercel plus Neon (Postgres 17). Add auth or a demo mode before any journal data is
    public. One Playwright end-to-end test of the main flow.
-4. Later: strategies, rules, and a pre-entry gate checklist (`trade_rule_checks`); MAE/MFE from
-   Alpaca bars; imports from Alpaca and broker CSVs; a legs table for vertical spreads.
+4. Later:
+   - Strategies, rules, and a pre-entry gate checklist (`trade_rule_checks`).
+   - Warnings from the trader's own history, shown at entry. Example: "Your last 8 0DTE entries
+     after 3:30 PM averaged -0.7R."
+   - Circuit breakers the trader sets: a daily max loss, a max number of trades per day, and a
+     cool-down after consecutive losses.
+   - Mistake cost ledger: total R lost per mistake tag, showing which habit to fix first.
+   - Context snapshot saved with each trade at entry: SPY/QQQ trend; VIX level and direction;
+     macro calendar events (FOMC, CPI, jobs report); sector ETF trend and the stock's relative
+     strength; days to earnings and ex-dividend dates; options context (IV rank, expected move,
+     days to expiration, bid-ask spread, open interest); time of day, pre-market gap, and relative
+     volume. Store it at entry, since values like IV rank can't be reliably reconstructed later.
+     VIX and the earnings and economic calendars need a data source beyond Alpaca.
+   - MAE/MFE computed from Alpaca bars.
+   - Imports from Alpaca and broker CSVs.
+   - A legs table for vertical spreads.
 
 ## Gotchas
 
