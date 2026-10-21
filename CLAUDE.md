@@ -6,7 +6,8 @@ Vitest, JavaScript (not TypeScript).
 
 ## Commands
 
-- `colima start` then `docker compose up -d`: start Postgres. Colima does not start on its own after a reboot.
+- `colima start`: start Docker, which brings Postgres back up (`restart: unless-stopped`). Colima does not
+  start on its own after a reboot. First run, or after `docker compose stop`: `docker compose up -d`.
 - `npm run dev`: dev server
 - `npm run db:generate -- --name=<snake_case_description>`: generate a migration after editing `src/db/schema.js`
 - `npm run db:migrate`: apply migrations to the dev database
@@ -40,6 +41,9 @@ Vitest, JavaScript (not TypeScript).
   pass the test database.
 - `src/db/index.js`: `getDb()`, created lazily (builds need no database) and cached on `globalThis`.
 - `src/app/api/*/route.js`: route handlers. Invalid input returns 400 with `{ error, fieldErrors }`.
+- `src/components/`: client components. They load data with SWR using `fetchJson` from `src/lib/`.
+  Forms post to the API and leave validation to the server, showing its `fieldErrors` under each
+  input (`Field.jsx`); after saving they call `mutate('/api/journal')` to reload the list.
 - Tests live in `__tests__` folders next to the code they test.
   - Database tests are named `*.db.test.js`, run against the `parallax_test` database (migrated once
     per run, tables truncated before each test), in a single fork.
@@ -62,7 +66,8 @@ Vitest, JavaScript (not TypeScript).
 
 ## Roadmap
 
-1. Journal page: list entries with their linked trade, plus forms to log a plan and a review.
+1. Done: journal page (`/journal`) listing entries with their linked trade, plus forms to log a
+   plan and a review.
 2. Voice journal: record in the browser, transcribe with ElevenLabs speech-to-text (Scribe, with
    watchlist tickers as keyterms), structure the transcript into a plan or review, validate it with
    `parseTradePlan` / `parseJournalEntry`, let me confirm, then save. Later: a weekly audio review
