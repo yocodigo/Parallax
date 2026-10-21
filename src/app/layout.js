@@ -1,5 +1,6 @@
 import './globals.css';
 import { Inter } from 'next/font/google';
+import SiteNav from '@/components/SiteNav';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -14,6 +15,7 @@ export default function RootLayout({ children }) {
       <body
         suppressHydrationWarning
         className={`${inter.className} antialiased bg-gray-50 text-gray-900`}>
+        <SiteNav />
         {children}
       </body>
     </html>
