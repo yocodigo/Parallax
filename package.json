@@ -10,7 +10,9 @@
     "test": "vitest",
     "test:run": "vitest run",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "test:unit": "vitest run --project unit",
+    "test:db": "vitest run --project db"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.3",

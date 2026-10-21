@@ -46,7 +46,11 @@ Route handlers in `src/app/api/` stay thin: authenticate, fetch, delegate to `li
 npm test          # watch mode
 npm run test:run  # single run
 npm run lint      # ESLint
+npm run test:unit # unit and component tests (no database needed)
+npm run test:db   # database integration tests (needs Postgres running)
 ```
+
+Database tests run against a separate parallax_test database, migrated automatically before each run, so they never touch your data.
 
 Unit tests cover the deterministic core (bar reshaping, correlation, risk, parameter validation, and timeframes). An integration test drives the chart component against MSW-mocked API responses to verify what it actually requests and renders.
 
