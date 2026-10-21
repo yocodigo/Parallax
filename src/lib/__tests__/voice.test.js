@@ -1,7 +1,7 @@
 // @vitest-environment node
 // Node's own File and FormData, which route handlers receive, not jsdom's.
 import { describe, expect, it } from 'vitest';
-import { MAX_AUDIO_BYTES, MAX_KEYTERMS, parseTranscribeForm } from '../voice';
+import { MAX_AUDIO_BYTES, MAX_KEYTERMS, parseDraftRequest, parseTranscribeForm } from '../voice';
 
 const audio = (bytes = 1000) => new File([new Uint8Array(bytes)], 'note.webm', { type: 'audio/webm' });
 
@@ -39,5 +39,16 @@ describe('parseTranscribeForm', () => {
 
     const tooMany = Array.from({ length: MAX_KEYTERMS + 1 }, (_, i) => `T${i}`);
     expect(errorPaths(parseTranscribeForm(form({ keyterms: tooMany })))).toContain('keyterms');
+  });
+});
+
+describe('parseDraftRequest', () => {
+  it('accepts a transcript and trims it', () => {
+    expect(parseDraftRequest({ transcript: '  Long AAPL.  ' }).data).toEqual({ transcript: 'Long AAPL.' });
+  });
+
+  it('rejects a missing or blank transcript', () => {
+    expect(parseDraftRequest(null).success).toBe(false);
+    expect(errorPaths(parseDraftRequest({ transcript: '  ' }))).toContain('transcript');
   });
 });

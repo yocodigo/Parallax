@@ -28,3 +28,12 @@ export function parseTranscribeForm(formData) {
     keyterms: formData.getAll('keyterms'),
   });
 }
+
+const draftRequestSchema = z.object({
+  transcript: z.string().trim().min(1, 'The transcript is empty').max(10000),
+});
+
+// Body of POST /api/voice/draft: { transcript }.
+export function parseDraftRequest(input) {
+  return draftRequestSchema.safeParse(input);
+}
