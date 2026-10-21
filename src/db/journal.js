@@ -20,3 +20,17 @@ export async function listJournalEntries(db, { limit = 50 } = {}) {
 
   return rows.map(({ entry, trade }) => ({ ...entry, trade }));
 }
+
+// A plan is a trade plus the journal entry explaining it. They're saved in one
+// transaction, so you never end up with one without the other.
+export async function savePlan(db, { plan, entry }) {
+  return db.transaction(async (tx) => {
+    const [trade] = await tx.insert(trades).values(plan).returning();
+    const [savedEntry] = await tx
+      .insert(journalEntries)
+      .values({ ...entry, kind: 'plan', tradeId: trade.id })
+      .returning();
+
+    return { trade, entry: savedEntry };
+  });
+}

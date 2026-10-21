@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { addJournalEntry, listJournalEntries } from '../journal';
+import { addJournalEntry, listJournalEntries, savePlan } from '../journal';
 import { trades } from '../schema';
 import { createTestDb, resetDb } from '../testing';
 
@@ -62,5 +62,23 @@ describe('listJournalEntries', () => {
     }
 
     expect(await listJournalEntries(db, { limit: 2 })).toHaveLength(2);
+  });
+});
+
+describe('savePlan', () => {
+  it('saves the trade and a linked plan entry together', async () => {
+    const { trade, entry } = await savePlan(db, {
+      plan,
+      entry: { notes: 'Bull flag on the daily.', emotion: 'calm' },
+    });
+
+    expect(trade).toMatchObject({ symbol: 'SPY', plannedEntry: 100, initialStop: 98 });
+    expect(entry).toMatchObject({ kind: 'plan', tradeId: trade.id, emotion: 'calm' });
+  });
+
+  it('saves nothing if the entry cannot be saved', async () => {
+    await expect(savePlan(db, { plan, entry: { notes: null } })).rejects.toThrow();
+
+    expect(await db.select().from(trades)).toHaveLength(0);
   });
 });
