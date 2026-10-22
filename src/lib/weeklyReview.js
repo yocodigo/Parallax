@@ -1,5 +1,6 @@
 import { EMOTION_LABELS, MISTAKE_LABELS } from './journalEntry';
-import { tradeStatus } from './tradeMetrics';
+import { formatProfitLoss, formatR } from './format';
+import { profitLoss, rMultiple, tradeStatus } from './tradeMetrics';
 
 const REVIEW_DAYS = 7;
 
@@ -32,6 +33,14 @@ function describeTrade(trade) {
   return `${mode} ${direction} ${quantity} ${symbol} ${assetClass}, ${tradeStatus(trade)}. ${levels.join(', ')}.`;
 }
 
+// Computed here so Claude quotes the numbers instead of doing the arithmetic.
+function describeResult(trade) {
+  const pnl = profitLoss(trade);
+  if (pnl === null) return null;
+  const r = rMultiple(trade);
+  return [formatProfitLoss(pnl), r !== null && formatR(r)].filter(Boolean).join(', ');
+}
+
 function formatEntry(entry) {
   const attributes = [
     `date="${dayFormat.format(entry.createdAt)}"`,
@@ -44,6 +53,7 @@ function formatEntry(entry) {
     entry.mistakes.length > 0 &&
       `Mistakes: ${entry.mistakes.map((mistake) => MISTAKE_LABELS[mistake] ?? mistake).join(', ')}`,
     entry.trade && `Trade: ${describeTrade(entry.trade)}`,
+    entry.trade && describeResult(entry.trade) && `Result: ${describeResult(entry.trade)}`,
     `Notes: ${entry.notes}`,
   ].filter(Boolean);
 

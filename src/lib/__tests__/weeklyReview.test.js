@@ -85,6 +85,20 @@ describe('formatEntries', () => {
     );
   });
 
+  it('gives a closed trade its computed result, so Claude never has to work it out', () => {
+    const closed = {
+      ...trade,
+      multiplier: 1,
+      fees: 0,
+      entryPrice: 180,
+      exitPrice: 175,
+      openedAt: new Date('2026-10-19T14:00:00Z'),
+      closedAt: new Date('2026-10-20T15:00:00Z'),
+    };
+
+    expect(formatEntries([entry({ trade: closed })])).toContain('Result: -$500.00, -1.0R');
+  });
+
   it('lists entries oldest first, so the review follows the week in order', () => {
     const text = formatEntries([
       entry({ notes: 'Thursday', createdAt: new Date('2026-10-22T18:00:00Z') }),
