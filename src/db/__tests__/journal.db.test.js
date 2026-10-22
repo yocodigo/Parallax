@@ -63,6 +63,16 @@ describe('listJournalEntries', () => {
 
     expect(await listJournalEntries(db, { limit: 2 })).toHaveLength(2);
   });
+
+  it('returns only entries created at or after `since`', async () => {
+    await addJournalEntry(db, { kind: 'review', notes: 'Last week', createdAt: new Date('2026-10-14') });
+    await addJournalEntry(db, { kind: 'review', notes: 'Monday', createdAt: new Date('2026-10-19') });
+    await addJournalEntry(db, { kind: 'review', notes: 'Today', createdAt: new Date('2026-10-22') });
+
+    const entries = await listJournalEntries(db, { since: new Date('2026-10-19') });
+
+    expect(entries.map((entry) => entry.notes)).toEqual(['Today', 'Monday']);
+  });
 });
 
 describe('savePlan', () => {

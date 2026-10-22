@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { desc, eq, gte } from 'drizzle-orm';
 import { journalEntries, trades } from './schema';
 
 // Repository functions take the database as their first argument, so tests
@@ -10,11 +10,13 @@ export async function addJournalEntry(db, entry) {
 }
 
 // Newest first, with the linked trade (or null) attached for display.
-export async function listJournalEntries(db, { limit = 50 } = {}) {
+// `since` limits it to entries created at or after that moment.
+export async function listJournalEntries(db, { limit = 50, since } = {}) {
   const rows = await db
     .select({ entry: journalEntries, trade: trades })
     .from(journalEntries)
     .leftJoin(trades, eq(journalEntries.tradeId, trades.id))
+    .where(since ? gte(journalEntries.createdAt, since) : undefined)
     .orderBy(desc(journalEntries.createdAt))
     .limit(limit);
 
