@@ -29,7 +29,7 @@ const failed = (...details) => {
 // Returns { script, entryCount }: the review to read aloud, or a null script
 // when nothing was logged in the past seven days.
 export async function POST(request) {
-  // Each review costs money, so voice routes get their own budget.
+  // Each review costs money, so it shares the voice routes' budget for paid calls.
   const limit = rateLimit(`voice:${clientKey(request)}`);
   if (!limit.ok) {
     return NextResponse.json({ error: 'Too many requests. Please slow down.' }, { status: 429 });

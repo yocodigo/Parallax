@@ -46,7 +46,7 @@ function captureMessages(response) {
   return requests;
 }
 
-const post = () => POST(new Request('http://localhost/api/voice/weekly-review', { method: 'POST' }));
+const post = () => POST(new Request('http://localhost/api/weekly-review', { method: 'POST' }));
 
 // The db project has no shared MSW setup, so this file runs its own.
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -64,7 +64,7 @@ afterAll(async () => {
   await getDb().$client.end();
 });
 
-describe('POST /api/voice/weekly-review', () => {
+describe('POST /api/weekly-review', () => {
   it("asks Claude for a spoken review of this week's entries", async () => {
     await addJournalEntry(getDb(), {
       kind: 'review',
