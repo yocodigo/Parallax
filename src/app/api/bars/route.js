@@ -3,6 +3,7 @@ import { reshapeBars, summarize } from '@/lib/bars';
 import { parseBarsParams } from '@/lib/params';
 import { correlationMatrix } from '@/lib/correlation';
 import { rateLimit, clientKey } from '@/lib/rateLimit';
+import { logError, requestId } from '@/lib/log';
 
 const DATA_URL = 'https://data.alpaca.markets/v2/stocks/bars';
 
@@ -66,9 +67,15 @@ export async function GET(request) {
         if (!res.ok) {
         // Log full detail server-side; return only a status to the client.
       const detail = await res.text();
-      console.error(`Alpaca bars error ${res.status}: ${detail.slice(0, 500)}`);
+      const id = requestId(request);
+      logError('Alpaca bars error', {
+        route: '/api/bars',
+        requestId: id,
+        status: res.status,
+        detail: detail.slice(0, 500),
+      });
       return NextResponse.json(
-        { error: `Upstream data provider returned ${res.status}` },
+        { error: `Upstream data provider returned ${res.status}`, requestId: id },
         { status: res.status }
       );
     }
@@ -98,9 +105,10 @@ export async function GET(request) {
   } catch (err) {
     // This also catches bugs in the reshaping and correlation code above, so
     // the error has to reach the log, not just the status.
-    console.error('Alpaca bars request failed', err);
+    const id = requestId(request);
+    logError('Alpaca bars request failed', { route: '/api/bars', requestId: id, error: err });
     return NextResponse.json(
-      { error: 'Request to data provider failed' },
+      { error: 'Request to data provider failed', requestId: id },
       { status: 502 }
     );
   }

@@ -2,6 +2,7 @@
 // Node's own Request, File, and FormData, as in a real route handler.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
+import { captureErrorLogs } from '@/mocks/logs';
 import { server } from '@/mocks/server';
 import { POST } from '../route';
 
@@ -15,7 +16,10 @@ function post({ keyterms = [], file = new File([new Uint8Array(1000)], 'note.web
 }
 
 beforeEach(() => vi.stubEnv('ELEVENLABS_API_KEY', 'test-key'));
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
+});
 
 describe('POST /api/voice/transcribe', () => {
   it('sends the recording and tickers to Scribe and returns the transcript', async () => {
@@ -73,20 +77,33 @@ describe('POST /api/voice/transcribe', () => {
         HttpResponse.json({ detail: [{ msg: 'internal detail' }] }, { status: 422 })
       )
     );
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const logs = captureErrorLogs();
 
     const response = await post();
 
     expect(response.status).toBe(502);
-    expect(await response.json()).toEqual({ error: 'Transcription failed. Try again.' });
+    const body = await response.json();
+    expect(body).toEqual({ error: 'Transcription failed. Try again.', requestId: expect.any(String) });
+    expect(logs()).toEqual([
+      expect.objectContaining({
+        message: 'Scribe transcription failed',
+        requestId: body.requestId,
+        status: 422,
+        detail: expect.stringContaining('internal detail'),
+      }),
+    ]);
   });
 
   it('reports a network failure the same way', async () => {
     server.use(http.post(SCRIBE_URL, () => HttpResponse.error()));
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const logs = captureErrorLogs();
 
     const response = await post();
 
     expect(response.status).toBe(502);
+    const { requestId } = await response.json();
+    expect(logs()).toEqual([
+      expect.objectContaining({ message: 'Scribe transcription failed', requestId, error: expect.any(Object) }),
+    ]);
   });
 });

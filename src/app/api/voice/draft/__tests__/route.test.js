@@ -2,6 +2,7 @@
 // The Anthropic SDK runs server-side only; jsdom would look like a browser to it.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
+import { captureErrorLogs } from '@/mocks/logs';
 import { server } from '@/mocks/server';
 import { POST } from '../route';
 
@@ -49,7 +50,10 @@ const post = (body) =>
   );
 
 beforeEach(() => vi.stubEnv('ANTHROPIC_API_KEY', 'test-key'));
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
+});
 
 describe('POST /api/voice/draft', () => {
   it('asks Claude to structure the transcript and returns a validated draft', async () => {
@@ -140,17 +144,21 @@ describe('POST /api/voice/draft', () => {
         })
       )
     );
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const logs = captureErrorLogs();
 
     const response = await post({ transcript: 'Some note' });
 
     expect(response.status).toBe(502);
-    expect((await response.json()).error).toMatch(/couldn't turn that note into a draft/i);
+    const body = await response.json();
+    expect(body.error).toMatch(/couldn't turn that note into a draft/i);
+    expect(logs()).toEqual([
+      expect.objectContaining({ message: 'Voice draft failed', requestId: body.requestId, stopReason: 'refusal' }),
+    ]);
   });
 
   it('reports output that does not match the draft schema', async () => {
     captureMessages(() => HttpResponse.json(message({ ...reviewOutput, kind: 'thesis' })));
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    captureErrorLogs();
 
     const response = await post({ transcript: 'Some note' });
 
@@ -164,11 +172,19 @@ describe('POST /api/voice/draft', () => {
         { status: 400 }
       )
     );
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const logs = captureErrorLogs();
 
     const response = await post({ transcript: 'Some note' });
 
     expect(response.status).toBe(502);
-    expect(JSON.stringify(await response.json())).not.toContain('internal detail');
+    const body = await response.json();
+    expect(JSON.stringify(body)).not.toContain('internal detail');
+    expect(logs()).toEqual([
+      expect.objectContaining({
+        message: 'Voice draft failed',
+        requestId: body.requestId,
+        error: expect.objectContaining({ message: expect.stringContaining('internal detail') }),
+      }),
+    ]);
   });
 });

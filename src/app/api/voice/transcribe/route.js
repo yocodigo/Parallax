@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { logError, requestId } from '@/lib/log';
 import { clientKey, rateLimit } from '@/lib/rateLimit';
 import { parseTranscribeForm } from '@/lib/voice';
 
@@ -39,10 +40,12 @@ export async function POST(request) {
   // Tickers bias recognition toward "AAPL" over "apple".
   for (const term of keyterms) scribeForm.append('keyterms', term);
 
-  const failed = (...details) => {
-    // Scribe's error details stay in the server log, not the response.
-    console.error('Scribe transcription failed', ...details);
-    return NextResponse.json({ error: 'Transcription failed. Try again.' }, { status: 502 });
+  const failed = (details) => {
+    // Scribe's error details stay in the server log, not the response; the
+    // request id lets the two be matched up.
+    const id = requestId(request);
+    logError('Scribe transcription failed', { route: '/api/voice/transcribe', requestId: id, ...details });
+    return NextResponse.json({ error: 'Transcription failed. Try again.', requestId: id }, { status: 502 });
   };
 
   let res;
@@ -53,10 +56,10 @@ export async function POST(request) {
       body: scribeForm,
     });
   } catch (error) {
-    return failed(error);
+    return failed({ error });
   }
 
-  if (!res.ok) return failed(res.status, await res.text());
+  if (!res.ok) return failed({ status: res.status, detail: (await res.text()).slice(0, 500) });
 
   const { text } = await res.json();
   return NextResponse.json({ text });

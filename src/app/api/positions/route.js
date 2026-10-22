@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { mapPositions } from '@/lib/positions';
+import { logError, requestId } from '@/lib/log';
 import { concentration } from '@/lib/risk';
 
 // Note: positions live on the trading host, NOT the market-data host.
@@ -7,7 +8,7 @@ const TRADING_HOST = process.env.ALPACA_TRADING_HOST || 'https://paper-api.alpac
 const TRADING_URL = `${TRADING_HOST}/v2/positions`;
 
 // Fetch the account's open positions and derive concentration metrics.
-export async function GET() {
+export async function GET(request) {
   const keyId = process.env.ALPACA_KEY_ID;
   const secretKey = process.env.ALPACA_SECRET_KEY;
 
@@ -30,9 +31,15 @@ export async function GET() {
     if (!res.ok) {
       // Log full detail server-side; return only a status to the client.
       const detail = await res.text();
-      console.error(`Alpaca positions error ${res.status}: ${detail.slice(0, 500)}`);
+      const id = requestId(request);
+      logError('Alpaca positions error', {
+        route: '/api/positions',
+        requestId: id,
+        status: res.status,
+        detail: detail.slice(0, 500),
+      });
       return NextResponse.json(
-        { error: `Alpaca returned ${res.status}` },
+        { error: `Alpaca returned ${res.status}`, requestId: id },
         { status: res.status }
       );
     }
@@ -43,9 +50,10 @@ export async function GET() {
 
     return NextResponse.json({ positions, weights, top });
   } catch (err) {
-    console.error('Alpaca positions request failed', err);
+    const id = requestId(request);
+    logError('Alpaca positions request failed', { route: '/api/positions', requestId: id, error: err });
     return NextResponse.json(
-      { error: 'Request to Alpaca failed' },
+      { error: 'Request to Alpaca failed', requestId: id },
       { status: 502 }
     );
   }

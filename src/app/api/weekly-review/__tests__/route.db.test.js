@@ -3,6 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { getDb } from '@/db';
 import { addJournalEntry } from '@/db/journal';
 import { resetDb } from '@/db/testing';
+import { captureErrorLogs } from '@/mocks/logs';
 import { server } from '@/mocks/server';
 import { POST } from '../route';
 
@@ -123,12 +124,16 @@ describe('POST /api/weekly-review', () => {
         })
       )
     );
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const logs = captureErrorLogs();
 
     const response = await post();
 
     expect(response.status).toBe(502);
-    expect((await response.json()).error).toMatch(/couldn't write this week's review/i);
+    const body = await response.json();
+    expect(body.error).toMatch(/couldn't write this week's review/i);
+    expect(logs()).toEqual([
+      expect.objectContaining({ message: 'Weekly review failed', requestId: body.requestId, stopReason: 'refusal' }),
+    ]);
   });
 
   it('reports an API error without passing on its details', async () => {
@@ -139,11 +144,19 @@ describe('POST /api/weekly-review', () => {
         { status: 400 }
       )
     );
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const logs = captureErrorLogs();
 
     const response = await post();
 
     expect(response.status).toBe(502);
-    expect(JSON.stringify(await response.json())).not.toContain('internal detail');
+    const body = await response.json();
+    expect(JSON.stringify(body)).not.toContain('internal detail');
+    expect(logs()).toEqual([
+      expect.objectContaining({
+        message: 'Weekly review failed',
+        requestId: body.requestId,
+        error: expect.objectContaining({ message: expect.stringContaining('internal detail') }),
+      }),
+    ]);
   });
 });
