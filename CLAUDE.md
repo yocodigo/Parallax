@@ -34,8 +34,8 @@ Vitest, JavaScript (not TypeScript).
 ## Architecture
 
 - `src/lib/`: pure logic with unit tests (bars, correlation, risk, timeframes, `tradePlan`,
-  `journalEntry`, `tradeFill`, `tradeMetrics`, `mistakeLedger`, `format`, shared `symbol`
-  validation). Validation uses Zod 4 and returns `safeParse` results.
+  `journalEntry`, `tradeFill`, `tradeMetrics`, `mistakeLedger`, `excursions`, `format`, shared
+  `symbol` validation). Validation uses Zod 4 and returns `safeParse` results.
 - `src/db/schema.js`: Drizzle schema. Migrations live in `drizzle/` (generated and committed,
   including `meta/`). Never hand-edit a migration that has been applied.
 - `src/db/journal.js` and `src/db/trades.js`: repository functions. They take `db` as the first argument so tests can
@@ -75,6 +75,10 @@ Vitest, JavaScript (not TypeScript).
   `/exit` (409 when the trade is in the wrong state). `recordEntry`/`recordExit` only update a trade
   in the right state, so a double submit can't overwrite a fill. `tradeMetrics.js` computes P/L (net
   of fees, times the multiplier) and R; 1R is measured from the entry fill once there is one.
+- MAE/MFE: `GET /api/trades/[id]/excursions` fetches Alpaca bars (IEX feed, `adjustment: raw` to
+  match fill prices) from the start of the bar holding the fill to the exit, or to now while open;
+  `barWindow` picks minute, hourly, or daily bars by holding time. Stocks only so far. Computed on
+  demand, never stored; a closed trade's bars are cached for a day.
 - Insights (`/insights`): history-based views. `MistakeLedger.jsx` loads `GET /api/insights/mistakes`
   (`?mode=` optional), built from `listClosedTradesWithMistakes` and `mistakeLedger`: per mistake,
   the closed trades tagged with it (on any of their entries, once per trade) and their total and
@@ -114,7 +118,8 @@ Vitest, JavaScript (not TypeScript).
 4. Polish, roughly in this order:
    - Done: mistake cost ledger on `/insights`: total and average R per mistake tag, against
      trades with no mistakes.
-   - MAE/MFE computed from Alpaca bars.
+   - Done for stocks: MAE/MFE computed from Alpaca bars, shown on journal trades. Options and
+     crypto later.
    - Warnings from the trader's own history, shown at entry. Example: "Your last 8 0DTE entries
      after 3:30 PM averaged -0.7R."
    - Circuit breakers the trader sets: a daily max loss, a max number of trades per day, and a
