@@ -8,6 +8,13 @@
       "when": 1792540475331,
       "tag": "0000_create_trades_and_journal",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792710239075,
+      "tag": "0001_add_circuit_breakers",
+      "breakpoints": true
     }
   ]
 }

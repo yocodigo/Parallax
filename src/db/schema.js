@@ -50,6 +50,8 @@ export const trades = pgTable(
     closedAt: timestamp('closed_at', { withTimezone: true }),
     exitReason: exitReason('exit_reason'),
     exitedPerPlan: boolean('exited_per_plan'),
+    // Circuit breakers that were tripped when the entry was recorded anyway.
+    overriddenBreakers: text('overridden_breakers').array().notNull().default(sql`'{}'::text[]`),
     ...timestamps,
   },
   (t) => [
@@ -77,4 +79,23 @@ export const journalEntries = pgTable(
     ...timestamps,
   },
   (t) => [index('journal_entries_trade_id_idx').on(t.tradeId)]
+);
+
+// The trader's own circuit breakers. One row (id 1); a null limit is off.
+// `modes` are the trade modes the limits count and apply to.
+export const circuitBreakerSettings = pgTable(
+  'circuit_breaker_settings',
+  {
+    id: integer('id').primaryKey().default(1),
+    maxDailyLossR: numeric('max_daily_loss_r', { precision: 6, scale: 2, mode: 'number' }),
+    maxTradesPerDay: integer('max_trades_per_day'),
+    cooldownAfterLosses: integer('cooldown_after_losses'),
+    cooldownMinutes: integer('cooldown_minutes'),
+    modes: tradeMode('modes').array().notNull().default(sql`'{live}'::trade_mode[]`),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [check('circuit_breaker_settings_single_row', sql`${t.id} = 1`)]
 );

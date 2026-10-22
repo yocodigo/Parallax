@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { createTestDb, resetDb } from '../testing';
-import { journalEntries, trades } from '../schema';
+import { circuitBreakerSettings, journalEntries, trades } from '../schema';
 
 const db = createTestDb();
 
@@ -27,6 +27,12 @@ describe('trades table', () => {
     await expect(db.insert(trades).values({ ...plan, quantity: 0 })).rejects.toMatchObject({
       cause: { constraint: 'trades_quantity_positive' },
     });
+  });
+
+  it('records no overridden circuit breakers by default', async () => {
+    const [trade] = await db.insert(trades).values(plan).returning();
+
+    expect(trade.overriddenBreakers).toEqual([]);
   });
 
   it('rejects closing a trade that was never opened', async () => {
@@ -57,5 +63,27 @@ describe('journal_entries table', () => {
     const [entry] = await db.select().from(journalEntries);
     expect(entry.tradeId).toBeNull();
     expect(entry.notes).toBe('Waiting for a VWAP reclaim');
+  });
+});
+describe('circuit_breaker_settings table', () => {
+  it('starts with every limit off, counting live trades', async () => {
+    const [settings] = await db.insert(circuitBreakerSettings).values({}).returning();
+
+    expect(settings).toMatchObject({
+      id: 1,
+      maxDailyLossR: null,
+      maxTradesPerDay: null,
+      cooldownAfterLosses: null,
+      cooldownMinutes: null,
+      modes: ['live'],
+    });
+  });
+
+  it('holds a single row', async () => {
+    await db.insert(circuitBreakerSettings).values({});
+
+    await expect(db.insert(circuitBreakerSettings).values({ id: 2 })).rejects.toMatchObject({
+      cause: { constraint: 'circuit_breaker_settings_single_row' },
+    });
   });
 });
