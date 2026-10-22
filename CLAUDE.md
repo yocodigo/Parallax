@@ -35,10 +35,10 @@ Vitest, JavaScript (not TypeScript).
 
 - `src/lib/`: pure logic with unit tests (bars, correlation, risk, timeframes, `tradePlan`,
   `journalEntry`, `tradeFill`, `tradeMetrics`, `mistakeLedger`, `excursions`, `historyWarnings`,
-  `circuitBreakers`, `circuitBreakerSettings`, `format`, shared `symbol` validation). Validation uses Zod 4 and returns `safeParse` results.
+  `circuitBreakers`, `circuitBreakerSettings`, `strategy`, `format`, shared `symbol` validation). Validation uses Zod 4 and returns `safeParse` results.
 - `src/db/schema.js`: Drizzle schema. Migrations live in `drizzle/` (generated and committed,
   including `meta/`). Never hand-edit a migration that has been applied.
-- `src/db/journal.js`, `src/db/trades.js`, and `src/db/settings.js`: repository functions. They take `db` as the first argument so tests can
+- `src/db/journal.js`, `trades.js`, `settings.js`, and `strategies.js`: repository functions. They take `db` as the first argument so tests can
   pass the test database.
 - `src/db/index.js`: `getDb()`, created lazily (builds need no database) and cached on `globalThis`.
 - `src/app/api/*/route.js`: route handlers. Invalid input returns 400 with `{ error, fieldErrors }`.
@@ -95,6 +95,12 @@ Vitest, JavaScript (not TypeScript).
   entries, and the losing streak. `POST /api/trades/[id]/entry` answers 409 `{ error, breakers }`
   while one is tripped for the trade's mode; resending with `override: true` records the entry and
   stores the breakers in `trades.overridden_breakers`. Plans and exits are never blocked.
+- Strategies and the entry checklist: `strategies` with ordered `strategy_rules` (kind `edge` for the
+  setup or `discipline` for risk and process), edited on `/strategies` (`Strategies.jsx`, `GET`/`POST
+  /api/strategies`, `PUT /api/strategies/[id]`). Editing keeps the ids of rules sent back with one.
+  A plan may name its `strategyId`; recording its entry then needs `ruleChecks` ({ ruleId: met } for
+  every rule), saved in `trade_rule_checks` with a copy of the rule's text. Unmet rules get a 409
+  `{ unmetRules }` (alongside any `breakers`) and `override: true` records the entry anyway.
 - Weekly review: `WeeklyReview.jsx` (top of `/journal`) posts to `POST /api/weekly-review` on demand,
   not with SWR, since each review is a paid Claude call. The route sends the past seven days of entries
   (`src/lib/weeklyReview.js`, dates in New York time) to Claude and returns `{ review, entryCount }` as
@@ -138,7 +144,8 @@ Vitest, JavaScript (not TypeScript).
    - Done, still being tried out: circuit breakers the trader sets (daily max loss in R, max trades
      per day, cool-down after consecutive losses). Entries are blocked with an override that's
      recorded on the trade.
-   - Strategies, rules, and a pre-entry gate checklist (`trade_rule_checks`).
+   - Done: strategies, rules, and a pre-entry checklist (`trade_rule_checks`). Next for it: compare
+     results when every rule was met against entries made against the checklist.
    - Imports from Alpaca and broker CSVs.
    - A legs table for vertical spreads.
    - Context snapshot saved with each trade at entry: SPY/QQQ trend; VIX level and direction;
