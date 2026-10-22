@@ -26,7 +26,7 @@ const failed = (...details) => {
   return NextResponse.json({ error: "Couldn't write this week's review. Try again." }, { status: 502 });
 };
 
-// Returns { script, entryCount }: the review as plain text, or a null script
+// Returns { review, entryCount }: the review as plain text, or a null review
 // when nothing was logged in the past seven days.
 export async function POST(request) {
   // Each review costs money, so it shares the voice routes' budget for paid calls.
@@ -46,7 +46,7 @@ export async function POST(request) {
   });
   // Nothing to review, so there's no reason to pay for a call.
   if (entries.length === 0) {
-    return NextResponse.json({ script: null, entryCount: 0 });
+    return NextResponse.json({ review: null, entryCount: 0 });
   }
 
   const client = new Anthropic({ apiKey });
@@ -71,15 +71,15 @@ export async function POST(request) {
     return failed(error);
   }
 
-  const script = response.content
+  const review = response.content
     .filter((block) => block.type === 'text')
     .map((block) => block.text)
     .join('')
     .trim();
 
-  if (response.stop_reason === 'refusal' || !script) {
+  if (response.stop_reason === 'refusal' || !review) {
     return failed(response.stop_reason, response.stop_details);
   }
 
-  return NextResponse.json({ script, entryCount: entries.length });
+  return NextResponse.json({ review, entryCount: entries.length });
 }

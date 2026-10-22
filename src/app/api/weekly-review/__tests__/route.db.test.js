@@ -17,7 +17,7 @@ const MESSAGES_URL = 'https://api.anthropic.com/v1/messages';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const daysAgo = (days) => new Date(Date.now() - days * DAY_MS);
 
-const SCRIPT = 'This week you logged two entries. You moved your stop on NVDA again.';
+const REVIEW = 'This week you logged two entries. You moved your stop on NVDA again.';
 
 // A Messages API response whose text is the review.
 function message(overrides = {}) {
@@ -26,7 +26,7 @@ function message(overrides = {}) {
     type: 'message',
     role: 'assistant',
     model: 'claude-opus-5-5',
-    content: [{ type: 'text', text: SCRIPT }],
+    content: [{ type: 'text', text: REVIEW }],
     stop_reason: 'end_turn',
     stop_sequence: null,
     usage: { input_tokens: 100, output_tokens: 50 },
@@ -79,7 +79,7 @@ describe('POST /api/weekly-review', () => {
     const response = await post();
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ script: SCRIPT, entryCount: 1 });
+    expect(await response.json()).toEqual({ review: REVIEW, entryCount: 1 });
 
     const [{ headers, body }] = requests;
     expect(headers.get('x-api-key')).toBe('test-key');
@@ -99,7 +99,7 @@ describe('POST /api/weekly-review', () => {
     const response = await post();
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ script: null, entryCount: 0 });
+    expect(await response.json()).toEqual({ review: null, entryCount: 0 });
     expect(requests).toHaveLength(0);
   });
 
