@@ -97,24 +97,27 @@ Vitest, JavaScript (not TypeScript).
    watchlist tickers as keyterms), structure the transcript into a plan or review, validate it with
    `parseTradePlan` / `parseJournalEntry`, let me confirm, then save. Plus a weekly review written by
    Claude and shown as text (I decided against reading it aloud with ElevenLabs text-to-speech).
-3. Deploy: Vercel plus Neon (Postgres 17). Add auth or a demo mode before any journal data is
-   public. One Playwright end-to-end test of the main flow.
-4. Later:
-   - Strategies, rules, and a pre-entry gate checklist (`trade_rule_checks`).
+3. Trade lifecycle and metrics: record a plan's entry fill and its exit, and compute P/L and
+   R-multiples from them (`src/lib/tradeMetrics.js`). Most of item 4 needs closed trades with R.
+4. Polish, roughly in this order:
+   - Mistake cost ledger: total R lost per mistake tag, showing which habit to fix first.
+   - MAE/MFE computed from Alpaca bars.
    - Warnings from the trader's own history, shown at entry. Example: "Your last 8 0DTE entries
      after 3:30 PM averaged -0.7R."
    - Circuit breakers the trader sets: a daily max loss, a max number of trades per day, and a
      cool-down after consecutive losses.
-   - Mistake cost ledger: total R lost per mistake tag, showing which habit to fix first.
+   - Strategies, rules, and a pre-entry gate checklist (`trade_rule_checks`).
+   - Imports from Alpaca and broker CSVs.
+   - A legs table for vertical spreads.
    - Context snapshot saved with each trade at entry: SPY/QQQ trend; VIX level and direction;
      macro calendar events (FOMC, CPI, jobs report); sector ETF trend and the stock's relative
      strength; days to earnings and ex-dividend dates; options context (IV rank, expected move,
      days to expiration, bid-ask spread, open interest); time of day, pre-market gap, and relative
      volume. Store it at entry, since values like IV rank can't be reliably reconstructed later.
      VIX and the earnings and economic calendars need a data source beyond Alpaca.
-   - MAE/MFE computed from Alpaca bars.
-   - Imports from Alpaca and broker CSVs.
-   - A legs table for vertical spreads.
+5. Last, once the product is polished: deploy to Vercel plus Neon (Postgres 17). Upgrade Next.js
+   past 16.4.0 first (security advisories; 16.4.1 is two weeks old on 2026-10-28). Add auth or a
+   demo mode before any journal data is public. One Playwright end-to-end test of the main flow.
 
 ## Gotchas
 
