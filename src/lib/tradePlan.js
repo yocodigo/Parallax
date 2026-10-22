@@ -25,6 +25,8 @@ const schema = z
     plannedEntry: price,
     initialStop: price,
     target: price.optional(),
+    // The strategy the plan follows; its rules become the entry checklist.
+    strategyId: z.uuid().optional(),
   })
   .refine(stopOnLosingSide, {
     path: ['initialStop'],

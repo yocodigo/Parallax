@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getDb } from '@/db';
 import { trades } from '@/db/schema';
+import { createStrategy } from '@/db/strategies';
 import { resetDb } from '@/db/testing';
 import { captureErrorLogs } from '@/mocks/logs';
 import { POST } from '../route';
@@ -68,5 +69,30 @@ describe('when the database fails', () => {
     const body = await response.json();
     expect(body.requestId).toEqual(expect.any(String));
     expect(logs()).toEqual([expect.objectContaining({ route: '/api/plans', requestId: body.requestId })]);
+  });
+});
+
+describe('POST /api/plans with a strategy', () => {
+  it('links the trade to the strategy it follows', async () => {
+    const strategy = await createStrategy(getDb(), {
+      name: '15m BB acceptance',
+      description: null,
+      rules: [{ text: 'Accepted above the 15m band', kind: 'edge' }],
+    });
+
+    const response = await post({ plan: { ...plan, strategyId: strategy.id }, entry: { notes: 'Setup.' } });
+
+    expect(response.status).toBe(201);
+    expect((await response.json()).trade.strategyId).toBe(strategy.id);
+  });
+
+  it('rejects a strategy that does not exist', async () => {
+    const response = await post({
+      plan: { ...plan, strategyId: '00000000-0000-4000-8000-000000000000' },
+      entry: { notes: 'Setup.' },
+    });
+
+    expect(response.status).toBe(400);
+    expect((await response.json()).fieldErrors.plan.strategyId).toEqual(['That strategy no longer exists']);
   });
 });

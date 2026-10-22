@@ -35,6 +35,13 @@ describe('parseTradePlan', () => {
     expect(result.data.symbol).toBe('SPY');
   });
 
+  it('accepts the strategy a plan follows, as a uuid', () => {
+    const strategyId = '6f1c2a4e-0000-4000-8000-000000000001';
+
+    expect(parseTradePlan({ ...longPlan, strategyId }).data.strategyId).toBe(strategyId);
+    expect(parseTradePlan({ ...longPlan, strategyId: 'nope' }).success).toBe(false);
+  });
+
   it('accepts a valid short plan', () => {
     expect(parseTradePlan(shortPlan).success).toBe(true);
   });

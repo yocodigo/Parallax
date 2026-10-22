@@ -2,13 +2,14 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getDb } from '@/db';
 import { savePlan } from '@/db/journal';
+import { getStrategy } from '@/db/strategies';
 import { parseJournalEntry } from '@/lib/journalEntry';
 import { parseTradePlan } from '@/lib/tradePlan';
 import { withErrorLogging } from '@/lib/log';
 
 const fieldErrors = (result) => (result.success ? {} : z.flattenError(result.error).fieldErrors);
 
-// Body: { plan: { ...trade plan }, entry: { notes, emotion?, mistakes? } }
+// Body: { plan: { ...trade plan, strategyId? }, entry: { notes, emotion?, mistakes? } }
 export const POST = withErrorLogging('/api/plans', async (request) => {
   const body = await request.json().catch(() => null);
   const plan = parseTradePlan(body?.plan);
@@ -17,6 +18,16 @@ export const POST = withErrorLogging('/api/plans', async (request) => {
   if (!plan.success || !entry.success) {
     return NextResponse.json(
       { error: 'Invalid plan', fieldErrors: { plan: fieldErrors(plan), entry: fieldErrors(entry) } },
+      { status: 400 }
+    );
+  }
+
+  if (plan.data.strategyId && !(await getStrategy(getDb(), plan.data.strategyId))) {
+    return NextResponse.json(
+      {
+        error: 'Invalid plan',
+        fieldErrors: { plan: { strategyId: ['That strategy no longer exists'] }, entry: {} },
+      },
       { status: 400 }
     );
   }
