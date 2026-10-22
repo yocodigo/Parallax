@@ -34,6 +34,14 @@ describe('parseStrategy', () => {
     expect(parseStrategy({ ...strategy, rules: [{ text: 'x', kind: 'vibes' }] }).success).toBe(false);
   });
 
+  it("keeps an existing rule's id, so editing it keeps its history", () => {
+    const id = '6f1c2a4e-0000-4000-8000-000000000001';
+    const result = parseStrategy({ ...strategy, rules: [{ id, text: 'Reworded', kind: 'edge' }] });
+
+    expect(result.data.rules).toEqual([{ id, text: 'Reworded', kind: 'edge' }]);
+    expect(parseStrategy({ ...strategy, rules: [{ id: 'nope', text: 'x', kind: 'edge' }] }).success).toBe(false);
+  });
+
   it('leaves the description optional', () => {
     expect(parseStrategy({ ...strategy, description: undefined }).data.description).toBeNull();
     expect(parseStrategy({ ...strategy, description: '  ' }).data.description).toBeNull();

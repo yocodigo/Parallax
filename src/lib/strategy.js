@@ -15,6 +15,8 @@ const strategySchema = z.object({
   rules: z
     .array(
       z.object({
+        // Set for a rule that already exists, so editing keeps its history.
+        id: z.uuid().optional(),
         text: z.string().trim().min(1, 'A rule needs some text').max(300),
         kind: z.enum(RULE_KINDS),
       })

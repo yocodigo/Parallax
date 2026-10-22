@@ -1,5 +1,5 @@
 import { and, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
-import { journalEntries, trades } from './schema';
+import { journalEntries, tradeRuleChecks, trades } from './schema';
 
 export async function getTrade(db, id) {
   const [trade] = await db.select().from(trades).where(eq(trades.id, id));
@@ -10,14 +10,22 @@ export async function getTrade(db, id) {
 // both record a fill. They return null when the trade wasn't in that state.
 
 // Planned -> open. `overriddenBreakers` lists circuit breakers that were
-// tripped when the entry was recorded anyway.
-export async function recordEntry(db, id, { entryPrice, openedAt, overriddenBreakers = [] }) {
-  const [trade] = await db
-    .update(trades)
-    .set({ entryPrice, openedAt, overriddenBreakers })
-    .where(and(eq(trades.id, id), isNull(trades.openedAt)))
-    .returning();
-  return trade ?? null;
+// tripped when the entry was recorded anyway; `ruleChecks` are the strategy
+// checklist as answered ({ ruleId, ruleText, met }), saved with the entry.
+export async function recordEntry(db, id, { entryPrice, openedAt, overriddenBreakers = [], ruleChecks = [] }) {
+  return db.transaction(async (tx) => {
+    const [trade] = await tx
+      .update(trades)
+      .set({ entryPrice, openedAt, overriddenBreakers })
+      .where(and(eq(trades.id, id), isNull(trades.openedAt)))
+      .returning();
+    if (!trade) return null;
+
+    if (ruleChecks.length > 0) {
+      await tx.insert(tradeRuleChecks).values(ruleChecks.map((check) => ({ ...check, tradeId: id })));
+    }
+    return trade;
+  });
 }
 
 // Open -> closed.
