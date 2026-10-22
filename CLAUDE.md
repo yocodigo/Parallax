@@ -34,10 +34,10 @@ Vitest, JavaScript (not TypeScript).
 ## Architecture
 
 - `src/lib/`: pure logic with unit tests (bars, correlation, risk, timeframes, `tradePlan`,
-  `journalEntry`, shared `symbol` validation). Validation uses Zod 4 and returns `safeParse` results.
+  `journalEntry`, `tradeFill`, `tradeMetrics`, `format`, shared `symbol` validation). Validation uses Zod 4 and returns `safeParse` results.
 - `src/db/schema.js`: Drizzle schema. Migrations live in `drizzle/` (generated and committed,
   including `meta/`). Never hand-edit a migration that has been applied.
-- `src/db/journal.js`: repository functions. They take `db` as the first argument so tests can
+- `src/db/journal.js` and `src/db/trades.js`: repository functions. They take `db` as the first argument so tests can
   pass the test database.
 - `src/db/index.js`: `getDb()`, created lazily (builds need no database) and cached on `globalThis`.
 - `src/app/api/*/route.js`: route handlers. Invalid input returns 400 with `{ error, fieldErrors }`.
@@ -69,11 +69,17 @@ Vitest, JavaScript (not TypeScript).
   (`scribe_v2`, journal tickers as keyterms), `POST /api/voice/draft` asks Claude (`claude-opus-5-5`,
   structured output in `src/lib/voiceDraft.js`) for a draft, and the plan or review form opens
   prefilled for confirmation. Needs `ELEVENLABS_API_KEY` and `ANTHROPIC_API_KEY` in `.env.local`.
+- Trade lifecycle: `TradeProgress.jsx` (on each trade-linked journal entry) shows the status and
+  result; the plan's own entry records the next step through `POST /api/trades/[id]/entry` and
+  `/exit` (409 when the trade is in the wrong state). `recordEntry`/`recordExit` only update a trade
+  in the right state, so a double submit can't overwrite a fill. `tradeMetrics.js` computes P/L (net
+  of fees, times the multiplier) and R; 1R is measured from the entry fill once there is one.
 - Weekly review: `WeeklyReview.jsx` (top of `/journal`) posts to `POST /api/weekly-review` on demand,
   not with SWR, since each review is a paid Claude call. The route sends the past seven days of entries
   (`src/lib/weeklyReview.js`, dates in New York time) to Claude and returns `{ review, entryCount }` as
-  plain text, or a null review without calling Claude when the week is empty. Claude is told not to
-  compute P/L or R. Text only, no text-to-speech.
+  plain text, or a null review without calling Claude when the week is empty. Closed trades come
+  with a computed Result line (P/L and R) that Claude quotes; it's told not to compute figures
+  itself. Text only, no text-to-speech.
 
 ## Domain rules
 
@@ -97,8 +103,9 @@ Vitest, JavaScript (not TypeScript).
    watchlist tickers as keyterms), structure the transcript into a plan or review, validate it with
    `parseTradePlan` / `parseJournalEntry`, let me confirm, then save. Plus a weekly review written by
    Claude and shown as text (I decided against reading it aloud with ElevenLabs text-to-speech).
-3. Trade lifecycle and metrics: record a plan's entry fill and its exit, and compute P/L and
-   R-multiples from them (`src/lib/tradeMetrics.js`). Most of item 4 needs closed trades with R.
+3. Done: trade lifecycle and metrics. Record a plan's entry fill and its exit from the journal, and
+   compute P/L and R-multiples from them (`src/lib/tradeMetrics.js`). No partial fills or scaling
+   in and out yet: one entry and one exit per trade.
 4. Polish, roughly in this order:
    - Mistake cost ledger: total R lost per mistake tag, showing which habit to fix first.
    - MAE/MFE computed from Alpaca bars.
