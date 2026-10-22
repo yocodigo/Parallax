@@ -51,12 +51,15 @@ function entry(overrides = {}) {
 
 // A tiny in-memory journal: recording a fill updates the trade, and the list
 // shows the change when it reloads. Returns the bodies posted.
-function serveJournal(trade, { kinds = ['plan'], respond } = {}) {
+function serveJournal(trade, { kinds = ['plan'], respond, excursions = null } = {}) {
   const posted = [];
   const state = { trade };
   server.use(
     http.get('*/api/journal', () =>
       HttpResponse.json({ entries: kinds.map((kind) => entry({ kind, trade: state.trade })) })
+    ),
+    http.get('*/api/trades/:id/excursions', () =>
+      HttpResponse.json(excursions ?? { excursions: null, reason: 'No price bars for the time the trade was open' })
     ),
     http.post('*/api/trades/:id/:step', async ({ request, params }) => {
       const body = await request.json();
@@ -189,5 +192,49 @@ describe('recording a trade from the journal', () => {
     expect(within(review).getByText('Planned')).toBeInTheDocument();
     expect(within(review).queryByRole('button', { name: 'Record entry' })).not.toBeInTheDocument();
     expect(within(plan).getByRole('button', { name: 'Record entry' })).toBeInTheDocument();
+  });
+});
+
+describe('MAE and MFE', () => {
+  const closed = {
+    ...opened,
+    exitPrice: 220,
+    closedAt: '2026-10-21T15:00:00.000Z',
+    exitReason: 'target',
+    exitedPerPlan: true,
+  };
+
+  it('shows how far a trade went against and for it, in R', async () => {
+    serveJournal(plannedTrade(closed), {
+      excursions: { excursions: { mae: 4, mfe: 12.5, maeR: 0.8, mfeR: 2.5 }, timeframe: '1Min' },
+    });
+    renderJournal();
+
+    expect(await screen.findByText('-0.8R')).toBeInTheDocument();
+    expect(screen.getByText('+2.5R')).toBeInTheDocument();
+    expect(screen.getByTitle(/furthest the price went against/i)).toHaveTextContent('MAE');
+  });
+
+  it('asks only for trades that have been entered', async () => {
+    const requested = [];
+    server.use(
+      http.get('*/api/trades/:id/excursions', ({ params }) => {
+        requested.push(params.id);
+        return HttpResponse.json({ excursions: null, reason: 'n/a' });
+      })
+    );
+    serveJournal(plannedTrade());
+    renderJournal();
+
+    await screen.findByText('Planned');
+    expect(requested).toEqual([]);
+  });
+
+  it('shows nothing when there is nothing to measure', async () => {
+    serveJournal(plannedTrade(closed));
+    renderJournal();
+
+    await screen.findByText('Closed');
+    expect(screen.queryByText(/MAE/)).not.toBeInTheDocument();
   });
 });

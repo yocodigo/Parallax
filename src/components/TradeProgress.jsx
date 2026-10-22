@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useSWRConfig } from 'swr';
-import { apiErrorMessage } from '@/lib/fetchJson';
+import useSWR, { useSWRConfig } from 'swr';
+import { apiErrorMessage, fetchJson } from '@/lib/fetchJson';
 import { formatProfitLoss, formatR } from '@/lib/format';
 import { profitLoss, rMultiple, tradeStatus } from '@/lib/tradeMetrics';
 import Field, { inputClass } from './Field';
@@ -217,6 +217,33 @@ function Summary({ trade, status }) {
   );
 }
 
+// How far the price went against the trade and in its favor while it was open,
+// in R. Only stocks that have been entered are measured; anything else, or a
+// failed request, simply shows nothing.
+function Excursions({ trade, status }) {
+  const measurable = status !== 'planned' && trade.assetClass === 'stock';
+  const { data } = useSWR(measurable ? `/api/trades/${trade.id}/excursions` : null, fetchJson, {
+    revalidateOnFocus: false,
+  });
+
+  const result = data?.excursions;
+  if (!result || result.maeR === null) return null;
+
+  return (
+    <span className="text-gray-500">
+      <abbr title="Maximum adverse excursion: the furthest the price went against the trade" className="no-underline">
+        MAE
+      </abbr>{' '}
+      <span className="text-red-700">{formatR(-result.maeR)}</span>
+      {' · '}
+      <abbr title="Maximum favorable excursion: the furthest the price went in the trade's favor" className="no-underline">
+        MFE
+      </abbr>{' '}
+      <span className="text-green-700">{formatR(result.mfeR)}</span>
+    </span>
+  );
+}
+
 // A trade's status and result on a journal entry. `canRecord` (the plan's own
 // entry) adds the buttons to record its entry fill and exit.
 export default function TradeProgress({ trade, canRecord }) {
@@ -231,6 +258,7 @@ export default function TradeProgress({ trade, canRecord }) {
           {status.charAt(0).toUpperCase() + status.slice(1)}
         </span>
         <Summary trade={trade} status={status} />
+        <Excursions trade={trade} status={status} />
         {canRecord && nextStep && !recording && (
           <button type="button" onClick={() => setRecording(true)} className={secondaryButtonClass}>
             {`Record ${nextStep}`}
