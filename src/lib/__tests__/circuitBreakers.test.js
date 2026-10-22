@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { circuitBreakers } from '../circuitBreakers';
+import { BREAKER_LABELS, circuitBreakers, describeBreaker } from '../circuitBreakers';
 
 // 2:00 PM in New York on Thursday, Oct 22.
 const now = new Date('2026-10-22T18:00:00Z');
@@ -102,5 +102,26 @@ describe('circuitBreakers', () => {
 
     expect(breakers(paper)).toEqual([]);
     expect(breakers(paper, { modes: ['live', 'paper'] })).toContain('dailyLoss');
+  });
+});
+
+describe('describeBreaker', () => {
+  it('says what was reached, with the numbers', () => {
+    expect(describeBreaker({ breaker: 'dailyLoss', limitR: 3, todayR: -3.2 })).toBe(
+      'Daily loss limit reached: -3.2R today against a limit of 3.0R.'
+    );
+    expect(describeBreaker({ breaker: 'tradesPerDay', limit: 4, today: 4 })).toBe(
+      'Trade limit reached: 4 of 4 trades today.'
+    );
+  });
+
+  it('gives the end of a cool-down in New York time', () => {
+    expect(describeBreaker({ breaker: 'cooldown', losses: 3, minutes: 60, until: '2026-10-22T18:30:00.000Z' })).toBe(
+      'Cool-down after 3 losses in a row, until 2:30 PM ET.'
+    );
+  });
+
+  it('has a short label for each breaker', () => {
+    expect(BREAKER_LABELS).toEqual({ dailyLoss: 'Daily loss limit', tradesPerDay: 'Trade limit', cooldown: 'Cool-down' });
   });
 });

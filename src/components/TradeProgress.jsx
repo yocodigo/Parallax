@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
+import { BREAKER_LABELS, describeBreaker } from '@/lib/circuitBreakers';
 import { apiErrorMessage, fetchJson } from '@/lib/fetchJson';
 import { formatProfitLoss, formatR } from '@/lib/format';
 import { profitLoss, rMultiple, tradeStatus } from '@/lib/tradeMetrics';
@@ -44,6 +45,8 @@ function StepForm({ trade, step, initial, toBody, submitLabel, onDone, children 
   const [form, setForm] = useState(initial);
   const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError] = useState(null);
+  // Circuit breakers that refused the step, until the trader overrides them.
+  const [breakers, setBreakers] = useState(null);
   const [saving, setSaving] = useState(false);
 
   const errorFor = (name) => fieldErrors[name]?.[0];
@@ -59,18 +62,24 @@ function StepForm({ trade, step, initial, toBody, submitLabel, onDone, children 
     };
   };
 
-  const submit = async (e) => {
-    e.preventDefault();
+  // `extra` is added to the body; { override: true } records past a breaker.
+  const send = async (extra = {}) => {
     setSaving(true);
     setError(null);
+    setBreakers(null);
 
     try {
       const res = await fetch(`/api/trades/${trade.id}/${step}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(toBody(form)),
+        body: JSON.stringify({ ...toBody(form), ...extra }),
       });
       const json = await res.json().catch(() => ({}));
+
+      if (res.status === 409 && json.breakers) {
+        setBreakers(json.breakers);
+        return;
+      }
 
       if (!res.ok) {
         setError(apiErrorMessage(json, `Could not save the ${step}`));
@@ -88,6 +97,11 @@ function StepForm({ trade, step, initial, toBody, submitLabel, onDone, children 
     }
   };
 
+  const submit = (e) => {
+    e.preventDefault();
+    send();
+  };
+
   return (
     <form onSubmit={submit} className="mt-3 space-y-3 rounded-md border border-gray-200 p-3">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">{children({ fieldProps, errorFor, form, setForm })}</div>
@@ -99,6 +113,24 @@ function StepForm({ trade, step, initial, toBody, submitLabel, onDone, children 
           Cancel
         </button>
       </div>
+      {breakers && (
+        <div role="alert" className="space-y-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          <p className="font-medium">A circuit breaker you set is tripped.</p>
+          <ul className="list-disc pl-4">
+            {breakers.map((b) => (
+              <li key={b.breaker}>{describeBreaker(b)}</li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            onClick={() => send({ override: true })}
+            disabled={saving}
+            className={secondaryButtonClass}
+          >
+            Record anyway
+          </button>
+        </div>
+      )}
       {error && (
         <div role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">
           {error}
@@ -259,6 +291,11 @@ export default function TradeProgress({ trade, canRecord }) {
         </span>
         <Summary trade={trade} status={status} />
         <Excursions trade={trade} status={status} />
+        {trade.overriddenBreakers?.length > 0 && (
+          <span className="rounded bg-amber-100 px-1.5 text-amber-900">
+            {`Overrode: ${trade.overriddenBreakers.map((b) => BREAKER_LABELS[b] ?? b).join(', ')}`}
+          </span>
+        )}
         {canRecord && nextStep && !recording && (
           <button type="button" onClick={() => setRecording(true)} className={secondaryButtonClass}>
             {`Record ${nextStep}`}

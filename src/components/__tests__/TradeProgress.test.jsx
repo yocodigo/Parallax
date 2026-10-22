@@ -64,7 +64,8 @@ function serveJournal(trade, { kinds = ['plan'], respond, excursions = null } = 
     http.post('*/api/trades/:id/:step', async ({ request, params }) => {
       const body = await request.json();
       posted.push({ step: params.step, id: params.id, body });
-      if (respond) return respond(body);
+      const custom = respond?.(body);
+      if (custom) return custom;
       state.trade = { ...state.trade, ...body };
       return HttpResponse.json({ trade: state.trade });
     })
@@ -236,5 +237,40 @@ describe('MAE and MFE', () => {
 
     await screen.findByText('Closed');
     expect(screen.queryByText(/MAE/)).not.toBeInTheDocument();
+  });
+});
+
+describe('circuit breakers', () => {
+  const tripped = [{ breaker: 'dailyLoss', limitR: 3, todayR: -3.2 }];
+
+  it('explains a tripped breaker and records the entry only when overridden', async () => {
+    const posted = serveJournal(plannedTrade(), {
+      respond: (body) =>
+        body.override
+          ? undefined
+          : HttpResponse.json({ error: 'Circuit breaker tripped', breakers: tripped }, { status: 409 }),
+    });
+    renderJournal();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Record entry' }));
+    await userEvent.type(screen.getByLabelText('Fill price'), '210');
+    await userEvent.click(screen.getByRole('button', { name: 'Save entry' }));
+
+    expect(
+      await screen.findByText('Daily loss limit reached: -3.2R today against a limit of 3.0R.')
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Open')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Record anyway' }));
+
+    expect(await screen.findByText('Open')).toBeInTheDocument();
+    expect(posted.map((p) => p.body.override)).toEqual([undefined, true]);
+  });
+
+  it('marks a trade whose entry overrode a breaker', async () => {
+    serveJournal(plannedTrade({ ...opened, overriddenBreakers: ['dailyLoss', 'cooldown'] }));
+    renderJournal();
+
+    expect(await screen.findByText('Overrode: Daily loss limit, Cool-down')).toBeInTheDocument();
   });
 });

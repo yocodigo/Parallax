@@ -49,3 +49,27 @@ export function circuitBreakers(settings, trades, { now = new Date() } = {}) {
 
   return { tripped, today: { r: todayR, trades: tradesToday }, losingStreak };
 }
+
+export const BREAKER_LABELS = {
+  dailyLoss: 'Daily loss limit',
+  tradesPerDay: 'Trade limit',
+  cooldown: 'Cool-down',
+};
+
+const nyClock = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/New_York',
+  hour: 'numeric',
+  minute: '2-digit',
+});
+
+// One sentence for a tripped breaker, as circuitBreakers returns it.
+export function describeBreaker(tripped) {
+  switch (tripped.breaker) {
+    case 'dailyLoss':
+      return `Daily loss limit reached: ${tripped.todayR.toFixed(1)}R today against a limit of ${tripped.limitR.toFixed(1)}R.`;
+    case 'tradesPerDay':
+      return `Trade limit reached: ${tripped.today} of ${tripped.limit} trades today.`;
+    default:
+      return `Cool-down after ${tripped.losses} losses in a row, until ${nyClock.format(new Date(tripped.until))} ET.`;
+  }
+}
