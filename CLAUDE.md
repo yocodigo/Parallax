@@ -34,8 +34,8 @@ Vitest, JavaScript (not TypeScript).
 ## Architecture
 
 - `src/lib/`: pure logic with unit tests (bars, correlation, risk, timeframes, `tradePlan`,
-  `journalEntry`, `tradeFill`, `tradeMetrics`, `mistakeLedger`, `excursions`, `format`, shared
-  `symbol` validation). Validation uses Zod 4 and returns `safeParse` results.
+  `journalEntry`, `tradeFill`, `tradeMetrics`, `mistakeLedger`, `excursions`, `historyWarnings`,
+  `format`, shared `symbol` validation). Validation uses Zod 4 and returns `safeParse` results.
 - `src/db/schema.js`: Drizzle schema. Migrations live in `drizzle/` (generated and committed,
   including `meta/`). Never hand-edit a migration that has been applied.
 - `src/db/journal.js` and `src/db/trades.js`: repository functions. They take `db` as the first argument so tests can
@@ -83,6 +83,12 @@ Vitest, JavaScript (not TypeScript).
   (`?mode=` optional), built from `listClosedTradesWithMistakes` and `mistakeLedger`: per mistake,
   the closed trades tagged with it (on any of their entries, once per trade) and their total and
   average R, plus the average R of trades with no mistakes as a baseline.
+- History warnings: `HistoryWarnings.jsx` in the plan form asks `GET /api/insights/warnings` (mode,
+  direction, assetClass, symbol; debounced) and lists what `historyWarnings` finds in closed trades of
+  the same mode: same symbol, same direction and asset class, and same part of the New York session
+  as now (open, midday, close). Each rule uses the 20 most recent matches and warns only with at least
+  5 averaging -0.3R or worse. Tests that render `PlanForm` must serve that route (MSW errors on
+  unhandled requests).
 - Weekly review: `WeeklyReview.jsx` (top of `/journal`) posts to `POST /api/weekly-review` on demand,
   not with SWR, since each review is a paid Claude call. The route sends the past seven days of entries
   (`src/lib/weeklyReview.js`, dates in New York time) to Claude and returns `{ review, entryCount }` as
@@ -120,8 +126,9 @@ Vitest, JavaScript (not TypeScript).
      trades with no mistakes.
    - Done for stocks: MAE/MFE computed from Alpaca bars, shown on journal trades. Options and
      crypto later.
-   - Warnings from the trader's own history, shown at entry. Example: "Your last 8 0DTE entries
-     after 3:30 PM averaged -0.7R."
+   - Done: warnings from the trader's own history, shown while writing a plan (symbol, side, time of
+     day). Days-to-expiration warnings like "Your last 8 0DTE entries averaged -0.7R" need option
+     expiration and strike on trades first (fits with the legs table below).
    - Circuit breakers the trader sets: a daily max loss, a max number of trades per day, and a
      cool-down after consecutive losses.
    - Strategies, rules, and a pre-entry gate checklist (`trade_rule_checks`).
