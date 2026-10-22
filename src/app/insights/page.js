@@ -1,3 +1,4 @@
+import CircuitBreakers from '@/components/CircuitBreakers';
 import MistakeLedger from '@/components/MistakeLedger';
 
 export const metadata = {
@@ -12,7 +13,10 @@ export default function InsightsPage() {
         <p className="mt-1 text-sm text-gray-500">What your own trading history says, in R.</p>
       </header>
 
-      <MistakeLedger />
+      <div className="space-y-6">
+        <CircuitBreakers />
+        <MistakeLedger />
+      </div>
     </main>
   );
 }
