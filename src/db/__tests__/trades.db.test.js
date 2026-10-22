@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { journalEntries, trades } from '../schema';
 import { createTestDb, resetDb } from '../testing';
-import { getTrade, listClosedTradesWithMistakes, recordEntry, recordExit } from '../trades';
+import { getTrade, listClosedTradesWithMistakes, listRecentTrades, recordEntry, recordExit } from '../trades';
 
 const db = createTestDb();
 
@@ -49,6 +49,14 @@ describe('recordEntry', () => {
     const updated = await recordEntry(db, trade.id, entry);
 
     expect(updated).toMatchObject({ entryPrice: 100.2, openedAt: entry.openedAt, closedAt: null });
+  });
+
+  it('records the circuit breakers overridden to enter it', async () => {
+    const trade = await insertTrade();
+
+    const updated = await recordEntry(db, trade.id, { ...entry, overriddenBreakers: ['dailyLoss'] });
+
+    expect(updated.overriddenBreakers).toEqual(['dailyLoss']);
   });
 
   it('leaves a trade that was already entered alone', async () => {
@@ -128,5 +136,24 @@ describe('listClosedTradesWithMistakes', () => {
     const rows = await listClosedTradesWithMistakes(db, { mode: 'live' });
 
     expect(rows.map((row) => row.id)).toEqual([live.id]);
+  });
+});
+
+describe('listRecentTrades', () => {
+  it('returns entered trades in the given modes, latest activity first', async () => {
+    await insertTrade();
+    const older = await insertTrade({ ...entry, ...exit, mode: 'live' });
+    const newer = await insertTrade({ mode: 'live', entryPrice: 101, openedAt: new Date('2026-10-22T14:00:00Z') });
+    await insertTrade({ ...entry, mode: 'backtest' });
+
+    const rows = await listRecentTrades(db, { modes: ['live'] });
+
+    expect(rows.map((row) => row.id)).toEqual([newer.id, older.id]);
+  });
+
+  it('returns at most the requested number', async () => {
+    for (let i = 0; i < 3; i += 1) await insertTrade({ ...entry, mode: 'live' });
+
+    expect(await listRecentTrades(db, { modes: ['live'], limit: 2 })).toHaveLength(2);
   });
 });

@@ -1,4 +1,4 @@
-import { and, eq, isNotNull, isNull } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import { journalEntries, trades } from './schema';
 
 export async function getTrade(db, id) {
@@ -9,11 +9,12 @@ export async function getTrade(db, id) {
 // Each update matches only a trade in the right state, so two submits can't
 // both record a fill. They return null when the trade wasn't in that state.
 
-// Planned -> open.
-export async function recordEntry(db, id, { entryPrice, openedAt }) {
+// Planned -> open. `overriddenBreakers` lists circuit breakers that were
+// tripped when the entry was recorded anyway.
+export async function recordEntry(db, id, { entryPrice, openedAt, overriddenBreakers = [] }) {
   const [trade] = await db
     .update(trades)
-    .set({ entryPrice, openedAt })
+    .set({ entryPrice, openedAt, overriddenBreakers })
     .where(and(eq(trades.id, id), isNull(trades.openedAt)))
     .returning();
   return trade ?? null;
@@ -47,4 +48,15 @@ export async function listClosedTradesWithMistakes(db, { mode } = {}) {
     if (mistakes) byId.get(trade.id).mistakes.push(...mistakes);
   }
   return [...byId.values()];
+}
+
+// Trades that have been entered, in the given modes, most recent activity
+// (exit, or entry while still open) first. Circuit breakers look at these.
+export async function listRecentTrades(db, { modes, limit = 100 }) {
+  return db
+    .select()
+    .from(trades)
+    .where(and(isNotNull(trades.openedAt), inArray(trades.mode, modes)))
+    .orderBy(desc(sql`coalesce(${trades.closedAt}, ${trades.openedAt})`))
+    .limit(limit);
 }
