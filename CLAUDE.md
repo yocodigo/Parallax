@@ -49,12 +49,19 @@ Vitest, JavaScript (not TypeScript).
     per run, tables truncated before each test), one file at a time (`fileParallelism: false`).
   - Route tests call the handlers directly and swap in the test database with `vi.mock('@/db', ...)`.
   - Component tests use Testing Library and MSW; see `PriceChart.integration.test.jsx`.
+  - MSW starts in `vitest.setup.js`, which only the unit project loads. A database test that also
+    mocks an outside API starts its own server; see `weekly-review/__tests__/route.db.test.js`.
   - Tests of code that runs on the server without a database (voice routes, `FormData` parsing)
     start with `// @vitest-environment node`, so they get Node's `Request`, `File`, and `FormData`.
 - Voice journal: `VoiceNote.jsx` records, `POST /api/voice/transcribe` calls ElevenLabs Scribe
   (`scribe_v2`, journal tickers as keyterms), `POST /api/voice/draft` asks Claude (`claude-opus-5-5`,
   structured output in `src/lib/voiceDraft.js`) for a draft, and the plan or review form opens
   prefilled for confirmation. Needs `ELEVENLABS_API_KEY` and `ANTHROPIC_API_KEY` in `.env.local`.
+- Weekly review: `WeeklyReview.jsx` (top of `/journal`) posts to `POST /api/weekly-review` on demand,
+  not with SWR, since each review is a paid Claude call. The route sends the past seven days of entries
+  (`src/lib/weeklyReview.js`, dates in New York time) to Claude and returns `{ review, entryCount }` as
+  plain text, or a null review without calling Claude when the week is empty. Claude is told not to
+  compute P/L or R. Text only, no text-to-speech.
 
 ## Domain rules
 
@@ -74,10 +81,10 @@ Vitest, JavaScript (not TypeScript).
 
 1. Done: journal page (`/journal`) listing entries with their linked trade, plus forms to log a
    plan and a review.
-2. Done except the weekly audio review: voice journal. Record in the browser, transcribe with ElevenLabs speech-to-text (Scribe, with
+2. Done: voice journal. Record in the browser, transcribe with ElevenLabs speech-to-text (Scribe, with
    watchlist tickers as keyterms), structure the transcript into a plan or review, validate it with
-   `parseTradePlan` / `parseJournalEntry`, let me confirm, then save. Later: a weekly audio review
-   read back with ElevenLabs text-to-speech.
+   `parseTradePlan` / `parseJournalEntry`, let me confirm, then save. Plus a weekly review written by
+   Claude and shown as text (I decided against reading it aloud with ElevenLabs text-to-speech).
 3. Deploy: Vercel plus Neon (Postgres 17). Add auth or a demo mode before any journal data is
    public. One Playwright end-to-end test of the main flow.
 4. Later:
