@@ -13,6 +13,17 @@ export function barTimeframeFor(openedAt, closedAt) {
   return '1Day';
 }
 
+const BAR_MS = { '1Min': 60 * 1000, '1Hour': 60 * 60 * 1000, '1Day': DAY_MS };
+
+// Which bars to fetch for a trade: from the start of the bar holding the fill
+// (so the entry bar's range counts) to the exit, or to `now` while it's open.
+export function barWindow(trade, now = new Date()) {
+  const end = trade.closedAt ?? now;
+  const timeframe = barTimeframeFor(trade.openedAt, end);
+  const size = BAR_MS[timeframe];
+  return { timeframe, start: new Date(Math.floor(trade.openedAt.getTime() / size) * size), end };
+}
+
 // `bars` are the bars ({ h, l }) the trade was open for. Returns { mae, mfe }
 // in price per share (or per contract premium), each zero or more, plus
 // { maeR, mfeR } in units of the initial risk; null without bars.

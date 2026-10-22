@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { barTimeframeFor, excursions } from '../excursions';
+import { barTimeframeFor, barWindow, excursions } from '../excursions';
 
 // Filled at 100 with a stop at 98: 1R is 2.00 a share.
 const long = { direction: 'long', entryPrice: 100, initialStop: 98 };
@@ -59,5 +59,36 @@ describe('barTimeframeFor', () => {
 
   it('uses daily bars beyond that', () => {
     expect(barTimeframeFor(at('2024-10-20T14:00:00Z'), at('2026-10-20T14:00:00Z'))).toBe('1Day');
+  });
+});
+
+describe('barWindow', () => {
+  const now = new Date('2026-10-22T20:00:00Z');
+
+  it('runs from the start of the bar holding the fill to the exit', () => {
+    const trade = { openedAt: new Date('2026-10-20T14:31:45Z'), closedAt: new Date('2026-10-21T15:00:00Z') };
+
+    expect(barWindow(trade, now)).toEqual({
+      timeframe: '1Min',
+      start: new Date('2026-10-20T14:31:00Z'),
+      end: new Date('2026-10-21T15:00:00Z'),
+    });
+  });
+
+  it('runs to now for a trade still open', () => {
+    const trade = { openedAt: new Date('2026-10-20T14:31:00Z'), closedAt: null };
+
+    expect(barWindow(trade, now).end).toEqual(now);
+  });
+
+  it('starts hourly bars on the hour, and daily bars at midnight UTC', () => {
+    const closedAt = new Date('2026-10-20T15:00:00Z');
+
+    expect(barWindow({ openedAt: new Date('2026-03-02T14:45:00Z'), closedAt }, now).start).toEqual(
+      new Date('2026-03-02T14:00:00Z')
+    );
+    expect(barWindow({ openedAt: new Date('2024-03-02T14:45:00Z'), closedAt }, now).start).toEqual(
+      new Date('2024-03-02T00:00:00Z')
+    );
   });
 });
