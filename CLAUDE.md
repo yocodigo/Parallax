@@ -34,7 +34,8 @@ Vitest, JavaScript (not TypeScript).
 ## Architecture
 
 - `src/lib/`: pure logic with unit tests (bars, correlation, risk, timeframes, `tradePlan`,
-  `journalEntry`, `tradeFill`, `tradeMetrics`, `format`, shared `symbol` validation). Validation uses Zod 4 and returns `safeParse` results.
+  `journalEntry`, `tradeFill`, `tradeMetrics`, `mistakeLedger`, `format`, shared `symbol`
+  validation). Validation uses Zod 4 and returns `safeParse` results.
 - `src/db/schema.js`: Drizzle schema. Migrations live in `drizzle/` (generated and committed,
   including `meta/`). Never hand-edit a migration that has been applied.
 - `src/db/journal.js` and `src/db/trades.js`: repository functions. They take `db` as the first argument so tests can
@@ -74,6 +75,10 @@ Vitest, JavaScript (not TypeScript).
   `/exit` (409 when the trade is in the wrong state). `recordEntry`/`recordExit` only update a trade
   in the right state, so a double submit can't overwrite a fill. `tradeMetrics.js` computes P/L (net
   of fees, times the multiplier) and R; 1R is measured from the entry fill once there is one.
+- Insights (`/insights`): history-based views. `MistakeLedger.jsx` loads `GET /api/insights/mistakes`
+  (`?mode=` optional), built from `listClosedTradesWithMistakes` and `mistakeLedger`: per mistake,
+  the closed trades tagged with it (on any of their entries, once per trade) and their total and
+  average R, plus the average R of trades with no mistakes as a baseline.
 - Weekly review: `WeeklyReview.jsx` (top of `/journal`) posts to `POST /api/weekly-review` on demand,
   not with SWR, since each review is a paid Claude call. The route sends the past seven days of entries
   (`src/lib/weeklyReview.js`, dates in New York time) to Claude and returns `{ review, entryCount }` as
@@ -107,7 +112,8 @@ Vitest, JavaScript (not TypeScript).
    compute P/L and R-multiples from them (`src/lib/tradeMetrics.js`). No partial fills or scaling
    in and out yet: one entry and one exit per trade.
 4. Polish, roughly in this order:
-   - Mistake cost ledger: total R lost per mistake tag, showing which habit to fix first.
+   - Done: mistake cost ledger on `/insights`: total and average R per mistake tag, against
+     trades with no mistakes.
    - MAE/MFE computed from Alpaca bars.
    - Warnings from the trader's own history, shown at entry. Example: "Your last 8 0DTE entries
      after 3:30 PM averaged -0.7R."
