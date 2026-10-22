@@ -3,6 +3,7 @@
 import useSWR from 'swr';
 import { fetchJson } from '@/lib/fetchJson';
 import { EMOTION_LABELS, MISTAKE_LABELS } from '@/lib/journalEntry';
+import TradeProgress from './TradeProgress';
 
 export const capitalize = (word) => word.charAt(0).toUpperCase() + word.slice(1);
 
@@ -46,9 +47,13 @@ export default function JournalEntries() {
           </div>
 
           {entry.trade && (
-            <div className="mt-2 flex gap-2 text-xs tabular-nums text-gray-600">
-              <span>{describeTrade(entry.trade)}</span>
-              <span className="rounded bg-gray-100 px-1.5">{capitalize(entry.trade.mode)}</span>
+            <div className="mt-2 space-y-1.5">
+              <div className="flex gap-2 text-xs tabular-nums text-gray-600">
+                <span>{describeTrade(entry.trade)}</span>
+                <span className="rounded bg-gray-100 px-1.5">{capitalize(entry.trade.mode)}</span>
+              </div>
+              {/* Fills are recorded on the plan; reviews of the trade just show where it stands. */}
+              <TradeProgress trade={entry.trade} canRecord={entry.kind === 'plan'} />
             </div>
           )}
 
