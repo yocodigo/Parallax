@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { createTestDb, resetDb } from '../testing';
-import { circuitBreakerSettings, journalEntries, trades } from '../schema';
+import { circuitBreakerSettings, journalEntries, strategies, strategyRules, tradeRuleChecks, trades } from '../schema';
 
 const db = createTestDb();
 
@@ -85,5 +85,64 @@ describe('circuit_breaker_settings table', () => {
     await expect(db.insert(circuitBreakerSettings).values({ id: 2 })).rejects.toMatchObject({
       cause: { constraint: 'circuit_breaker_settings_single_row' },
     });
+  });
+});
+
+describe('strategies and rules', () => {
+  async function strategyWithRule() {
+    const [strategy] = await db.insert(strategies).values({ name: '15m BB acceptance' }).returning();
+    const [rule] = await db
+      .insert(strategyRules)
+      .values({ strategyId: strategy.id, text: 'Accepted above the 15m band', kind: 'edge', position: 0 })
+      .returning();
+    return { strategy, rule };
+  }
+
+  it('links a trade to its strategy and records its rule checks', async () => {
+    const { strategy, rule } = await strategyWithRule();
+    const [trade] = await db.insert(trades).values({ ...plan, strategyId: strategy.id }).returning();
+
+    const [check] = await db.insert(tradeRuleChecks).values({ tradeId: trade.id, ruleId: rule.id, ruleText: rule.text, met: true }).returning();
+
+    expect(check).toMatchObject({ tradeId: trade.id, ruleId: rule.id, met: true });
+  });
+
+  it('keeps trades when their strategy is deleted', async () => {
+    const { strategy } = await strategyWithRule();
+    const [trade] = await db.insert(trades).values({ ...plan, strategyId: strategy.id }).returning();
+
+    await db.delete(strategies).where(eq(strategies.id, strategy.id));
+
+    const [kept] = await db.select().from(trades).where(eq(trades.id, trade.id));
+    expect(kept.strategyId).toBeNull();
+  });
+
+  it("keeps a trade's checks, with the rule's text, when the rule is deleted", async () => {
+    const { strategy, rule } = await strategyWithRule();
+    const [trade] = await db.insert(trades).values({ ...plan, strategyId: strategy.id }).returning();
+    await db.insert(tradeRuleChecks).values({ tradeId: trade.id, ruleId: rule.id, ruleText: rule.text, met: false });
+
+    await db.delete(strategyRules).where(eq(strategyRules.id, rule.id));
+
+    const [check] = await db.select().from(tradeRuleChecks);
+    expect(check).toMatchObject({ ruleId: null, ruleText: 'Accepted above the 15m band', met: false });
+  });
+
+  it('rejects an unknown rule kind', async () => {
+    const { strategy } = await strategyWithRule();
+
+    await expect(
+      db.insert(strategyRules).values({ strategyId: strategy.id, text: 'x', kind: 'vibes', position: 1 })
+    ).rejects.toThrow();
+  });
+
+  it('checks each rule once per trade', async () => {
+    const { strategy, rule } = await strategyWithRule();
+    const [trade] = await db.insert(trades).values({ ...plan, strategyId: strategy.id }).returning();
+    await db.insert(tradeRuleChecks).values({ tradeId: trade.id, ruleId: rule.id, ruleText: rule.text, met: true });
+
+    await expect(
+      db.insert(tradeRuleChecks).values({ tradeId: trade.id, ruleId: rule.id, ruleText: rule.text, met: false })
+    ).rejects.toThrow();
   });
 });

@@ -9,6 +9,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
 
@@ -17,6 +18,8 @@ export const assetClass = pgEnum('asset_class', ['stock', 'option', 'crypto']);
 export const direction = pgEnum('direction', ['long', 'short']);
 export const exitReason = pgEnum('exit_reason', ['target', 'stop', 'time', 'discretionary']);
 export const journalKind = pgEnum('journal_kind', ['plan', 'review', 'thesis']);
+// Edge rules describe the setup; discipline rules are about risk and process.
+export const ruleKind = pgEnum('rule_kind', ['edge', 'discipline']);
 
 const price = (name) => numeric(name, { precision: 18, scale: 6, mode: 'number' });
 
@@ -27,6 +30,30 @@ const timestamps = {
     .defaultNow()
     .$onUpdate(() => new Date()),
 };
+
+// A named setup the trader trades, with the checklist of rules it requires.
+export const strategies = pgTable('strategies', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  description: text('description'),
+  ...timestamps,
+});
+
+export const strategyRules = pgTable(
+  'strategy_rules',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    strategyId: uuid('strategy_id')
+      .notNull()
+      .references(() => strategies.id, { onDelete: 'cascade' }),
+    text: text('text').notNull(),
+    kind: ruleKind('kind').notNull(),
+    // Order within the strategy's checklist.
+    position: integer('position').notNull(),
+    ...timestamps,
+  },
+  (t) => [index('strategy_rules_strategy_id_idx').on(t.strategyId)]
+);
 
 // A trade starts as a plan. opened_at marks the entry fill and closed_at the
 // exit, so status (planned, open, closed) is derived rather than stored.
@@ -50,6 +77,8 @@ export const trades = pgTable(
     closedAt: timestamp('closed_at', { withTimezone: true }),
     exitReason: exitReason('exit_reason'),
     exitedPerPlan: boolean('exited_per_plan'),
+    // Deleting a strategy keeps its trades; they just lose the link.
+    strategyId: uuid('strategy_id').references(() => strategies.id, { onDelete: 'set null' }),
     // Circuit breakers that were tripped when the entry was recorded anyway.
     overriddenBreakers: text('overridden_breakers').array().notNull().default(sql`'{}'::text[]`),
     ...timestamps,
@@ -98,4 +127,21 @@ export const circuitBreakerSettings = pgTable(
       .$onUpdate(() => new Date()),
   },
   (t) => [check('circuit_breaker_settings_single_row', sql`${t.id} = 1`)]
+);
+
+// The pre-entry checklist as answered for a trade: one row per rule. The
+// rule's text is copied in, so the history survives editing or deleting it.
+export const tradeRuleChecks = pgTable(
+  'trade_rule_checks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tradeId: uuid('trade_id')
+      .notNull()
+      .references(() => trades.id, { onDelete: 'cascade' }),
+    ruleId: uuid('rule_id').references(() => strategyRules.id, { onDelete: 'set null' }),
+    ruleText: text('rule_text').notNull(),
+    met: boolean('met').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('trade_rule_checks_trade_rule_idx').on(t.tradeId, t.ruleId)]
 );

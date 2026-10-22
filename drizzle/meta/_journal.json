@@ -15,6 +15,13 @@
       "when": 1792710239075,
       "tag": "0001_add_circuit_breakers",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792711426347,
+      "tag": "0002_add_strategies_and_rule_checks",
+      "breakpoints": true
     }
   ]
 }
