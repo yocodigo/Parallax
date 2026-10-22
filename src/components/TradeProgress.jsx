@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useSWRConfig } from 'swr';
 import { apiErrorMessage } from '@/lib/fetchJson';
+import { formatProfitLoss, formatR } from '@/lib/format';
 import { profitLoss, rMultiple, tradeStatus } from '@/lib/tradeMetrics';
 import Field, { inputClass } from './Field';
 
@@ -34,13 +35,6 @@ function toLocalInput(date) {
   return local.toISOString().slice(0, 16);
 }
 const toIso = (value) => (value ? new Date(value).toISOString() : undefined);
-
-const money = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  signDisplay: 'always',
-});
-const formatR = (r) => `${r > 0 ? '+' : ''}${r.toFixed(1)}R`;
 
 // A small form posting one step (entry or exit) of a trade. Fields render
 // through `children({ fieldProps, errorFor, form, setForm })`; `toBody(form)`
@@ -217,7 +211,7 @@ function Summary({ trade, status }) {
   return (
     <>
       <span>{`${trade.entryPrice} → ${trade.exitPrice}`}</span>
-      <span className={`font-medium ${tone}`}>{money.format(pnl)}</span>
+      <span className={`font-medium ${tone}`}>{formatProfitLoss(pnl)}</span>
       {r !== null && <span className={`font-medium ${tone}`}>{formatR(r)}</span>}
     </>
   );
