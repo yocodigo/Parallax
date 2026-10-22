@@ -19,7 +19,7 @@ const daysAgo = (days) => new Date(Date.now() - days * DAY_MS);
 
 const SCRIPT = 'This week you logged two entries. You moved your stop on NVDA again.';
 
-// A Messages API response whose text is the spoken script.
+// A Messages API response whose text is the review.
 function message(overrides = {}) {
   return {
     id: 'msg_test',
@@ -65,7 +65,7 @@ afterAll(async () => {
 });
 
 describe('POST /api/weekly-review', () => {
-  it("asks Claude for a spoken review of this week's entries", async () => {
+  it("asks Claude to review this week's entries", async () => {
     await addJournalEntry(getDb(), {
       kind: 'review',
       symbol: 'NVDA',

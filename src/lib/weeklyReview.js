@@ -8,7 +8,7 @@ export function reviewWindowStart(now = new Date()) {
 }
 
 // Dates are given in market time, so a note logged Tuesday evening in New York
-// is read back as Tuesday, not as UTC's Wednesday.
+// is reviewed as Tuesday, not as UTC's Wednesday.
 const dayFormat = new Intl.DateTimeFormat('en-US', {
   timeZone: 'America/New_York',
   weekday: 'short',

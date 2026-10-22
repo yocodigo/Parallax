@@ -5,9 +5,9 @@ import { listJournalEntries } from '@/db/journal';
 import { clientKey, rateLimit } from '@/lib/rateLimit';
 import { formatEntries, reviewWindowStart } from '@/lib/weeklyReview';
 
-const SYSTEM_PROMPT = `You write a trader's weekly journal review, which will be read aloud to them by text-to-speech. You get the past week's journal entries: trade plans, reviews, and investment theses, with how they felt, the mistakes they tagged, and the linked trade.
+const SYSTEM_PROMPT = `You write a trader's weekly journal review, which they read on their journal page. You get the past week's journal entries: trade plans, reviews, and investment theses, with how they felt, the mistakes they tagged, and the linked trade.
 
-Write it as spoken prose, addressed to the trader as "you", about two minutes long when read aloud (roughly 250 to 350 words). No headings, lists, markdown, or symbols that don't read aloud; write tickers as they appear.
+Write it addressed to the trader as "you", in a few short paragraphs separated by blank lines, roughly 250 to 350 words. The page shows plain text, so use no headings, lists, or markdown.
 
 - Walk through the week in order: what they planned, what they traded, and how it went.
 - Point out patterns in their feelings and tagged mistakes, such as a mistake that came up more than once.
@@ -26,7 +26,7 @@ const failed = (...details) => {
   return NextResponse.json({ error: "Couldn't write this week's review. Try again." }, { status: 502 });
 };
 
-// Returns { script, entryCount }: the review to read aloud, or a null script
+// Returns { script, entryCount }: the review as plain text, or a null script
 // when nothing was logged in the past seven days.
 export async function POST(request) {
   // Each review costs money, so it shares the voice routes' budget for paid calls.
@@ -61,7 +61,7 @@ export async function POST(request) {
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: `<entries>\n${formatEntries(entries)}\n</entries>` }],
       // Spotting patterns across a week is worth more thought than pulling
-      // fields from one note, and nobody is waiting mid-recording here.
+      // fields from one note, which the voice draft does at low effort.
       output_config: { effort: 'medium' },
     });
   } catch (error) {
