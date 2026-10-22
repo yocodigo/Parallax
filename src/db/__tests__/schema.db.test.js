@@ -35,6 +35,27 @@ describe('trades table', () => {
     expect(trade.overriddenBreakers).toEqual([]);
   });
 
+  it("stores an option's type, strike, and expiration", async () => {
+    const [trade] = await db
+      .insert(trades)
+      .values({ ...plan, assetClass: 'option', optionType: 'call', strike: 500, expiration: '2026-10-23' })
+      .returning();
+
+    expect(trade).toMatchObject({ optionType: 'call', strike: 500, expiration: '2026-10-23' });
+  });
+
+  it('leaves the option fields empty for a stock', async () => {
+    const [trade] = await db.insert(trades).values(plan).returning();
+
+    expect(trade).toMatchObject({ optionType: null, strike: null, expiration: null });
+  });
+
+  it('rejects option fields on a stock', async () => {
+    await expect(db.insert(trades).values({ ...plan, strike: 500 })).rejects.toMatchObject({
+      cause: { constraint: 'trades_option_fields_only_on_options' },
+    });
+  });
+
   it('rejects closing a trade that was never opened', async () => {
     await expect(
       db.insert(trades).values({ ...plan, closedAt: new Date() })

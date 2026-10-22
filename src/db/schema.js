@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
   boolean,
   check,
+  date,
   index,
   integer,
   numeric,
@@ -16,6 +17,7 @@ import {
 export const tradeMode = pgEnum('trade_mode', ['live', 'paper', 'backtest']);
 export const assetClass = pgEnum('asset_class', ['stock', 'option', 'crypto']);
 export const direction = pgEnum('direction', ['long', 'short']);
+export const optionType = pgEnum('option_type', ['call', 'put']);
 export const exitReason = pgEnum('exit_reason', ['target', 'stop', 'time', 'discretionary']);
 export const journalKind = pgEnum('journal_kind', ['plan', 'review', 'thesis']);
 // Edge rules describe the setup; discipline rules are about risk and process.
@@ -67,6 +69,11 @@ export const trades = pgTable(
     direction: direction('direction').notNull(),
     quantity: numeric('quantity', { precision: 18, scale: 8, mode: 'number' }).notNull(),
     multiplier: integer('multiplier').notNull().default(1),
+    // For options: the contract. `symbol` stays the underlying (SPY).
+    optionType: optionType('option_type'),
+    strike: price('strike'),
+    // A calendar date, kept as 'YYYY-MM-DD' so no time zone can shift it.
+    expiration: date('expiration', { mode: 'string' }),
     plannedEntry: price('planned_entry'),
     entryPrice: price('entry_price'),
     initialStop: price('initial_stop'),
@@ -86,6 +93,10 @@ export const trades = pgTable(
   (t) => [
     check('trades_quantity_positive', sql`${t.quantity} > 0`),
     check('trades_multiplier_positive', sql`${t.multiplier} > 0`),
+    check(
+      'trades_option_fields_only_on_options',
+      sql`${t.assetClass} = 'option' OR (${t.optionType} IS NULL AND ${t.strike} IS NULL AND ${t.expiration} IS NULL)`
+    ),
     check(
       'trades_closed_after_opened',
       sql`${t.closedAt} IS NULL OR (${t.openedAt} IS NOT NULL AND ${t.closedAt} >= ${t.openedAt})`
