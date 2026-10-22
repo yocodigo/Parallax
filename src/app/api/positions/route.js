@@ -28,6 +28,9 @@ export async function GET() {
     });
 
     if (!res.ok) {
+      // Log full detail server-side; return only a status to the client.
+      const detail = await res.text();
+      console.error(`Alpaca positions error ${res.status}: ${detail.slice(0, 500)}`);
       return NextResponse.json(
         { error: `Alpaca returned ${res.status}` },
         { status: res.status }
@@ -40,6 +43,7 @@ export async function GET() {
 
     return NextResponse.json({ positions, weights, top });
   } catch (err) {
+    console.error('Alpaca positions request failed', err);
     return NextResponse.json(
       { error: 'Request to Alpaca failed' },
       { status: 502 }

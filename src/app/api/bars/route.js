@@ -96,6 +96,9 @@ export async function GET(request) {
     });
 
   } catch (err) {
+    // This also catches bugs in the reshaping and correlation code above, so
+    // the error has to reach the log, not just the status.
+    console.error('Alpaca bars request failed', err);
     return NextResponse.json(
       { error: 'Request to data provider failed' },
       { status: 502 }
