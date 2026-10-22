@@ -1,7 +1,9 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getDb } from '@/db';
 import { trades } from '@/db/schema';
+import { saveBreakerSettings } from '@/db/settings';
 import { resetDb } from '@/db/testing';
+import { DEFAULT_BREAKER_SETTINGS } from '@/lib/circuitBreakerSettings';
 import { POST } from '../route';
 
 // Swap the app's database for the test database. Everything else is real.
@@ -22,6 +24,19 @@ const plan = {
 };
 
 const entry = { entryPrice: 100.2, openedAt: '2026-10-20T14:00:00.000Z' };
+
+// A paper trade that lost 2R and closed just now, tripping a 2R daily limit.
+async function lostTwoRToday() {
+  const closedAt = new Date();
+  await insertTrade({
+    entryPrice: 100,
+    exitPrice: 96,
+    openedAt: new Date(closedAt.getTime() - 60_000),
+    closedAt,
+  });
+}
+
+const dailyLimit = (modes = ['paper']) => saveBreakerSettings(getDb(), { ...DEFAULT_BREAKER_SETTINGS, maxDailyLossR: 2, modes });
 
 async function insertTrade(values = {}) {
   const [trade] = await getDb().insert(trades).values({ ...plan, ...values }).returning();
@@ -73,5 +88,41 @@ describe('POST /api/trades/[id]/entry', () => {
   it('answers 404 for a trade that does not exist, or an id that is not one', async () => {
     expect((await post('00000000-0000-4000-8000-000000000000', entry)).status).toBe(404);
     expect((await post('not-a-uuid', entry)).status).toBe(404);
+  });
+});
+
+describe('POST /api/trades/[id]/entry with circuit breakers', () => {
+  it('refuses the entry while a breaker is tripped, saying which', async () => {
+    await dailyLimit();
+    await lostTwoRToday();
+    const trade = await insertTrade();
+
+    const response = await post(trade.id, entry);
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({
+      error: 'Circuit breaker tripped',
+      breakers: [{ breaker: 'dailyLoss', limitR: 2, todayR: -2 }],
+    });
+    expect((await getDb().select().from(trades)).find((t) => t.id === trade.id).openedAt).toBeNull();
+  });
+
+  it('records the entry when overridden, noting which breakers were', async () => {
+    await dailyLimit();
+    await lostTwoRToday();
+    const trade = await insertTrade();
+
+    const response = await post(trade.id, { ...entry, override: true });
+
+    expect(response.status).toBe(200);
+    expect((await response.json()).trade).toMatchObject({ entryPrice: 100.2, overriddenBreakers: ['dailyLoss'] });
+  });
+
+  it('lets trades in other modes through', async () => {
+    await dailyLimit(['live']);
+    await lostTwoRToday();
+    const trade = await insertTrade();
+
+    expect((await post(trade.id, entry)).status).toBe(200);
   });
 });
