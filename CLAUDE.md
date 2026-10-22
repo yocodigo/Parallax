@@ -35,10 +35,10 @@ Vitest, JavaScript (not TypeScript).
 
 - `src/lib/`: pure logic with unit tests (bars, correlation, risk, timeframes, `tradePlan`,
   `journalEntry`, `tradeFill`, `tradeMetrics`, `mistakeLedger`, `excursions`, `historyWarnings`,
-  `format`, shared `symbol` validation). Validation uses Zod 4 and returns `safeParse` results.
+  `circuitBreakers`, `circuitBreakerSettings`, `format`, shared `symbol` validation). Validation uses Zod 4 and returns `safeParse` results.
 - `src/db/schema.js`: Drizzle schema. Migrations live in `drizzle/` (generated and committed,
   including `meta/`). Never hand-edit a migration that has been applied.
-- `src/db/journal.js` and `src/db/trades.js`: repository functions. They take `db` as the first argument so tests can
+- `src/db/journal.js`, `src/db/trades.js`, and `src/db/settings.js`: repository functions. They take `db` as the first argument so tests can
   pass the test database.
 - `src/db/index.js`: `getDb()`, created lazily (builds need no database) and cached on `globalThis`.
 - `src/app/api/*/route.js`: route handlers. Invalid input returns 400 with `{ error, fieldErrors }`.
@@ -89,6 +89,12 @@ Vitest, JavaScript (not TypeScript).
   as now (open, midday, close). Each rule uses the 20 most recent matches and warns only with at least
   5 averaging -0.3R or worse. Tests that render `PlanForm` must serve that route (MSW errors on
   unhandled requests).
+- Circuit breakers: settings live in `circuit_breaker_settings` (one row, id 1; a null limit is off;
+  `modes` they apply to, live by default), edited in `CircuitBreakers.jsx` on `/insights` through
+  `GET`/`PUT /api/circuit-breakers`. `circuitBreakers` checks today's closed R (New York day), today's
+  entries, and the losing streak. `POST /api/trades/[id]/entry` answers 409 `{ error, breakers }`
+  while one is tripped for the trade's mode; resending with `override: true` records the entry and
+  stores the breakers in `trades.overridden_breakers`. Plans and exits are never blocked.
 - Weekly review: `WeeklyReview.jsx` (top of `/journal`) posts to `POST /api/weekly-review` on demand,
   not with SWR, since each review is a paid Claude call. The route sends the past seven days of entries
   (`src/lib/weeklyReview.js`, dates in New York time) to Claude and returns `{ review, entryCount }` as
@@ -129,8 +135,9 @@ Vitest, JavaScript (not TypeScript).
    - Done: warnings from the trader's own history, shown while writing a plan (symbol, side, time of
      day). Days-to-expiration warnings like "Your last 8 0DTE entries averaged -0.7R" need option
      expiration and strike on trades first (fits with the legs table below).
-   - Circuit breakers the trader sets: a daily max loss, a max number of trades per day, and a
-     cool-down after consecutive losses.
+   - Done, still being tried out: circuit breakers the trader sets (daily max loss in R, max trades
+     per day, cool-down after consecutive losses). Entries are blocked with an override that's
+     recorded on the trade.
    - Strategies, rules, and a pre-entry gate checklist (`trade_rule_checks`).
    - Imports from Alpaca and broker CSVs.
    - A legs table for vertical spreads.
