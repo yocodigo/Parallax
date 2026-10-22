@@ -14,10 +14,14 @@ const longPlan = {
 
 const shortPlan = { ...longPlan, direction: 'short', initialStop: 102, target: 94 };
 
+// Two SPY 500 calls expiring Jan 16, priced as premiums.
 const optionPlan = {
   ...longPlan,
-  symbol: 'SPY260116C00500000',
+  symbol: 'SPY',
   assetClass: 'option',
+  optionType: 'call',
+  strike: 500,
+  expiration: '2026-01-16',
   quantity: 2,
   plannedEntry: 1.25,
   initialStop: 0.8,
@@ -46,8 +50,26 @@ describe('parseTradePlan', () => {
     expect(parseTradePlan(shortPlan).success).toBe(true);
   });
 
-  it('accepts an option contract symbol', () => {
-    expect(parseTradePlan(optionPlan).success).toBe(true);
+  it('accepts an option with its contract: type, strike, and expiration', () => {
+    const result = parseTradePlan(optionPlan);
+
+    expect(result.success).toBe(true);
+    expect(result.data).toMatchObject({ symbol: 'SPY', optionType: 'call', strike: 500, expiration: '2026-01-16' });
+  });
+
+  it('requires the whole contract for an option', () => {
+    const result = parseTradePlan({ ...optionPlan, optionType: undefined, strike: undefined, expiration: undefined });
+
+    expect(errorPaths(result)).toEqual(expect.arrayContaining(['optionType', 'strike', 'expiration']));
+  });
+
+  it('rejects an expiration that is not a calendar date', () => {
+    expect(errorPaths(parseTradePlan({ ...optionPlan, expiration: '2026-02-30' }))).toContain('expiration');
+    expect(errorPaths(parseTradePlan({ ...optionPlan, expiration: 'next friday' }))).toContain('expiration');
+  });
+
+  it('rejects contract fields on a stock', () => {
+    expect(errorPaths(parseTradePlan({ ...longPlan, strike: 500 }))).toContain('strike');
   });
 
   it('defaults the multiplier to 100 for options and 1 otherwise', () => {

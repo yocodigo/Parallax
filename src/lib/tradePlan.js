@@ -14,6 +14,24 @@ const targetOnWinningSide = (plan) =>
   plan.target === undefined ||
   (plan.direction === 'long' ? plan.target > plan.plannedEntry : plan.target < plan.plannedEntry);
 
+const CONTRACT_FIELDS = [
+  ['optionType', 'call or put'],
+  ['strike', 'strike'],
+  ['expiration', 'expiration'],
+];
+
+// An option needs its whole contract; a stock or crypto has none of it.
+function checkContract(plan, ctx) {
+  for (const [field, label] of CONTRACT_FIELDS) {
+    const present = plan[field] !== undefined;
+    if (plan.assetClass === 'option' && !present) {
+      ctx.addIssue({ code: 'custom', path: [field], message: `An option needs its ${label}` });
+    } else if (plan.assetClass !== 'option' && present) {
+      ctx.addIssue({ code: 'custom', path: [field], message: 'Only options have a contract' });
+    }
+  }
+}
+
 const schema = z
   .object({
     mode: z.enum(['live', 'paper', 'backtest']),
@@ -27,6 +45,10 @@ const schema = z
     target: price.optional(),
     // The strategy the plan follows; its rules become the entry checklist.
     strategyId: z.uuid().optional(),
+    // For options: the contract. The symbol is the underlying.
+    optionType: z.enum(['call', 'put']).optional(),
+    strike: price.optional(),
+    expiration: z.iso.date({ error: 'Enter the expiration as a date' }).optional(),
   })
   .refine(stopOnLosingSide, {
     path: ['initialStop'],
@@ -36,6 +58,7 @@ const schema = z
     path: ['target'],
     message: 'Target must be above the entry for a long and below it for a short',
   })
+  .superRefine(checkContract)
   // Options control 100 shares per contract unless told otherwise.
   .transform((plan) => ({
     ...plan,
