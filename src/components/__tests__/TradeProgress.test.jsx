@@ -274,3 +274,89 @@ describe('circuit breakers', () => {
     expect(await screen.findByText('Overrode: Daily loss limit, Cool-down')).toBeInTheDocument();
   });
 });
+
+describe('the strategy checklist', () => {
+  const STRATEGY_ID = '6f1c2a4e-0000-4000-8000-000000000009';
+  const strategy = {
+    id: STRATEGY_ID,
+    name: '15m BB acceptance',
+    description: null,
+    rules: [
+      { id: 'r1', text: 'Accepted above the 15m band', kind: 'edge' },
+      { id: 'r2', text: 'Not the first impulsive bar', kind: 'edge' },
+    ],
+  };
+
+  const serveStrategies = () =>
+    server.use(http.get('*/api/strategies', () => HttpResponse.json({ strategies: [strategy] })));
+
+  const answer = async (ruleText, choice) =>
+    userEvent.click(within(screen.getByRole('group', { name: ruleText })).getByRole('radio', { name: choice }));
+
+  it("asks for each of the strategy's rules and sends the answers", async () => {
+    serveStrategies();
+    const posted = serveJournal(plannedTrade({ strategyId: STRATEGY_ID }));
+    renderJournal();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Record entry' }));
+    await screen.findByRole('group', { name: 'Accepted above the 15m band' });
+    await userEvent.type(screen.getByLabelText('Fill price'), '210');
+    await answer('Accepted above the 15m band', 'Met');
+    await answer('Not the first impulsive bar', 'Met');
+    await userEvent.click(screen.getByRole('button', { name: 'Save entry' }));
+
+    expect(await screen.findByText('Open')).toBeInTheDocument();
+    expect(posted[0].body.ruleChecks).toEqual({ r1: true, r2: true });
+  });
+
+  it('names the rules not met and records the entry only when confirmed', async () => {
+    serveStrategies();
+    const posted = serveJournal(plannedTrade({ strategyId: STRATEGY_ID }), {
+      respond: (body) =>
+        body.override
+          ? undefined
+          : HttpResponse.json(
+              { error: 'Checklist not met', unmetRules: ['Not the first impulsive bar'] },
+              { status: 409 }
+            ),
+    });
+    renderJournal();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Record entry' }));
+    await screen.findByRole('group', { name: 'Accepted above the 15m band' });
+    await userEvent.type(screen.getByLabelText('Fill price'), '210');
+    await answer('Accepted above the 15m band', 'Met');
+    await answer('Not the first impulsive bar', 'Not met');
+    await userEvent.click(screen.getByRole('button', { name: 'Save entry' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('You marked these rules as not met:');
+    expect(alert).toHaveTextContent('Not the first impulsive bar');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Record anyway' }));
+
+    expect(await screen.findByText('Open')).toBeInTheDocument();
+    expect(posted[1].body).toMatchObject({ ruleChecks: { r1: true, r2: false }, override: true });
+  });
+
+  it('leaves out rules not answered, so the server can ask for them', async () => {
+    serveStrategies();
+    const posted = serveJournal(plannedTrade({ strategyId: STRATEGY_ID }), {
+      respond: () =>
+        HttpResponse.json(
+          { error: 'Invalid entry', fieldErrors: { ruleChecks: ['Answer every rule on the checklist'] } },
+          { status: 400 }
+        ),
+    });
+    renderJournal();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Record entry' }));
+    await screen.findByRole('group', { name: 'Accepted above the 15m band' });
+    await userEvent.type(screen.getByLabelText('Fill price'), '210');
+    await answer('Accepted above the 15m band', 'Met');
+    await userEvent.click(screen.getByRole('button', { name: 'Save entry' }));
+
+    expect(await screen.findByText('Answer every rule on the checklist')).toBeInTheDocument();
+    expect(posted[0].body.ruleChecks).toEqual({ r1: true });
+  });
+});

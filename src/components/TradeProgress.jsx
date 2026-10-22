@@ -45,8 +45,9 @@ function StepForm({ trade, step, initial, toBody, submitLabel, onDone, children 
   const [form, setForm] = useState(initial);
   const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError] = useState(null);
-  // Circuit breakers that refused the step, until the trader overrides them.
-  const [breakers, setBreakers] = useState(null);
+  // What refused the step (tripped circuit breakers, rules not met) until the
+  // trader overrides it: { breakers?, unmetRules? }.
+  const [blocked, setBlocked] = useState(null);
   const [saving, setSaving] = useState(false);
 
   const errorFor = (name) => fieldErrors[name]?.[0];
@@ -66,7 +67,7 @@ function StepForm({ trade, step, initial, toBody, submitLabel, onDone, children 
   const send = async (extra = {}) => {
     setSaving(true);
     setError(null);
-    setBreakers(null);
+    setBlocked(null);
 
     try {
       const res = await fetch(`/api/trades/${trade.id}/${step}`, {
@@ -76,8 +77,8 @@ function StepForm({ trade, step, initial, toBody, submitLabel, onDone, children 
       });
       const json = await res.json().catch(() => ({}));
 
-      if (res.status === 409 && json.breakers) {
-        setBreakers(json.breakers);
+      if (res.status === 409 && (json.breakers || json.unmetRules)) {
+        setBlocked(json);
         return;
       }
 
@@ -113,14 +114,28 @@ function StepForm({ trade, step, initial, toBody, submitLabel, onDone, children 
           Cancel
         </button>
       </div>
-      {breakers && (
+      {blocked && (
         <div role="alert" className="space-y-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-          <p className="font-medium">A circuit breaker you set is tripped.</p>
-          <ul className="list-disc pl-4">
-            {breakers.map((b) => (
-              <li key={b.breaker}>{describeBreaker(b)}</li>
-            ))}
-          </ul>
+          {blocked.breakers && (
+            <>
+              <p className="font-medium">A circuit breaker you set is tripped.</p>
+              <ul className="list-disc pl-4">
+                {blocked.breakers.map((b) => (
+                  <li key={b.breaker}>{describeBreaker(b)}</li>
+                ))}
+              </ul>
+            </>
+          )}
+          {blocked.unmetRules && (
+            <>
+              <p className="font-medium">You marked these rules as not met:</p>
+              <ul className="list-disc pl-4">
+                {blocked.unmetRules.map((rule) => (
+                  <li key={rule}>{rule}</li>
+                ))}
+              </ul>
+            </>
+          )}
           <button
             type="button"
             onClick={() => send({ override: true })}
@@ -140,17 +155,62 @@ function StepForm({ trade, step, initial, toBody, submitLabel, onDone, children 
   );
 }
 
+// The plan's strategy rules, each answered met or not met before entering.
+function Checklist({ trade, rules, form, setForm, error }) {
+  const answer = (ruleId, met) =>
+    setForm((current) => ({ ...current, ruleChecks: { ...current.ruleChecks, [ruleId]: met } }));
+
+  return (
+    <div className="col-span-full space-y-1.5">
+      <p className="text-xs font-medium text-gray-500">Checklist</p>
+      {rules.map((rule) => (
+        <fieldset key={rule.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+          <legend className="sr-only">{rule.text}</legend>
+          <span aria-hidden="true" className="text-gray-800">
+            {rule.text}
+          </span>
+          <div className="flex gap-3 text-gray-700">
+            {[
+              [true, 'Met'],
+              [false, 'Not met'],
+            ].map(([met, label]) => (
+              <label key={label} className="flex items-center gap-1">
+                <input
+                  type="radio"
+                  name={`${trade.id}-rule-${rule.id}`}
+                  checked={form.ruleChecks[rule.id] === met}
+                  onChange={() => answer(rule.id, met)}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      ))}
+      {error && <p className="text-xs text-red-700">{error}</p>}
+    </div>
+  );
+}
+
 function EntryForm({ trade, onDone }) {
+  const { data } = useSWR(trade.strategyId ? '/api/strategies' : null, fetchJson, { revalidateOnFocus: false });
+  const rules = data?.strategies.find((s) => s.id === trade.strategyId)?.rules ?? [];
+
   return (
     <StepForm
       trade={trade}
       step="entry"
       submitLabel="Save entry"
-      initial={{ entryPrice: '', openedAt: toLocalInput(new Date()) }}
-      toBody={(form) => ({ entryPrice: toNumber(form.entryPrice), openedAt: toIso(form.openedAt) })}
+      initial={{ entryPrice: '', openedAt: toLocalInput(new Date()), ruleChecks: {} }}
+      toBody={(form) => ({
+        entryPrice: toNumber(form.entryPrice),
+        openedAt: toIso(form.openedAt),
+        // Only rules answered; the server asks about any left out.
+        ...(rules.length > 0 && { ruleChecks: form.ruleChecks }),
+      })}
       onDone={onDone}
     >
-      {({ fieldProps, errorFor }) => (
+      {({ fieldProps, errorFor, form, setForm }) => (
         <>
           <Field id={`${trade.id}-entryPrice`} label="Fill price" error={errorFor('entryPrice')}>
             <input {...fieldProps('entryPrice')} type="number" step="any" required className={inputClass} />
@@ -158,6 +218,9 @@ function EntryForm({ trade, onDone }) {
           <Field id={`${trade.id}-openedAt`} label="Fill time" error={errorFor('openedAt')}>
             <input {...fieldProps('openedAt')} type="datetime-local" className={inputClass} />
           </Field>
+          {rules.length > 0 && (
+            <Checklist trade={trade} rules={rules} form={form} setForm={setForm} error={errorFor('ruleChecks')} />
+          )}
         </>
       )}
     </StepForm>
