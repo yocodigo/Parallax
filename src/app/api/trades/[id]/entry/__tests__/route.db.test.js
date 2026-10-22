@@ -1,7 +1,8 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getDb } from '@/db';
-import { trades } from '@/db/schema';
+import { tradeRuleChecks, trades } from '@/db/schema';
 import { saveBreakerSettings } from '@/db/settings';
+import { createStrategy } from '@/db/strategies';
 import { resetDb } from '@/db/testing';
 import { DEFAULT_BREAKER_SETTINGS } from '@/lib/circuitBreakerSettings';
 import { POST } from '../route';
@@ -124,5 +125,65 @@ describe('POST /api/trades/[id]/entry with circuit breakers', () => {
     const trade = await insertTrade();
 
     expect((await post(trade.id, entry)).status).toBe(200);
+  });
+});
+
+describe('POST /api/trades/[id]/entry with a strategy checklist', () => {
+  async function tradeWithStrategy() {
+    const strategy = await createStrategy(getDb(), {
+      name: '15m BB acceptance',
+      description: null,
+      rules: [
+        { text: 'Accepted above the 15m band', kind: 'edge' },
+        { text: 'Not the first impulsive bar', kind: 'edge' },
+      ],
+    });
+    const trade = await insertTrade({ strategyId: strategy.id });
+    const [accepted, notFirstBar] = strategy.rules;
+    return { trade, accepted, notFirstBar };
+  }
+
+  const isOpen = async (id) => (await getDb().select().from(trades)).find((t) => t.id === id).openedAt !== null;
+
+  it('needs every rule answered', async () => {
+    const { trade, accepted } = await tradeWithStrategy();
+
+    const response = await post(trade.id, { ...entry, ruleChecks: { [accepted.id]: true } });
+
+    expect(response.status).toBe(400);
+    expect((await response.json()).fieldErrors.ruleChecks).toEqual(['Answer every rule on the checklist']);
+  });
+
+  it('records the entry and the answers when every rule is met', async () => {
+    const { trade, accepted, notFirstBar } = await tradeWithStrategy();
+
+    const response = await post(trade.id, { ...entry, ruleChecks: { [accepted.id]: true, [notFirstBar.id]: true } });
+
+    expect(response.status).toBe(200);
+    expect(await getDb().select().from(tradeRuleChecks)).toHaveLength(2);
+  });
+
+  it('asks for confirmation when a rule is not met, naming it', async () => {
+    const { trade, accepted, notFirstBar } = await tradeWithStrategy();
+
+    const response = await post(trade.id, { ...entry, ruleChecks: { [accepted.id]: true, [notFirstBar.id]: false } });
+
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: 'Checklist not met', unmetRules: ['Not the first impulsive bar'] });
+    expect(await isOpen(trade.id)).toBe(false);
+  });
+
+  it('records an entry made against the checklist when overridden, with the answers as given', async () => {
+    const { trade, accepted, notFirstBar } = await tradeWithStrategy();
+
+    const response = await post(trade.id, {
+      ...entry,
+      ruleChecks: { [accepted.id]: true, [notFirstBar.id]: false },
+      override: true,
+    });
+
+    expect(response.status).toBe(200);
+    const checks = await getDb().select().from(tradeRuleChecks);
+    expect(checks.find((c) => c.ruleText === 'Not the first impulsive bar').met).toBe(false);
   });
 });
