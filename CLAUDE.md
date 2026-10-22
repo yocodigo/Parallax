@@ -41,6 +41,16 @@ Vitest, JavaScript (not TypeScript).
   pass the test database.
 - `src/db/index.js`: `getDb()`, created lazily (builds need no database) and cached on `globalThis`.
 - `src/app/api/*/route.js`: route handlers. Invalid input returns 400 with `{ error, fieldErrors }`.
+  Every handler is wrapped in `withErrorLogging(route, handler)`, so an uncaught error is logged and
+  answered with 500 `{ error, requestId }`, never Next's default error page.
+- Errors and logging (`src/lib/log.js`): log server errors with `logError(message, { route, requestId,
+  error, ... })`, never bare `console.error`. It writes one JSON line, with the error's stack and
+  `cause`. Every logged error response includes `requestId(request)` (Vercel's `x-vercel-id`, or a
+  random id locally); the UI shows it as "(Reference: …)" via `apiErrorMessage` in `fetchJson.js`.
+  Upstream error details go to the log, never to the response. `src/instrumentation.js`
+  (`onRequestError`) logs errors outside route handlers, such as page renders, with React's `digest`;
+  `app/error.js` and `app/global-error.js` show that digest as the reference. Errors in client
+  components only reach the browser console for now.
 - `src/components/`: client components. They load data with SWR using `fetchJson` from `src/lib/`.
   Forms post to the API and leave validation to the server, showing its `fieldErrors` under each
   input (`Field.jsx`); after saving they call `mutate('/api/journal')` to reload the list.
@@ -48,6 +58,8 @@ Vitest, JavaScript (not TypeScript).
   - Database tests are named `*.db.test.js`, run against the `parallax_test` database (migrated once
     per run, tables truncated before each test), one file at a time (`fileParallelism: false`).
   - Route tests call the handlers directly and swap in the test database with `vi.mock('@/db', ...)`.
+    To check what was logged, use `captureErrorLogs()` from `src/mocks/logs.js`; assert the logged
+    `requestId` matches the response's.
   - Component tests use Testing Library and MSW; see `PriceChart.integration.test.jsx`.
   - MSW starts in `vitest.setup.js`, which only the unit project loads. A database test that also
     mocks an outside API starts its own server; see `weekly-review/__tests__/route.db.test.js`.
@@ -115,3 +127,8 @@ Vitest, JavaScript (not TypeScript).
   Node's `fetch`. Stub both with Node's, as `VoiceNote.test.jsx` does.
 - ESLint stays on 9: `eslint-config-next` 16 crashes on ESLint 10. Next 16 removed `next lint`,
   so the lint script runs `eslint .`.
+- `eslint-config-next` turns `no-undef` off (it expects TypeScript); `eslint.config.mjs` turns it back
+  on with browser and Node globals from `globals`. Tests import `describe`, `it`, etc. from `vitest`
+  rather than relying on Vitest's globals.
+- Next 16 error boundaries get `{ error, retry }`; `retry()` refetches and re-renders. `reset()` is the
+  older, rarely wanted variant.
