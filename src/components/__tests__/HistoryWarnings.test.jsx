@@ -10,6 +10,7 @@ import PlanForm from '../PlanForm';
 function serveWarnings(warnings = []) {
   const queries = [];
   server.use(
+    http.get('*/api/strategies', () => HttpResponse.json({ strategies: [] })),
     http.get('*/api/insights/warnings', ({ request }) => {
       queries.push(Object.fromEntries(new URL(request.url).searchParams));
       return HttpResponse.json({ warnings });

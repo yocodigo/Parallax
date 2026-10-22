@@ -72,6 +72,7 @@ function serveVoiceApis({
     http.get('*/api/journal', () => HttpResponse.json({ entries })),
     // A drafted plan opens the plan form, which asks for history warnings.
     http.get('*/api/insights/warnings', () => HttpResponse.json({ warnings: [] })),
+    http.get('*/api/strategies', () => HttpResponse.json({ strategies: [] })),
     http.post('*/api/voice/transcribe', async ({ request }) => {
       const form = await request.formData();
       sent.transcribe.push({ audio: form.get('audio'), keyterms: form.getAll('keyterms') });

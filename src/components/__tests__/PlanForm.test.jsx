@@ -22,8 +22,16 @@ function capturePlanRequests(response = () => HttpResponse.json({}, { status: 20
 
 // The form asks for warnings from the trader's history as it's filled in;
 // these tests are about saving, so the history has none.
+const STRATEGY_ID = '6f1c2a4e-0000-4000-8000-000000000009';
+
+// The form also loads the trader's strategies.
 beforeEach(() => {
-  server.use(http.get('*/api/insights/warnings', () => HttpResponse.json({ warnings: [] })));
+  server.use(
+    http.get('*/api/insights/warnings', () => HttpResponse.json({ warnings: [] })),
+    http.get('*/api/strategies', () =>
+      HttpResponse.json({ strategies: [{ id: STRATEGY_ID, name: '15m BB acceptance', description: null, rules: [] }] })
+    )
+  );
 });
 
 function renderForm(children = <PlanForm />) {
@@ -107,6 +115,30 @@ describe('PlanForm', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Notes cannot be empty')).toBeInTheDocument();
     expect(screen.getByLabelText('Initial stop')).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('sends the strategy the plan follows', async () => {
+    const bodies = capturePlanRequests();
+    renderForm();
+
+    await screen.findByRole('option', { name: '15m BB acceptance' });
+    await userEvent.selectOptions(screen.getByLabelText('Strategy'), '15m BB acceptance');
+    await fillRequiredFields();
+    await save();
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0].plan.strategyId).toBe(STRATEGY_ID);
+  });
+
+  it('sends no strategy when none is chosen', async () => {
+    const bodies = capturePlanRequests();
+    renderForm();
+
+    await fillRequiredFields();
+    await save();
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0].plan).not.toHaveProperty('strategyId');
   });
 
   it('shows the error when the plan cannot be saved', async () => {

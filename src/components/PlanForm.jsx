@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useSWRConfig } from 'swr';
-import { apiErrorMessage } from '@/lib/fetchJson';
+import useSWR, { useSWRConfig } from 'swr';
+import { apiErrorMessage, fetchJson } from '@/lib/fetchJson';
 import { EMOTION_LABELS, EMOTIONS } from '@/lib/journalEntry';
 import Field, { inputClass } from './Field';
 import HistoryWarnings from './HistoryWarnings';
@@ -18,6 +18,7 @@ const EMPTY_FORM = {
   target: '',
   notes: '',
   emotion: '',
+  strategyId: '',
 };
 
 const NO_ERRORS = { plan: {}, entry: {} };
@@ -41,6 +42,8 @@ function formFromDraft({ plan = {}, entry = {} }) {
 // `onSaved` receives the saved { trade, entry }.
 export default function PlanForm({ draft, draftErrors = NO_ERRORS, onSaved }) {
   const { mutate } = useSWRConfig();
+  const { data: strategyData } = useSWR('/api/strategies', fetchJson, { revalidateOnFocus: false });
+  const strategies = strategyData?.strategies ?? [];
   const [form, setForm] = useState(() => (draft ? formFromDraft(draft) : EMPTY_FORM));
   const [fieldErrors, setFieldErrors] = useState({ ...NO_ERRORS, ...draftErrors });
   const [error, setError] = useState(null);
@@ -79,6 +82,7 @@ export default function PlanForm({ draft, draftErrors = NO_ERRORS, onSaved }) {
         plannedEntry: toNumber(form.plannedEntry),
         initialStop: toNumber(form.initialStop),
         target: toNumber(form.target),
+        strategyId: orUndefined(form.strategyId),
       },
       entry: { notes: form.notes, emotion: orUndefined(form.emotion) },
     };
@@ -119,6 +123,17 @@ export default function PlanForm({ draft, draftErrors = NO_ERRORS, onSaved }) {
             <option value="paper">Paper</option>
             <option value="live">Live</option>
             <option value="backtest">Backtest</option>
+          </select>
+        </Field>
+
+        <Field id="plan-strategyId" label="Strategy" error={errorFor('plan', 'strategyId')}>
+          <select {...fieldProps('plan', 'strategyId')} className={inputClass}>
+            <option value="">None</option>
+            {strategies.map((strategy) => (
+              <option key={strategy.id} value={strategy.id}>
+                {strategy.name}
+              </option>
+            ))}
           </select>
         </Field>
 
