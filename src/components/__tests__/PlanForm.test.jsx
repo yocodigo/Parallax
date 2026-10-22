@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -19,6 +19,12 @@ function capturePlanRequests(response = () => HttpResponse.json({}, { status: 20
   );
   return bodies;
 }
+
+// The form asks for warnings from the trader's history as it's filled in;
+// these tests are about saving, so the history has none.
+beforeEach(() => {
+  server.use(http.get('*/api/insights/warnings', () => HttpResponse.json({ warnings: [] })));
+});
 
 function renderForm(children = <PlanForm />) {
   return render(

@@ -5,6 +5,7 @@ import { useSWRConfig } from 'swr';
 import { apiErrorMessage } from '@/lib/fetchJson';
 import { EMOTION_LABELS, EMOTIONS } from '@/lib/journalEntry';
 import Field, { inputClass } from './Field';
+import HistoryWarnings from './HistoryWarnings';
 
 const EMPTY_FORM = {
   mode: 'paper',
@@ -156,6 +157,13 @@ export default function PlanForm({ draft, draftErrors = NO_ERRORS, onSaved }) {
           <input {...fieldProps('plan', 'target')} type="number" step="any" placeholder="Optional" className={inputClass} />
         </Field>
       </div>
+
+      <HistoryWarnings
+        mode={form.mode}
+        direction={form.direction}
+        assetClass={form.assetClass}
+        symbol={form.symbol}
+      />
 
       <Field id="plan-notes" label="Notes" error={errorFor('entry', 'notes')}>
         <textarea
