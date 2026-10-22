@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { NextResponse } from 'next/server';
 import { getDb } from '@/db';
 import { listJournalEntries } from '@/db/journal';
-import { logError, requestId } from '@/lib/log';
+import { logError, requestId, withErrorLogging } from '@/lib/log';
 import { clientKey, rateLimit } from '@/lib/rateLimit';
 import { formatEntries, reviewWindowStart } from '@/lib/weeklyReview';
 
@@ -34,7 +34,7 @@ const failed = (request, details) => {
 
 // Returns { review, entryCount }: the review as plain text, or a null review
 // when nothing was logged in the past seven days.
-export async function POST(request) {
+export const POST = withErrorLogging('/api/weekly-review', async (request) => {
   // Each review costs money, so it shares the voice routes' budget for paid calls.
   const limit = rateLimit(`voice:${clientKey(request)}`);
   if (!limit.ok) {
@@ -88,4 +88,4 @@ export async function POST(request) {
   }
 
   return NextResponse.json({ review, entryCount: entries.length });
-}
+});

@@ -3,13 +3,13 @@ import { reshapeBars, summarize } from '@/lib/bars';
 import { parseBarsParams } from '@/lib/params';
 import { correlationMatrix } from '@/lib/correlation';
 import { rateLimit, clientKey } from '@/lib/rateLimit';
-import { logError, requestId } from '@/lib/log';
+import { logError, requestId, withErrorLogging } from '@/lib/log';
 
 const DATA_URL = 'https://data.alpaca.markets/v2/stocks/bars';
 
 // Pull daily bars for the requested symbols and reshape them into a single
 // time-ordered series suitable for charting.
-export async function GET(request) {
+export const GET = withErrorLogging('/api/bars', async (request) => {
   const keyId = process.env.ALPACA_KEY_ID;
   const secretKey = process.env.ALPACA_SECRET_KEY;
   const limit = rateLimit(clientKey(request));
@@ -112,4 +112,4 @@ export async function GET(request) {
       { status: 502 }
     );
   }
-}
+});

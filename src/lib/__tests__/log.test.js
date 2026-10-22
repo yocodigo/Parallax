@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { logError, requestId } from '../log';
+import { logError, requestId, withErrorLogging } from '../log';
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -70,5 +70,49 @@ describe('requestId', () => {
 
     expect(requestId(request)).toMatch(/^[0-9a-f-]{36}$/);
     expect(requestId(request)).not.toBe(requestId(request));
+  });
+});
+
+describe('withErrorLogging', () => {
+  it('passes through what the handler returns', async () => {
+    const handler = withErrorLogging('/api/test', async () => Response.json({ ok: true }));
+
+    const response = await handler(new Request('http://localhost/api/test'));
+
+    expect(await response.json()).toEqual({ ok: true });
+  });
+
+  it('logs an uncaught error and answers 500 with the request id', async () => {
+    const logged = captureLog();
+    const handler = withErrorLogging('/api/test', async () => {
+      throw new Error('connection terminated');
+    });
+
+    const response = await handler(
+      new Request('http://localhost/api/test', { headers: { 'x-vercel-id': 'iad1::abc123' } })
+    );
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({
+      error: 'Something went wrong. Try again.',
+      requestId: 'iad1::abc123',
+    });
+    expect(logged()).toMatchObject({
+      message: 'Unhandled error',
+      route: '/api/test',
+      requestId: 'iad1::abc123',
+      error: { message: 'connection terminated' },
+    });
+  });
+
+  it("doesn't pass the error's details to the client", async () => {
+    captureLog();
+    const handler = withErrorLogging('/api/test', async () => {
+      throw new Error('password authentication failed for user "parallax"');
+    });
+
+    const response = await handler(new Request('http://localhost/api/test'));
+
+    expect(JSON.stringify(await response.json())).not.toContain('password');
   });
 });

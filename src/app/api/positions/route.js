@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { mapPositions } from '@/lib/positions';
-import { logError, requestId } from '@/lib/log';
+import { logError, requestId, withErrorLogging } from '@/lib/log';
 import { concentration } from '@/lib/risk';
 
 // Note: positions live on the trading host, NOT the market-data host.
@@ -8,7 +8,7 @@ const TRADING_HOST = process.env.ALPACA_TRADING_HOST || 'https://paper-api.alpac
 const TRADING_URL = `${TRADING_HOST}/v2/positions`;
 
 // Fetch the account's open positions and derive concentration metrics.
-export async function GET(request) {
+export const GET = withErrorLogging('/api/positions', async (request) => {
   const keyId = process.env.ALPACA_KEY_ID;
   const secretKey = process.env.ALPACA_SECRET_KEY;
 
@@ -57,4 +57,4 @@ export async function GET(request) {
       { status: 502 }
     );
   }
-}
+});

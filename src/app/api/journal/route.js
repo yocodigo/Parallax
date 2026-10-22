@@ -3,16 +3,17 @@ import { z } from 'zod';
 import { getDb } from '@/db';
 import { addJournalEntry, listJournalEntries } from '@/db/journal';
 import { parseJournalEntry } from '@/lib/journalEntry';
+import { withErrorLogging } from '@/lib/log';
 
 // The journal is always read fresh from the database, never prerendered.
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export const GET = withErrorLogging('/api/journal', async () => {
   const entries = await listJournalEntries(getDb());
   return NextResponse.json({ entries });
-}
+});
 
-export async function POST(request) {
+export const POST = withErrorLogging('/api/journal', async (request) => {
   const body = await request.json().catch(() => null);
   const parsed = parseJournalEntry(body);
 
@@ -25,4 +26,4 @@ export async function POST(request) {
 
   const entry = await addJournalEntry(getDb(), parsed.data);
   return NextResponse.json({ entry }, { status: 201 });
-}
+});

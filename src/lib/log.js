@@ -30,3 +30,18 @@ export function logError(message, { error, ...fields } = {}) {
 export function requestId(request) {
   return request.headers.get('x-vercel-id') ?? crypto.randomUUID();
 }
+
+// Wraps a route handler so an error nobody caught (the database is down, a
+// bug in our own code) is logged and answered with JSON the forms can show,
+// instead of Next's default error page. The details stay in the log.
+export function withErrorLogging(route, handler) {
+  return async (request, context) => {
+    try {
+      return await handler(request, context);
+    } catch (error) {
+      const id = requestId(request);
+      logError('Unhandled error', { route, requestId: id, error });
+      return Response.json({ error: 'Something went wrong. Try again.', requestId: id }, { status: 500 });
+    }
+  };
+}

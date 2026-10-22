@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { logError, requestId } from '@/lib/log';
+import { logError, requestId, withErrorLogging } from '@/lib/log';
 import { clientKey, rateLimit } from '@/lib/rateLimit';
 import { parseDraftRequest } from '@/lib/voice';
 import { draftOutputSchema, toDraft } from '@/lib/voiceDraft';
@@ -36,7 +36,7 @@ const failed = (request, details) => {
 
 // Body: { transcript }. Returns { draft, fieldErrors }: values to prefill the
 // plan or review form, and what they would fail on if saved as-is.
-export async function POST(request) {
+export const POST = withErrorLogging('/api/voice/draft', async (request) => {
   // Each draft costs money, so voice routes get their own budget.
   const limit = rateLimit(`voice:${clientKey(request)}`);
   if (!limit.ok) {
@@ -86,4 +86,4 @@ export async function POST(request) {
   }
 
   return NextResponse.json(toDraft(response.parsed_output));
-}
+});

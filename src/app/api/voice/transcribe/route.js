@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { logError, requestId } from '@/lib/log';
+import { logError, requestId, withErrorLogging } from '@/lib/log';
 import { clientKey, rateLimit } from '@/lib/rateLimit';
 import { parseTranscribeForm } from '@/lib/voice';
 
@@ -8,7 +8,7 @@ const SCRIBE_URL = 'https://api.elevenlabs.io/v1/speech-to-text';
 
 // Body: multipart form with `audio` and one `keyterms` field per ticker.
 // Returns { text }, the raw transcript.
-export async function POST(request) {
+export const POST = withErrorLogging('/api/voice/transcribe', async (request) => {
   // Each transcription costs money, so voice routes get their own budget.
   const limit = rateLimit(`voice:${clientKey(request)}`);
   if (!limit.ok) {
@@ -63,4 +63,4 @@ export async function POST(request) {
 
   const { text } = await res.json();
   return NextResponse.json({ text });
-}
+});

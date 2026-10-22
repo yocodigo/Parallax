@@ -1,6 +1,7 @@
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getDb } from '@/db';
 import { resetDb } from '@/db/testing';
+import { captureErrorLogs } from '@/mocks/logs';
 import { GET, POST } from '../route';
 
 // Swap the app's database for the test database. Everything else is real.
@@ -13,7 +14,10 @@ vi.mock('@/db', async () => {
 const post = (body) =>
   POST(new Request('http://localhost/api/journal', { method: 'POST', body: JSON.stringify(body) }));
 
+const get = () => GET(new Request('http://localhost/api/journal'));
+
 beforeEach(() => resetDb(getDb()));
+afterEach(() => vi.restoreAllMocks());
 afterAll(() => getDb().$client.end());
 
 describe('POST /api/journal', () => {
@@ -51,10 +55,27 @@ describe('GET /api/journal', () => {
     await post({ kind: 'review', notes: 'First' });
     await post({ kind: 'review', notes: 'Second' });
 
-    const response = await GET();
+    const response = await get();
 
     expect(response.status).toBe(200);
     const { entries } = await response.json();
     expect(entries.map((entry) => entry.notes).sort()).toEqual(['First', 'Second']);
+  });
+});
+describe('when the database fails', () => {
+  it('logs the error and answers with JSON and a request id', async () => {
+    vi.spyOn(getDb(), 'insert').mockImplementation(() => {
+      throw new Error('connection terminated');
+    });
+    const logs = captureErrorLogs();
+
+    const response = await post({ kind: 'review', notes: 'Held past my target.' });
+
+    expect(response.status).toBe(500);
+    const body = await response.json();
+    expect(body).toEqual({ error: 'Something went wrong. Try again.', requestId: expect.any(String) });
+    expect(logs()).toEqual([
+      expect.objectContaining({ route: '/api/journal', requestId: body.requestId }),
+    ]);
   });
 });

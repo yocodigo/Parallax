@@ -4,11 +4,12 @@ import { getDb } from '@/db';
 import { savePlan } from '@/db/journal';
 import { parseJournalEntry } from '@/lib/journalEntry';
 import { parseTradePlan } from '@/lib/tradePlan';
+import { withErrorLogging } from '@/lib/log';
 
 const fieldErrors = (result) => (result.success ? {} : z.flattenError(result.error).fieldErrors);
 
 // Body: { plan: { ...trade plan }, entry: { notes, emotion?, mistakes? } }
-export async function POST(request) {
+export const POST = withErrorLogging('/api/plans', async (request) => {
   const body = await request.json().catch(() => null);
   const plan = parseTradePlan(body?.plan);
   const entry = parseJournalEntry({ ...body?.entry, kind: 'plan' });
@@ -22,4 +23,4 @@ export async function POST(request) {
 
   const saved = await savePlan(getDb(), { plan: plan.data, entry: entry.data });
   return NextResponse.json(saved, { status: 201 });
-}
+});

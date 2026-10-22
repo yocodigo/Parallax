@@ -1,7 +1,8 @@
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getDb } from '@/db';
 import { trades } from '@/db/schema';
 import { resetDb } from '@/db/testing';
+import { captureErrorLogs } from '@/mocks/logs';
 import { POST } from '../route';
 
 // Swap the app's database for the test database. Everything else is real.
@@ -26,6 +27,7 @@ const post = (body) =>
   POST(new Request('http://localhost/api/plans', { method: 'POST', body: JSON.stringify(body) }));
 
 beforeEach(() => resetDb(getDb()));
+afterEach(() => vi.restoreAllMocks());
 afterAll(() => getDb().$client.end());
 
 describe('POST /api/plans', () => {
@@ -53,5 +55,18 @@ describe('POST /api/plans', () => {
     expect(response.status).toBe(400);
     const body = await response.json();
     expect(body.fieldErrors.entry).toHaveProperty('notes');
+  });
+});
+describe('when the database fails', () => {
+  it('logs the error and answers with JSON and a request id', async () => {
+    vi.spyOn(getDb(), 'transaction').mockRejectedValue(new Error('connection terminated'));
+    const logs = captureErrorLogs();
+
+    const response = await post({ plan, entry: { notes: 'Bull flag on the daily.' } });
+
+    expect(response.status).toBe(500);
+    const body = await response.json();
+    expect(body.requestId).toEqual(expect.any(String));
+    expect(logs()).toEqual([expect.objectContaining({ route: '/api/plans', requestId: body.requestId })]);
   });
 });
