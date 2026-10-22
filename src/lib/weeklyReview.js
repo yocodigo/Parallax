@@ -1,4 +1,5 @@
 import { EMOTION_LABELS, MISTAKE_LABELS } from './journalEntry';
+import { tradeStatus } from './tradeMetrics';
 
 const REVIEW_DAYS = 7;
 
@@ -16,9 +17,6 @@ const dayFormat = new Intl.DateTimeFormat('en-US', {
   day: 'numeric',
 });
 
-// Status is derived from the timestamps, never stored.
-const statusOf = (trade) => (trade.closedAt ? 'closed' : trade.openedAt ? 'open' : 'planned');
-
 function describeTrade(trade) {
   const levels = [
     ['Planned entry', trade.plannedEntry],
@@ -31,7 +29,7 @@ function describeTrade(trade) {
     .map(([label, value]) => `${label} ${value}`);
 
   const { mode, direction, quantity, symbol, assetClass } = trade;
-  return `${mode} ${direction} ${quantity} ${symbol} ${assetClass}, ${statusOf(trade)}. ${levels.join(', ')}.`;
+  return `${mode} ${direction} ${quantity} ${symbol} ${assetClass}, ${tradeStatus(trade)}. ${levels.join(', ')}.`;
 }
 
 function formatEntry(entry) {
