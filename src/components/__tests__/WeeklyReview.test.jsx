@@ -52,14 +52,19 @@ describe('WeeklyReview', () => {
 
   it("shows the server's error", async () => {
     serveReview(() =>
-      HttpResponse.json({ error: "Couldn't write this week's review. Try again." }, { status: 502 })
+      HttpResponse.json(
+        { error: "Couldn't write this week's review. Try again.", requestId: 'req-123' },
+        { status: 502 }
+      )
     );
     const user = userEvent.setup();
     render(<WeeklyReview />);
 
     await user.click(screen.getByRole('button', { name: /review my week/i }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/couldn't write this week's review/i);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      "Couldn't write this week's review. Try again. (Reference: req-123)"
+    );
   });
 
   it('disables the button while the review is being written', async () => {

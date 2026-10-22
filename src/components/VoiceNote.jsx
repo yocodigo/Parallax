@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import useSWR from 'swr';
-import { fetchJson } from '@/lib/fetchJson';
+import { apiErrorMessage, fetchJson } from '@/lib/fetchJson';
 import { MAX_KEYTERMS } from '@/lib/voice';
 import { inputClass } from './Field';
 import PlanForm from './PlanForm';
@@ -26,7 +26,7 @@ const fileName = (mimeType) => (mimeType.includes('mp4') ? 'voice-note.mp4' : 'v
 async function postJson(url, options) {
   const res = await fetch(url, options);
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json.error || 'Request failed');
+  if (!res.ok) throw new Error(apiErrorMessage(json, 'Request failed'));
   return json;
 }
 

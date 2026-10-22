@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
-import { fetchJson } from '@/lib/fetchJson';
+import { apiErrorMessage, fetchJson } from '@/lib/fetchJson';
 import { EMOTION_LABELS, EMOTIONS, MISTAKE_LABELS, MISTAKES } from '@/lib/journalEntry';
 import Field, { inputClass } from './Field';
 import { capitalize, describeTrade } from './JournalEntries';
@@ -95,7 +95,7 @@ export default function ReviewForm({ draft, draftErrors, onSaved }) {
       const json = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        setError(json.error || 'Could not save the review');
+        setError(apiErrorMessage(json, 'Could not save the review'));
         setFieldErrors(json.fieldErrors || {});
         return;
       }

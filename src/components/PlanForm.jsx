@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useSWRConfig } from 'swr';
+import { apiErrorMessage } from '@/lib/fetchJson';
 import { EMOTION_LABELS, EMOTIONS } from '@/lib/journalEntry';
 import Field, { inputClass } from './Field';
 
@@ -90,7 +91,7 @@ export default function PlanForm({ draft, draftErrors = NO_ERRORS, onSaved }) {
       const json = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        setError(json.error || 'Could not save the plan');
+        setError(apiErrorMessage(json, 'Could not save the plan'));
         setFieldErrors({ ...NO_ERRORS, ...json.fieldErrors });
         return;
       }

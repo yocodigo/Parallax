@@ -104,13 +104,15 @@ describe('PlanForm', () => {
   });
 
   it('shows the error when the plan cannot be saved', async () => {
-    capturePlanRequests(() => HttpResponse.json({ error: 'Database unavailable' }, { status: 500 }));
+    capturePlanRequests(() =>
+      HttpResponse.json({ error: 'Database unavailable', requestId: 'req-123' }, { status: 500 })
+    );
     renderForm();
 
     await fillRequiredFields();
     await save();
 
-    expect(await screen.findByText('Database unavailable')).toBeInTheDocument();
+    expect(await screen.findByText('Database unavailable (Reference: req-123)')).toBeInTheDocument();
   });
 
   it('adds the saved plan to the journal and clears the form', async () => {

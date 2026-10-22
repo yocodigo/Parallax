@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { apiErrorMessage } from '@/lib/fetchJson';
 
 const buttonClass =
   'rounded-md bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50';
@@ -21,7 +22,7 @@ export default function WeeklyReview() {
       const json = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        setError(json.error || "Couldn't write this week's review");
+        setError(apiErrorMessage(json, "Couldn't write this week's review"));
         return;
       }
 

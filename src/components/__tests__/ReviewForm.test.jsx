@@ -143,13 +143,15 @@ describe('ReviewForm', () => {
 
   it('shows the error when the review cannot be saved', async () => {
     serveJournal([]);
-    captureReviews(() => HttpResponse.json({ error: 'Database unavailable' }, { status: 500 }));
+    captureReviews(() =>
+      HttpResponse.json({ error: 'Database unavailable', requestId: 'req-123' }, { status: 500 })
+    );
     renderForm();
 
     await userEvent.type(screen.getByLabelText('Notes'), 'Good discipline today.');
     await save();
 
-    expect(await screen.findByText('Database unavailable')).toBeInTheDocument();
+    expect(await screen.findByText('Database unavailable (Reference: req-123)')).toBeInTheDocument();
   });
 
   it('adds the saved review to the journal and clears the form', async () => {

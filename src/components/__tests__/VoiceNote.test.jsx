@@ -190,13 +190,18 @@ describe('VoiceNote', () => {
   it('shows the error when transcription fails', async () => {
     serveVoiceApis({
       transcribe: () =>
-        HttpResponse.json({ error: 'Transcription failed. Try again.' }, { status: 502 }),
+        HttpResponse.json(
+          { error: 'Transcription failed. Try again.', requestId: 'req-123' },
+          { status: 502 }
+        ),
     });
     renderVoiceNote();
 
     await recordNote();
 
-    expect(await screen.findByText('Transcription failed. Try again.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Transcription failed. Try again. (Reference: req-123)')
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Record voice note' })).toBeInTheDocument();
   });
 

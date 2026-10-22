@@ -101,9 +101,11 @@ describe('JournalEntries', () => {
   });
 
   it('shows the error when the journal cannot be loaded', async () => {
-    serveJournal(HttpResponse.json({ error: 'Database unavailable' }, { status: 500 }));
+    serveJournal(
+      HttpResponse.json({ error: 'Database unavailable', requestId: 'req-123' }, { status: 500 })
+    );
     renderEntries();
 
-    expect(await screen.findByText('Database unavailable')).toBeInTheDocument();
+    expect(await screen.findByText('Database unavailable (Reference: req-123)')).toBeInTheDocument();
   });
 });
