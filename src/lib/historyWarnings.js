@@ -1,0 +1,68 @@
+import { rMultiple } from './tradeMetrics';
+
+// A warning needs enough similar trades to mean something, a result bad
+// enough to be worth interrupting for, and recent history: a habit fixed
+// long ago shouldn't keep warning.
+const MIN_TRADES = 5;
+const WARN_AT_R = -0.3;
+const RECENT_TRADES = 20;
+
+const nyTime = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/New_York',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+});
+
+// Which part of the regular New York session a moment falls in: the first 30
+// minutes ('open'), the last 30 ('close'), 'midday' between, or null outside
+// 9:30 AM to 4:00 PM.
+export function sessionPart(date) {
+  const parts = Object.fromEntries(nyTime.formatToParts(date).map(({ type, value }) => [type, value]));
+  const minutes = Number(parts.hour) * 60 + Number(parts.minute);
+  if (minutes < 9 * 60 + 30 || minutes >= 16 * 60) return null;
+  if (minutes < 10 * 60) return 'open';
+  if (minutes >= 15 * 60 + 30) return 'close';
+  return 'midday';
+}
+
+// The average R of the most recent closed trades matching `matches`, if
+// there are enough of them and it's bad enough to warn about.
+function check(trades, matches) {
+  const rs = trades
+    .filter(matches)
+    .slice(0, RECENT_TRADES)
+    .map(rMultiple)
+    .filter((r) => r !== null);
+  if (rs.length < MIN_TRADES) return null;
+
+  const averageR = rs.reduce((sum, r) => sum + r, 0) / rs.length;
+  if (averageR > WARN_AT_R) return null;
+  // Rounded for display; float noise like -0.4000000000000001 is not news.
+  return { trades: rs.length, averageR: Math.round(averageR * 100) / 100 };
+}
+
+// Warnings for a plan from the trader's own closed trades: the same symbol,
+// the same direction and asset class, and entries at the same time of day as
+// `now`. Each is { rule, ...what matched, trades, averageR }, worst first.
+export function historyWarnings(plan, closedTrades, { now = new Date() } = {}) {
+  const trades = [...closedTrades].sort((a, b) => b.closedAt - a.closedAt);
+  const warnings = [];
+
+  if (plan.symbol) {
+    const symbol = plan.symbol.toUpperCase();
+    const found = check(trades, (t) => t.symbol === symbol);
+    if (found) warnings.push({ rule: 'symbol', symbol, ...found });
+  }
+
+  const side = check(trades, (t) => t.direction === plan.direction && t.assetClass === plan.assetClass);
+  if (side) warnings.push({ rule: 'side', direction: plan.direction, assetClass: plan.assetClass, ...side });
+
+  const part = sessionPart(now);
+  if (part) {
+    const found = check(trades, (t) => sessionPart(t.openedAt) === part);
+    if (found) warnings.push({ rule: 'session', sessionPart: part, ...found });
+  }
+
+  return warnings.sort((a, b) => a.averageR - b.averageR);
+}
