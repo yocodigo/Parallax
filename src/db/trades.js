@@ -1,5 +1,5 @@
 import { and, eq, isNotNull, isNull } from 'drizzle-orm';
-import { trades } from './schema';
+import { journalEntries, trades } from './schema';
 
 export async function getTrade(db, id) {
   const [trade] = await db.select().from(trades).where(eq(trades.id, id));
@@ -27,4 +27,24 @@ export async function recordExit(db, id, { exitPrice, closedAt, exitReason, exit
     .where(and(eq(trades.id, id), isNotNull(trades.openedAt), isNull(trades.closedAt)))
     .returning();
   return trade ?? null;
+}
+
+// Closed trades, each once, with `mistakes`: every tag from the journal
+// entries about it (repeats included; the ledger counts each mistake once per
+// trade). `mode` limits it to live, paper, or backtest trades.
+export async function listClosedTradesWithMistakes(db, { mode } = {}) {
+  const rows = await db
+    .select({ trade: trades, mistakes: journalEntries.mistakes })
+    .from(trades)
+    .leftJoin(journalEntries, eq(journalEntries.tradeId, trades.id))
+    .where(and(isNotNull(trades.closedAt), mode ? eq(trades.mode, mode) : undefined))
+    .orderBy(trades.closedAt);
+
+  const byId = new Map();
+  for (const { trade, mistakes } of rows) {
+    if (!byId.has(trade.id)) byId.set(trade.id, { ...trade, mistakes: [] });
+    // A trade with no journal entries comes back once, with null mistakes.
+    if (mistakes) byId.get(trade.id).mistakes.push(...mistakes);
+  }
+  return [...byId.values()];
 }

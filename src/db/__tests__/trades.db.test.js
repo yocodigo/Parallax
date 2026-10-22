@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { trades } from '../schema';
+import { journalEntries, trades } from '../schema';
 import { createTestDb, resetDb } from '../testing';
-import { getTrade, recordEntry, recordExit } from '../trades';
+import { getTrade, listClosedTradesWithMistakes, recordEntry, recordExit } from '../trades';
 
 const db = createTestDb();
 
@@ -85,5 +85,48 @@ describe('recordExit', () => {
 
     expect(await recordExit(db, trade.id, { ...exit, exitPrice: 90 })).toBeNull();
     expect((await getTrade(db, trade.id)).exitPrice).toBe(105);
+  });
+});
+
+describe('listClosedTradesWithMistakes', () => {
+  const closed = { ...entry, ...exit, exitReason: 'stop', exitPrice: 98 };
+
+  async function tag(trade, kind, mistakes) {
+    await db.insert(journalEntries).values({ tradeId: trade.id, kind, notes: 'Notes', mistakes });
+  }
+
+  it('returns each closed trade once, with the mistakes from all its entries', async () => {
+    const trade = await insertTrade(closed);
+    await tag(trade, 'plan', []);
+    await tag(trade, 'review', ['moved_stop']);
+    await tag(trade, 'review', ['moved_stop', 'oversized']);
+
+    const rows = await listClosedTradesWithMistakes(db);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ id: trade.id, exitPrice: 98 });
+    expect(rows[0].mistakes.sort()).toEqual(['moved_stop', 'moved_stop', 'oversized']);
+  });
+
+  it('includes a closed trade with no journal entries, with no mistakes', async () => {
+    const trade = await insertTrade(closed);
+
+    expect(await listClosedTradesWithMistakes(db)).toEqual([expect.objectContaining({ id: trade.id, mistakes: [] })]);
+  });
+
+  it('leaves out trades that are not closed', async () => {
+    await insertTrade();
+    await insertTrade(entry);
+
+    expect(await listClosedTradesWithMistakes(db)).toEqual([]);
+  });
+
+  it('can be limited to one mode', async () => {
+    await insertTrade({ ...closed, mode: 'paper' });
+    const live = await insertTrade({ ...closed, mode: 'live' });
+
+    const rows = await listClosedTradesWithMistakes(db, { mode: 'live' });
+
+    expect(rows.map((row) => row.id)).toEqual([live.id]);
   });
 });
