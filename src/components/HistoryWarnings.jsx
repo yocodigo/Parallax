@@ -7,6 +7,8 @@ import { formatR } from '@/lib/format';
 
 const DEBOUNCE_MS = 400;
 
+const DTE = { '0dte': '0DTE', week: '1–7 DTE', later: '8+ DTE' };
+
 const SESSION_PARTS = {
   open: 'in the first 30 minutes of the session',
   midday: 'at midday',
@@ -31,6 +33,10 @@ function describe(warning) {
       return `Your last ${warning.trades} ${warning.symbol} trades ${average}.`;
     case 'side':
       return `Your last ${warning.trades} ${warning.direction} ${warning.assetClass} trades ${average}.`;
+    case 'dte':
+      return `Your last ${warning.trades} ${DTE[warning.dte]} trades ${average}.`;
+    case 'dteSession':
+      return `Your last ${warning.trades} ${DTE[warning.dte]} entries ${SESSION_PARTS[warning.sessionPart]} ${average}.`;
     default:
       return `Your last ${warning.trades} entries ${SESSION_PARTS[warning.sessionPart]} ${average}.`;
   }
@@ -39,11 +45,10 @@ function describe(warning) {
 // What the trader's own closed trades say about a plan like this one, shown
 // while it's being written. Advisory only: while loading, on an error, or
 // with nothing to say, it shows nothing.
-export default function HistoryWarnings({ mode, direction, assetClass, symbol }) {
-  const query = useDebouncedValue(
-    new URLSearchParams({ mode, direction, assetClass, symbol: symbol.trim() }).toString(),
-    DEBOUNCE_MS
-  );
+export default function HistoryWarnings({ mode, direction, assetClass, symbol, expiration }) {
+  const params = { mode, direction, assetClass, symbol: symbol.trim() };
+  if (assetClass === 'option' && expiration) params.expiration = expiration;
+  const query = useDebouncedValue(new URLSearchParams(params).toString(), DEBOUNCE_MS);
   const { data } = useSWR(`/api/insights/warnings?${query}`, fetchJson, { revalidateOnFocus: false });
 
   const warnings = data?.warnings ?? [];

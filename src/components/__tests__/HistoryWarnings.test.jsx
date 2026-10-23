@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { SWRConfig } from 'swr';
@@ -39,6 +39,29 @@ describe('warnings while writing a plan', () => {
     expect(await screen.findByText('Your last 8 AAPL trades averaged -0.7R.')).toBeInTheDocument();
     expect(screen.getByText('Your last 5 short option trades averaged -0.5R.')).toBeInTheDocument();
     expect(screen.getByText('Your last 6 entries in the last 30 minutes of the session averaged -0.4R.')).toBeInTheDocument();
+  });
+
+  it('describes days-to-expiration warnings', async () => {
+    serveWarnings([
+      { rule: 'dteSession', dte: '0dte', sessionPart: 'close', trades: 8, averageR: -0.7 },
+      { rule: 'dte', dte: 'week', trades: 6, averageR: -0.4 },
+    ]);
+    renderForm();
+
+    expect(
+      await screen.findByText('Your last 8 0DTE entries in the last 30 minutes of the session averaged -0.7R.')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Your last 6 1–7 DTE trades averaged -0.4R.')).toBeInTheDocument();
+  });
+
+  it("sends an option plan's expiration", async () => {
+    const queries = serveWarnings();
+    renderForm();
+
+    await userEvent.selectOptions(screen.getByLabelText('Asset class'), 'option');
+    fireEvent.change(screen.getByLabelText('Expiration'), { target: { value: '2026-10-23' } });
+
+    await waitFor(() => expect(queries.at(-1)).toMatchObject({ assetClass: 'option', expiration: '2026-10-23' }));
   });
 
   it('asks about the plan as it is filled in, once typing pauses', async () => {

@@ -74,3 +74,41 @@ describe('GET /api/insights/warnings', () => {
     expect((await response.json()).fieldErrors).toHaveProperty('direction');
   });
 });
+
+describe('GET /api/insights/warnings for an option', () => {
+  it('passes the expiration on, for days-to-expiration warnings', async () => {
+    const expiration = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
+    for (let i = 0; i < 5; i += 1) {
+      const openedAt = new Date(Date.now() - (i + 1) * 60_000);
+      await getDb()
+        .insert(trades)
+        .values({
+          mode: 'paper',
+          symbol: 'SPY',
+          assetClass: 'option',
+          optionType: 'call',
+          strike: 500,
+          // Expired the day each was entered: 0DTE.
+          expiration: new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(openedAt),
+          direction: 'long',
+          quantity: 1,
+          multiplier: 100,
+          plannedEntry: 2,
+          entryPrice: 2,
+          initialStop: 1,
+          exitPrice: 1,
+          openedAt,
+          closedAt: new Date(openedAt.getTime() + 30_000),
+        });
+    }
+
+    const response = await get({ mode: 'paper', direction: 'long', assetClass: 'option', symbol: 'QQQ', expiration });
+
+    expect(response.status).toBe(200);
+    expect((await response.json()).warnings).toContainEqual({ rule: 'dte', dte: '0dte', trades: 5, averageR: -1 });
+  });
+
+  it('treats a blank expiration as none', async () => {
+    expect((await get({ ...plan, expiration: '' })).status).toBe(200);
+  });
+});

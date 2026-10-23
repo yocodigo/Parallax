@@ -207,6 +207,7 @@ export default function PlanForm({ draft, draftErrors = NO_ERRORS, onSaved }) {
         direction={form.direction}
         assetClass={form.assetClass}
         symbol={form.symbol}
+        expiration={form.expiration}
       />
 
       <Field id="plan-notes" label="Notes" error={errorFor('entry', 'notes')}>
