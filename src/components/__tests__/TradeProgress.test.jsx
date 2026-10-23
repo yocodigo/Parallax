@@ -360,3 +360,30 @@ describe('the strategy checklist', () => {
     expect(posted[0].body.ruleChecks).toEqual({ r1: true });
   });
 });
+
+describe('context at entry', () => {
+  it('loads the snapshot only when asked', async () => {
+    const requested = [];
+    server.use(
+      http.get('*/api/trades/:id/context', ({ params }) => {
+        requested.push(params.id);
+        return HttpResponse.json({ context: null });
+      })
+    );
+    serveJournal(plannedTrade(opened));
+    renderJournal();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Context at entry' }));
+
+    expect(await screen.findByText('No context was captured for this entry.')).toBeInTheDocument();
+    expect(requested).toEqual([TRADE_ID]);
+  });
+
+  it('is not offered before the trade is entered', async () => {
+    serveJournal(plannedTrade());
+    renderJournal();
+
+    await screen.findByText('Planned');
+    expect(screen.queryByRole('button', { name: 'Context at entry' })).not.toBeInTheDocument();
+  });
+});

@@ -7,6 +7,7 @@ import { apiErrorMessage, fetchJson } from '@/lib/fetchJson';
 import { formatProfitLoss, formatR } from '@/lib/format';
 import { profitLoss, rMultiple, tradeStatus } from '@/lib/tradeMetrics';
 import Field, { inputClass } from './Field';
+import TradeContext from './TradeContext';
 
 const buttonClass =
   'rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50';
@@ -343,6 +344,7 @@ function Excursions({ trade, status }) {
 // entry) adds the buttons to record its entry fill and exit.
 export default function TradeProgress({ trade, canRecord }) {
   const [recording, setRecording] = useState(false);
+  const [showContext, setShowContext] = useState(false);
   const status = tradeStatus(trade);
   const nextStep = { planned: 'entry', open: 'exit' }[status];
 
@@ -359,12 +361,27 @@ export default function TradeProgress({ trade, canRecord }) {
             {`Overrode: ${trade.overriddenBreakers.map((b) => BREAKER_LABELS[b] ?? b).join(', ')}`}
           </span>
         )}
+        {status !== 'planned' && (
+          <button
+            type="button"
+            onClick={() => setShowContext((shown) => !shown)}
+            aria-expanded={showContext}
+            className={secondaryButtonClass}
+          >
+            Context at entry
+          </button>
+        )}
         {canRecord && nextStep && !recording && (
           <button type="button" onClick={() => setRecording(true)} className={secondaryButtonClass}>
             {`Record ${nextStep}`}
           </button>
         )}
       </div>
+      {showContext && (
+        <div className="mt-2">
+          <TradeContext tradeId={trade.id} />
+        </div>
+      )}
       {recording && nextStep === 'entry' && <EntryForm trade={trade} onDone={() => setRecording(false)} />}
       {recording && nextStep === 'exit' && <ExitForm trade={trade} onDone={() => setRecording(false)} />}
     </div>
