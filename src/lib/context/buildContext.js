@@ -13,11 +13,18 @@ const UNAVAILABLE = ['sectorTrend', 'earnings', 'exDividend', 'ivRank'];
 
 const nyDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' });
 
+const MINUTE_MS = 60 * 1000;
+
+// A minute bar is stamped with its start, so it only predates the entry if it
+// ended (start + 1 minute) by then; the bar the fill happened in already
+// holds prices from after it.
+const endedBy = (bar, at) => new Date(bar.t).getTime() + MINUTE_MS <= at.getTime();
+
 const round = (value, places = 2) => (value === null || value === undefined ? null : Number(value.toFixed(places)));
 
-// The last price at or before the entry, from the entry day's minute bars.
+// The last price before the entry, from the entry day's minute bars.
 function priceAt(bars, at) {
-  const before = (bars ?? []).filter((bar) => new Date(bar.t) <= at);
+  const before = (bars ?? []).filter((bar) => endedBy(bar, at));
   return before.at(-1)?.c ?? null;
 }
 
@@ -27,7 +34,7 @@ function symbolContext(daily = [], intraday = [], at) {
   const closes = daily.map((bar) => bar.c);
   const price = priceAt(intraday, at);
   // The regular session's first bar: the open the gap is measured from.
-  const session = intraday.filter((bar) => minutesSinceOpen(new Date(bar.t)) !== null && new Date(bar.t) <= at);
+  const session = intraday.filter((bar) => minutesSinceOpen(new Date(bar.t)) !== null && endedBy(bar, at));
   const open = session[0]?.o ?? null;
   const previousClose = closes.at(-1) ?? null;
   const volumeSoFar = session.reduce((sum, bar) => sum + bar.v, 0);

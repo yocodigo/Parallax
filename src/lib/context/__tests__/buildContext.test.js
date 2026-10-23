@@ -56,6 +56,22 @@ describe('buildContext', () => {
     expect(context.stock.relativeStrength).toBeCloseTo(14.13, 1);
   });
 
+  it('uses only bars that ended by the entry, since a bar is stamped with its start', () => {
+    // Filled at 10:30:45; the 10:30 bar runs to 10:31, after the fill.
+    const midMinute = new Date('2026-10-20T14:30:45Z');
+    const bars = [...intraday(183, 190), { t: '2026-10-20T14:30:00Z', o: 190, c: 195, v: 900_000 }];
+
+    const context = buildContext({
+      trade: { ...stockTrade, openedAt: midMinute },
+      now: midMinute,
+      ...raw,
+      intraday: { ...raw.intraday, NVDA: bars },
+    });
+
+    expect(context.stock.price).toBe(190);
+    expect(context.stock.relativeVolume).toBeCloseTo(2, 2);
+  });
+
   it('marks the scheduled releases as unknown outside the covered dates', () => {
     expect(buildContext({ trade: stockTrade, now: openedAt, ...raw }).market.events).toBeNull();
   });
