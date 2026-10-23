@@ -1,3 +1,4 @@
+import ChecklistReport from '@/components/ChecklistReport';
 import CircuitBreakers from '@/components/CircuitBreakers';
 import MistakeLedger from '@/components/MistakeLedger';
 
@@ -16,6 +17,7 @@ export default function InsightsPage() {
       <div className="space-y-6">
         <CircuitBreakers />
         <MistakeLedger />
+        <ChecklistReport />
       </div>
     </main>
   );
