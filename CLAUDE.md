@@ -35,7 +35,7 @@ Vitest, JavaScript (not TypeScript).
 
 - `src/lib/`: pure logic with unit tests (bars, correlation, risk, timeframes, `tradePlan`,
   `journalEntry`, `tradeFill`, `tradeMetrics`, `mistakeLedger`, `excursions`, `historyWarnings`,
-  `circuitBreakers`, `circuitBreakerSettings`, `strategy`, `format`, shared `symbol` validation). Validation uses Zod 4 and returns `safeParse` results.
+  `circuitBreakers`, `circuitBreakerSettings`, `strategy`, `checklistReport`, `format`, shared `symbol` validation). Validation uses Zod 4 and returns `safeParse` results.
 - `src/db/schema.js`: Drizzle schema. Migrations live in `drizzle/` (generated and committed,
   including `meta/`). Never hand-edit a migration that has been applied.
 - `src/lib/context/`: pure pieces of the entry context snapshot (indicators, macro calendar, VIX,
@@ -88,6 +88,10 @@ Vitest, JavaScript (not TypeScript).
   (`?mode=` optional), built from `listClosedTradesWithMistakes` and `mistakeLedger`: per mistake,
   the closed trades tagged with it (on any of their entries, once per trade) and their total and
   average R, plus the average R of trades with no mistakes as a baseline.
+  `ChecklistReport.jsx` loads `GET /api/insights/checklist` (`?mode=` optional), built from
+  `listClosedTradesWithRuleChecks` and `checklistReport`: closed checklist trades with every rule met
+  against those entered anyway, and per rule how often it was skipped and its average R when skipped
+  and when met. Rules are grouped by id (named by their latest text); deleted rules by their text.
 - History warnings: `HistoryWarnings.jsx` in the plan form asks `GET /api/insights/warnings` (mode,
   direction, assetClass, symbol; debounced) and lists what `historyWarnings` finds in closed trades of
   the same mode: same symbol, same direction and asset class, and same part of the New York session
@@ -159,8 +163,8 @@ Vitest, JavaScript (not TypeScript).
    - Done, still being tried out: circuit breakers the trader sets (daily max loss in R, max trades
      per day, cool-down after consecutive losses). Entries are blocked with an override that's
      recorded on the trade.
-   - Done: strategies, rules, and a pre-entry checklist (`trade_rule_checks`). Next for it: compare
-     results when every rule was met against entries made against the checklist.
+   - Done: strategies, rules, and a pre-entry checklist (`trade_rule_checks`), with a comparison on
+     `/insights` of results when every rule was met against entries made anyway.
    - Imports from Schwab/thinkorswim CSV exports, filling in fills on matching hand-recorded trades
      (same symbol, direction, mode, close in time) and creating the rest. Waiting on a sample export.
    - Done: option contract fields for single calls and puts (I don't trade spreads; no legs table).
