@@ -87,8 +87,9 @@ Vitest, JavaScript (not TypeScript).
   direction, assetClass, symbol; debounced) and lists what `historyWarnings` finds in closed trades of
   the same mode: same symbol, same direction and asset class, and same part of the New York session
   as now (open, midday, close). Each rule uses the 20 most recent matches and warns only with at least
-  5 averaging -0.3R or worse. Tests that render `PlanForm` must serve that route (MSW errors on
-  unhandled requests).
+  5 averaging -0.3R or worse. Option plans add days-to-expiration rules (0DTE, 1-7, 8+ DTE at entry,
+  New York date), alone and with the session part. Tests that render `PlanForm` must serve that route
+  and `/api/strategies` (MSW errors on unhandled requests).
 - Circuit breakers: settings live in `circuit_breaker_settings` (one row, id 1; a null limit is off;
   `modes` they apply to, live by default), edited in `CircuitBreakers.jsx` on `/insights` through
   `GET`/`PUT /api/circuit-breakers`. `circuitBreakers` checks today's closed R (New York day), today's
@@ -116,7 +117,9 @@ Vitest, JavaScript (not TypeScript).
 - A plan requires an initial stop on the losing side of the planned entry (R is measured from it).
   A target is optional and must be on the winning side.
 - For options, prices are premiums and `multiplier` defaults to 100. "Long" means the contract was
-  bought.
+  bought. The symbol is the underlying (SPY), with the contract in `option_type` (call/put), `strike`,
+  and `expiration` (a `YYYY-MM-DD` date string; never parse it with `new Date()`, which shifts it a
+  day west of UTC). Plans for options require all three; stocks and crypto may not have them.
 - Journal entry kinds: `plan`, `review`, `thesis`. A thesis needs a symbol. Emotions and mistakes
   come from the fixed lists in `src/lib/journalEntry.js`.
 - Deleting a trade never deletes its journal entries; the link is set to null.
@@ -139,21 +142,23 @@ Vitest, JavaScript (not TypeScript).
    - Done for stocks: MAE/MFE computed from Alpaca bars, shown on journal trades. Options and
      crypto later.
    - Done: warnings from the trader's own history, shown while writing a plan (symbol, side, time of
-     day). Days-to-expiration warnings like "Your last 8 0DTE entries averaged -0.7R" need option
-     expiration and strike on trades first (fits with the legs table below).
+     day, and days to expiration for options).
    - Done, still being tried out: circuit breakers the trader sets (daily max loss in R, max trades
      per day, cool-down after consecutive losses). Entries are blocked with an override that's
      recorded on the trade.
    - Done: strategies, rules, and a pre-entry checklist (`trade_rule_checks`). Next for it: compare
      results when every rule was met against entries made against the checklist.
-   - Imports from Alpaca and broker CSVs.
-   - A legs table for vertical spreads.
+   - Imports from Schwab/thinkorswim CSV exports, filling in fills on matching hand-recorded trades
+     (same symbol, direction, mode, close in time) and creating the rest. Waiting on a sample export.
+   - Done: option contract fields for single calls and puts (I don't trade spreads; no legs table).
    - Context snapshot saved with each trade at entry: SPY/QQQ trend; VIX level and direction;
      macro calendar events (FOMC, CPI, jobs report); sector ETF trend and the stock's relative
      strength; days to earnings and ex-dividend dates; options context (IV rank, expected move,
      days to expiration, bid-ask spread, open interest); time of day, pre-market gap, and relative
      volume. Store it at entry, since values like IV rank can't be reliably reconstructed later.
-     VIX and the earnings and economic calendars need a data source beyond Alpaca.
+     VIX and the earnings and economic calendars need a data source beyond Alpaca. Plan: Alpaca for
+     market data, Cboe's free daily VIX history (prior close), and the published Fed/BLS schedules for
+     FOMC, CPI, and jobs dates. TradingView has no data API.
 5. Last, once the product is polished: deploy to Vercel plus Neon (Postgres 17). Upgrade Next.js
    past 16.4.0 first (security advisories; 16.4.1 is two weeks old on 2026-10-28). Add auth or a
    demo mode before any journal data is public. One Playwright end-to-end test of the main flow.
