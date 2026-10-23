@@ -1,13 +1,15 @@
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getDb } from '@/db';
+import { saveTradeContext } from '@/db/contexts';
 import { loadBreakerStatus } from '@/db/settings';
 import { getStrategy } from '@/db/strategies';
 import { getTrade, recordEntry } from '@/db/trades';
-import { withErrorLogging } from '@/lib/log';
+import { logError, requestId, withErrorLogging } from '@/lib/log';
 import { parseRuleChecks, unmetRules } from '@/lib/strategy';
 import { parseTradeEntry } from '@/lib/tradeFill';
 import { tradeStatus } from '@/lib/tradeMetrics';
+import { captureContext } from '@/server/marketContext';
 
 const notFound = () => NextResponse.json({ error: 'Trade not found' }, { status: 404 });
 const alreadyEntered = () =>
@@ -67,6 +69,18 @@ export const POST = withErrorLogging('/api/trades/[id]/entry', async (request, {
     ruleChecks: checks.data,
   });
   if (!updated) return alreadyEntered();
+
+  // The market context at entry is fetched once the response is sent, so
+  // recording an entry never waits on Alpaca or Cboe. A failure only loses
+  // the snapshot, never the entry.
+  const reqId = requestId(request);
+  after(async () => {
+    try {
+      await saveTradeContext(getDb(), updated.id, await captureContext(updated, { requestId: reqId }));
+    } catch (error) {
+      logError('Context capture failed', { route: '/api/trades/[id]/entry', requestId: reqId, error });
+    }
+  });
 
   return NextResponse.json({ trade: updated });
 });

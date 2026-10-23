@@ -5,7 +5,21 @@ import { saveBreakerSettings } from '@/db/settings';
 import { createStrategy } from '@/db/strategies';
 import { resetDb } from '@/db/testing';
 import { DEFAULT_BREAKER_SETTINGS } from '@/lib/circuitBreakerSettings';
+import { getTradeContext } from '@/db/contexts';
+import { captureErrorLogs } from '@/mocks/logs';
+import { captureContext } from '@/server/marketContext';
 import { POST } from '../route';
+
+// `after` only works inside a real Next request. Here it runs the work right
+// away, and tests await `afterWork` to see it finish.
+const afterWork = vi.hoisted(() => []);
+vi.mock('next/server', async (importOriginal) => ({
+  ...(await importOriginal()),
+  after: (work) => afterWork.push(Promise.resolve().then(work)),
+}));
+
+// The market context comes from Alpaca and Cboe; these tests stay offline.
+vi.mock('@/server/marketContext', () => ({ captureContext: vi.fn() }));
 
 // Swap the app's database for the test database. Everything else is real.
 vi.mock('@/db', async () => {
@@ -51,7 +65,12 @@ const post = (id, body) =>
     { params: Promise.resolve({ id }) }
   );
 
-beforeEach(() => resetDb(getDb()));
+beforeEach(async () => {
+  await resetDb(getDb());
+  afterWork.length = 0;
+  captureContext.mockReset();
+  captureContext.mockResolvedValue({ version: 1, market: { spyTrend: 'up' } });
+});
 afterAll(() => getDb().$client.end());
 
 describe('POST /api/trades/[id]/entry', () => {
@@ -185,5 +204,43 @@ describe('POST /api/trades/[id]/entry with a strategy checklist', () => {
     expect(response.status).toBe(200);
     const checks = await getDb().select().from(tradeRuleChecks);
     expect(checks.find((c) => c.ruleText === 'Not the first impulsive bar').met).toBe(false);
+  });
+});
+
+describe('POST /api/trades/[id]/entry captures the market context', () => {
+  it('saves the context at entry once the response is sent', async () => {
+    const trade = await insertTrade();
+
+    const response = await post(trade.id, entry);
+    await Promise.all(afterWork);
+
+    expect(response.status).toBe(200);
+    expect(captureContext).toHaveBeenCalledWith(
+      expect.objectContaining({ id: trade.id, openedAt: new Date(entry.openedAt) }),
+      expect.objectContaining({ requestId: expect.any(String) })
+    );
+    expect(await getTradeContext(getDb(), trade.id)).toEqual({ version: 1, market: { spyTrend: 'up' } });
+  });
+
+  it('keeps the entry, and logs, when the context cannot be captured', async () => {
+    captureContext.mockRejectedValue(new Error('Alpaca is down'));
+    const logs = captureErrorLogs();
+    const trade = await insertTrade();
+
+    const response = await post(trade.id, entry);
+    await Promise.all(afterWork);
+
+    expect(response.status).toBe(200);
+    expect(await getTradeContext(getDb(), trade.id)).toBeNull();
+    expect(logs()).toEqual([expect.objectContaining({ message: 'Context capture failed', route: '/api/trades/[id]/entry' })]);
+  });
+
+  it('captures nothing when the entry is refused', async () => {
+    const trade = await insertTrade();
+
+    await post(trade.id, { entryPrice: -1, openedAt: entry.openedAt });
+    await Promise.all(afterWork);
+
+    expect(captureContext).not.toHaveBeenCalled();
   });
 });
