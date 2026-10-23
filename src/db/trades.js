@@ -58,6 +58,28 @@ export async function listClosedTradesWithMistakes(db, { mode } = {}) {
   return [...byId.values()];
 }
 
+// Closed trades entered through a strategy checklist, oldest exit first, each
+// with `ruleChecks` ({ ruleId, ruleText, met }). `mode` limits it to live,
+// paper, or backtest trades.
+export async function listClosedTradesWithRuleChecks(db, { mode } = {}) {
+  const rows = await db
+    .select({
+      trade: trades,
+      check: { ruleId: tradeRuleChecks.ruleId, ruleText: tradeRuleChecks.ruleText, met: tradeRuleChecks.met },
+    })
+    .from(trades)
+    .innerJoin(tradeRuleChecks, eq(tradeRuleChecks.tradeId, trades.id))
+    .where(and(isNotNull(trades.closedAt), mode ? eq(trades.mode, mode) : undefined))
+    .orderBy(trades.closedAt, trades.id);
+
+  const byId = new Map();
+  for (const { trade, check } of rows) {
+    if (!byId.has(trade.id)) byId.set(trade.id, { ...trade, ruleChecks: [] });
+    byId.get(trade.id).ruleChecks.push(check);
+  }
+  return [...byId.values()];
+}
+
 // Trades that have been entered, in the given modes, most recent activity
 // (exit, or entry while still open) first. Circuit breakers look at these.
 export async function listRecentTrades(db, { modes, limit = 100 }) {

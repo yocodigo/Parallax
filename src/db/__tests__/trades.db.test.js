@@ -1,7 +1,14 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { journalEntries, trades } from '../schema';
 import { createTestDb, resetDb } from '../testing';
-import { getTrade, listClosedTradesWithMistakes, listRecentTrades, recordEntry, recordExit } from '../trades';
+import {
+  getTrade,
+  listClosedTradesWithMistakes,
+  listClosedTradesWithRuleChecks,
+  listRecentTrades,
+  recordEntry,
+  recordExit,
+} from '../trades';
 
 const db = createTestDb();
 
@@ -134,6 +141,50 @@ describe('listClosedTradesWithMistakes', () => {
     const live = await insertTrade({ ...closed, mode: 'live' });
 
     const rows = await listClosedTradesWithMistakes(db, { mode: 'live' });
+
+    expect(rows.map((row) => row.id)).toEqual([live.id]);
+  });
+});
+
+describe('listClosedTradesWithRuleChecks', () => {
+  const checks = [
+    { ruleId: null, ruleText: 'Volume rising', met: true },
+    { ruleId: null, ruleText: 'Not the first impulse bar', met: false },
+  ];
+
+  // Records the entry with its checklist, then the exit.
+  async function closedWithChecks(values = {}, closedAt = exit.closedAt) {
+    const trade = await insertTrade(values);
+    await recordEntry(db, trade.id, { ...entry, ruleChecks: checks });
+    await recordExit(db, trade.id, { ...exit, closedAt });
+    return trade;
+  }
+
+  it('returns closed trades with their checklist answers, oldest exit first', async () => {
+    const later = await closedWithChecks({}, new Date('2026-10-22T15:00:00Z'));
+    const earlier = await closedWithChecks({}, new Date('2026-10-21T15:00:00Z'));
+
+    const rows = await listClosedTradesWithRuleChecks(db);
+
+    expect(rows.map((row) => row.id)).toEqual([earlier.id, later.id]);
+    expect(rows[0]).toMatchObject({ exitPrice: 105, entryPrice: 100.2 });
+    expect(rows[0].ruleChecks).toEqual(expect.arrayContaining(checks));
+    expect(rows[0].ruleChecks).toHaveLength(2);
+  });
+
+  it('leaves out trades without a checklist and trades that are not closed', async () => {
+    await insertTrade({ ...entry, ...exit });
+    const open = await insertTrade();
+    await recordEntry(db, open.id, { ...entry, ruleChecks: checks });
+
+    expect(await listClosedTradesWithRuleChecks(db)).toEqual([]);
+  });
+
+  it('can be limited to one mode', async () => {
+    await closedWithChecks({ mode: 'paper' });
+    const live = await closedWithChecks({ mode: 'live' });
+
+    const rows = await listClosedTradesWithRuleChecks(db, { mode: 'live' });
 
     expect(rows.map((row) => row.id)).toEqual([live.id]);
   });
