@@ -85,6 +85,14 @@ describe('formatEntries', () => {
     );
   });
 
+  it("includes an option's contract", () => {
+    const option = { ...trade, symbol: 'SPY', assetClass: 'option', quantity: 2, optionType: 'call', strike: 500, expiration: '2026-10-23' };
+
+    expect(formatEntries([entry({ kind: 'plan', trade: option })])).toContain(
+      'Trade: paper long 2 SPY option 500C exp Oct 23, planned.'
+    );
+  });
+
   it('gives a closed trade its computed result, so Claude never has to work it out', () => {
     const closed = {
       ...trade,

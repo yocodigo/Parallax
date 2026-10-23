@@ -1,5 +1,5 @@
 import { EMOTION_LABELS, MISTAKE_LABELS } from './journalEntry';
-import { formatProfitLoss, formatR } from './format';
+import { formatContract, formatProfitLoss, formatR } from './format';
 import { profitLoss, rMultiple, tradeStatus } from './tradeMetrics';
 
 const REVIEW_DAYS = 7;
@@ -30,7 +30,9 @@ function describeTrade(trade) {
     .map(([label, value]) => `${label} ${value}`);
 
   const { mode, direction, quantity, symbol, assetClass } = trade;
-  return `${mode} ${direction} ${quantity} ${symbol} ${assetClass}, ${tradeStatus(trade)}. ${levels.join(', ')}.`;
+  const contract = assetClass === 'option' ? formatContract(trade) : '';
+  const what = [mode, direction, quantity, symbol, assetClass, contract].filter(Boolean).join(' ');
+  return `${what}, ${tradeStatus(trade)}. ${levels.join(', ')}.`;
 }
 
 // Computed here so Claude quotes the numbers instead of doing the arithmetic.
