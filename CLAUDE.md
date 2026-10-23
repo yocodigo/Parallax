@@ -38,7 +38,12 @@ Vitest, JavaScript (not TypeScript).
   `circuitBreakers`, `circuitBreakerSettings`, `strategy`, `format`, shared `symbol` validation). Validation uses Zod 4 and returns `safeParse` results.
 - `src/db/schema.js`: Drizzle schema. Migrations live in `drizzle/` (generated and committed,
   including `meta/`). Never hand-edit a migration that has been applied.
-- `src/db/journal.js`, `trades.js`, `settings.js`, and `strategies.js`: repository functions. They take `db` as the first argument so tests can
+- `src/lib/context/`: pure pieces of the entry context snapshot (indicators, macro calendar, VIX,
+  option helpers, `buildContext`).
+- `src/server/`: server-only fetchers that call outside services (`marketContext.js`), tested with
+  MSW in the node environment.
+- `src/db/journal.js`, `trades.js`, `settings.js`, `strategies.js`, and `contexts.js`: repository
+  functions. They take `db` as the first argument so tests can
   pass the test database.
 - `src/db/index.js`: `getDb()`, created lazily (builds need no database) and cached on `globalThis`.
 - `src/app/api/*/route.js`: route handlers. Invalid input returns 400 with `{ error, fieldErrors }`.
@@ -102,6 +107,14 @@ Vitest, JavaScript (not TypeScript).
   A plan may name its `strategyId`; recording its entry then needs `ruleChecks` ({ ruleId: met } for
   every rule), saved in `trade_rule_checks` with a copy of the rule's text. Unmet rules get a 409
   `{ unmetRules }` (alongside any `breakers`) and `override: true` records the entry anyway.
+- Context snapshot: after `POST /api/trades/[id]/entry` responds, `after()` runs `captureContext`
+  (Alpaca daily and minute bars for SPY, QQQ, and the symbol, split-adjusted and only bars that ended
+  before the fill; Cboe's daily VIX file; for options Alpaca's contract open interest and indicative
+  snapshot) and saves it in `trade_contexts` (JSON with a `version`; first snapshot wins). A failing
+  source is logged and left null. Live option values are kept only within 15 minutes of the fill.
+  `TradeContext.jsx` shows it on demand via `GET /api/trades/[id]/context`. Entry route tests mock
+  `after` and `captureContext`. Macro dates in `src/lib/context/macroCalendar.js` cover 2026-10-22
+  through 2027-12-31 (BLS blocks automated requests); extend them yearly.
 - Weekly review: `WeeklyReview.jsx` (top of `/journal`) posts to `POST /api/weekly-review` on demand,
   not with SWR, since each review is a paid Claude call. The route sends the past seven days of entries
   (`src/lib/weeklyReview.js`, dates in New York time) to Claude and returns `{ review, entryCount }` as
@@ -151,7 +164,8 @@ Vitest, JavaScript (not TypeScript).
    - Imports from Schwab/thinkorswim CSV exports, filling in fills on matching hand-recorded trades
      (same symbol, direction, mode, close in time) and creating the rest. Waiting on a sample export.
    - Done: option contract fields for single calls and puts (I don't trade spreads; no legs table).
-   - Context snapshot saved with each trade at entry: SPY/QQQ trend; VIX level and direction;
+   - Done (except sector trend, earnings and ex-dividend dates, IV rank): context snapshot saved with
+     each trade at entry: SPY/QQQ trend; VIX level and direction;
      macro calendar events (FOMC, CPI, jobs report); sector ETF trend and the stock's relative
      strength; days to earnings and ex-dividend dates; options context (IV rank, expected move,
      days to expiration, bid-ask spread, open interest); time of day, pre-market gap, and relative
@@ -172,6 +186,9 @@ Vitest, JavaScript (not TypeScript).
 - Docker runs on Colima, not Docker Desktop.
 - In jsdom tests, an upload with a `Blob` hangs: jsdom's `Blob` and `FormData` can't be read by
   Node's `fetch`. Stub both with Node's, as `VoiceNote.test.jsx` does.
+- `@next/env`'s `loadEnvConfig` skips `.env.local` when `NODE_ENV` is `test`, so code run under
+  Vitest never sees the real API keys. To try something against live APIs, pass the keys in
+  explicitly.
 - ESLint stays on 9: `eslint-config-next` 16 crashes on ESLint 10. Next 16 removed `next lint`,
   so the lint script runs `eslint .`.
 - `eslint-config-next` turns `no-undef` off (it expects TypeScript); `eslint.config.mjs` turns it back
