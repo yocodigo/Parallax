@@ -19,6 +19,9 @@ const EMPTY_FORM = {
   notes: '',
   emotion: '',
   strategyId: '',
+  optionType: 'call',
+  strike: '',
+  expiration: '',
 };
 
 const NO_ERRORS = { plan: {}, entry: {} };
@@ -83,6 +86,13 @@ export default function PlanForm({ draft, draftErrors = NO_ERRORS, onSaved }) {
         initialStop: toNumber(form.initialStop),
         target: toNumber(form.target),
         strategyId: orUndefined(form.strategyId),
+        // The contract only goes with an option, even if typed before
+        // switching the asset class back.
+        ...(form.assetClass === 'option' && {
+          optionType: form.optionType,
+          strike: toNumber(form.strike),
+          expiration: orUndefined(form.expiration),
+        }),
       },
       entry: { notes: form.notes, emotion: orUndefined(form.emotion) },
     };
@@ -155,6 +165,25 @@ export default function PlanForm({ draft, draftErrors = NO_ERRORS, onSaved }) {
             <option value="short">Short</option>
           </select>
         </Field>
+
+        {form.assetClass === 'option' && (
+          <>
+            <Field id="plan-optionType" label="Call or put" error={errorFor('plan', 'optionType')}>
+              <select {...fieldProps('plan', 'optionType')} className={inputClass}>
+                <option value="call">Call</option>
+                <option value="put">Put</option>
+              </select>
+            </Field>
+
+            <Field id="plan-strike" label="Strike" error={errorFor('plan', 'strike')}>
+              <input {...fieldProps('plan', 'strike')} type="number" step="any" required className={inputClass} />
+            </Field>
+
+            <Field id="plan-expiration" label="Expiration" error={errorFor('plan', 'expiration')}>
+              <input {...fieldProps('plan', 'expiration')} type="date" required className={inputClass} />
+            </Field>
+          </>
+        )}
 
         <Field id="plan-quantity" label="Quantity" error={errorFor('plan', 'quantity')}>
           <input {...fieldProps('plan', 'quantity')} type="number" step="any" required className={inputClass} />

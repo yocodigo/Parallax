@@ -100,6 +100,24 @@ describe('JournalEntries', () => {
     expect(await screen.findByText('No journal entries yet.')).toBeInTheDocument();
   });
 
+  it('shows the contract of an option trade', async () => {
+    const option = {
+      ...trade,
+      id: '6f1c2a4e-0000-4000-8000-000000000002',
+      symbol: 'SPY',
+      assetClass: 'option',
+      quantity: 2,
+      multiplier: 100,
+      optionType: 'call',
+      strike: 500,
+      expiration: '2026-01-16',
+    };
+    serveJournal(HttpResponse.json({ entries: [entry({ kind: 'plan', tradeId: option.id, trade: option })] }));
+    renderEntries();
+
+    expect(await screen.findByText('Long 2 SPY 500C exp Jan 16')).toBeInTheDocument();
+  });
+
   it('shows the error when the journal cannot be loaded', async () => {
     serveJournal(
       HttpResponse.json({ error: 'Database unavailable', requestId: 'req-123' }, { status: 500 })

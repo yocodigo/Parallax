@@ -1,5 +1,5 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { SWRConfig } from 'swr';
@@ -128,6 +128,42 @@ describe('PlanForm', () => {
 
     await waitFor(() => expect(bodies).toHaveLength(1));
     expect(bodies[0].plan.strategyId).toBe(STRATEGY_ID);
+  });
+
+  it("asks for an option's contract and sends it", async () => {
+    const bodies = capturePlanRequests();
+    renderForm();
+
+    expect(screen.queryByLabelText('Strike')).not.toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText('Asset class'), 'option');
+    await fillRequiredFields();
+    await userEvent.selectOptions(screen.getByLabelText('Call or put'), 'put');
+    await userEvent.type(screen.getByLabelText('Strike'), '205');
+    fireEvent.change(screen.getByLabelText('Expiration'), { target: { value: '2026-10-23' } });
+    await save();
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0].plan).toMatchObject({
+      assetClass: 'option',
+      optionType: 'put',
+      strike: 205,
+      expiration: '2026-10-23',
+    });
+  });
+
+  it('sends no contract for a stock', async () => {
+    const bodies = capturePlanRequests();
+    renderForm();
+
+    await userEvent.selectOptions(screen.getByLabelText('Asset class'), 'option');
+    await userEvent.type(screen.getByLabelText('Strike'), '205');
+    await userEvent.selectOptions(screen.getByLabelText('Asset class'), 'stock');
+    await fillRequiredFields();
+    await save();
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0].plan).not.toHaveProperty('strike');
+    expect(bodies[0].plan).not.toHaveProperty('optionType');
   });
 
   it('sends no strategy when none is chosen', async () => {

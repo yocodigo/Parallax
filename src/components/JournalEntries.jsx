@@ -2,13 +2,18 @@
 
 import useSWR from 'swr';
 import { fetchJson } from '@/lib/fetchJson';
+import { formatContract } from '@/lib/format';
 import { EMOTION_LABELS, MISTAKE_LABELS } from '@/lib/journalEntry';
 import TradeProgress from './TradeProgress';
 
 export const capitalize = (word) => word.charAt(0).toUpperCase() + word.slice(1);
 
-// "Long 100 AAPL": enough to recognize the trade without opening it.
-export const describeTrade = (trade) => `${capitalize(trade.direction)} ${trade.quantity} ${trade.symbol}`;
+// "Long 100 AAPL", or "Long 2 SPY 500C exp Jan 16" for an option: enough to
+// recognize the trade without opening it.
+export const describeTrade = (trade) =>
+  [capitalize(trade.direction), trade.quantity, trade.symbol, trade.assetClass === 'option' && formatContract(trade)]
+    .filter(Boolean)
+    .join(' ');
 
 export default function JournalEntries() {
   const { data, error, isLoading } = useSWR('/api/journal', fetchJson, {
