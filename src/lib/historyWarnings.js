@@ -26,6 +26,24 @@ export function sessionPart(date) {
   return 'midday';
 }
 
+const nyDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' });
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Calendar days from `at` (as a New York date) to an option's expiration
+// ('YYYY-MM-DD'): 0 on expiration day.
+export function daysToExpiration(expiration, at) {
+  return Math.round((Date.parse(expiration) - Date.parse(nyDate.format(at))) / DAY_MS);
+}
+
+// 0DTE, the rest of the week, or later: how options traders tend to group them.
+function dteBucket(expiration, at) {
+  if (!expiration) return null;
+  const days = daysToExpiration(expiration, at);
+  if (days < 0) return null;
+  if (days === 0) return '0dte';
+  return days <= 7 ? 'week' : 'later';
+}
+
 // The average R of the most recent closed trades matching `matches`, if
 // there are enough of them and it's bad enough to warn about.
 function check(trades, matches) {
@@ -43,8 +61,10 @@ function check(trades, matches) {
 }
 
 // Warnings for a plan from the trader's own closed trades: the same symbol,
-// the same direction and asset class, and entries at the same time of day as
-// `now`. Each is { rule, ...what matched, trades, averageR }, worst first.
+// the same direction and asset class, entries at the same time of day as
+// `now`, and for an option, the same days to expiration (alone and at this
+// time of day). Each is { rule, ...what matched, trades, averageR }, worst
+// first.
 export function historyWarnings(plan, closedTrades, { now = new Date() } = {}) {
   const trades = [...closedTrades].sort((a, b) => b.closedAt - a.closedAt);
   const warnings = [];
@@ -62,6 +82,18 @@ export function historyWarnings(plan, closedTrades, { now = new Date() } = {}) {
   if (part) {
     const found = check(trades, (t) => sessionPart(t.openedAt) === part);
     if (found) warnings.push({ rule: 'session', sessionPart: part, ...found });
+  }
+
+  const dte = plan.assetClass === 'option' ? dteBucket(plan.expiration, now) : null;
+  if (dte) {
+    const sameDte = (t) => t.assetClass === 'option' && dteBucket(t.expiration, t.openedAt) === dte;
+    const found = check(trades, sameDte);
+    if (found) warnings.push({ rule: 'dte', dte, ...found });
+
+    if (part) {
+      const atThisTime = check(trades, (t) => sameDte(t) && sessionPart(t.openedAt) === part);
+      if (atThisTime) warnings.push({ rule: 'dteSession', dte, sessionPart: part, ...atThisTime });
+    }
   }
 
   return warnings.sort((a, b) => a.averageR - b.averageR);

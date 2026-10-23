@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { historyWarnings, sessionPart } from '../historyWarnings';
+import { daysToExpiration, historyWarnings, sessionPart } from '../historyWarnings';
 
 // 2:00 PM in New York (EDT), midday.
 const MIDDAY = '2026-10-20T18:00:00Z';
@@ -9,12 +9,13 @@ const LATE = '2026-10-20T19:45:00Z';
 let day = 0;
 // A closed trade for `r` (1R = $100), entered at `openedAt`. Each one closes a
 // day later than the last, so their order is known.
-function closedTrade(r, { symbol = 'AAPL', direction = 'long', assetClass = 'stock', openedAt = MIDDAY } = {}) {
+function closedTrade(r, { symbol = 'AAPL', direction = 'long', assetClass = 'stock', openedAt = MIDDAY, expiration = null } = {}) {
   day += 1;
   return {
     symbol,
     direction,
     assetClass,
+    expiration,
     quantity: 100,
     multiplier: 1,
     entryPrice: 50,
@@ -107,5 +108,57 @@ describe('historyWarnings', () => {
     ];
 
     expect(historyWarnings(plan, trades, { now }).map((w) => w.rule)).toEqual(['symbol', 'side']);
+  });
+});
+
+describe('daysToExpiration', () => {
+  it('counts calendar days from the New York date to the expiration', () => {
+    expect(daysToExpiration('2026-10-20', new Date(MIDDAY))).toBe(0);
+    expect(daysToExpiration('2026-10-23', new Date(MIDDAY))).toBe(3);
+  });
+
+  it('uses the New York date late in the evening', () => {
+    // 9 PM on Oct 19 in New York is Oct 20 in UTC: still one day to go.
+    expect(daysToExpiration('2026-10-20', new Date('2026-10-20T01:00:00Z'))).toBe(1);
+  });
+});
+
+describe('historyWarnings for options', () => {
+  // 0DTE SPY calls entered in the last 30 minutes, each a loss.
+  const zeroDteLate = (r) =>
+    closedTrade(r, { symbol: 'SPY', assetClass: 'option', openedAt: LATE, expiration: '2026-10-20' });
+  const optionPlan = { symbol: 'QQQ', direction: 'long', assetClass: 'option', expiration: '2026-10-20' };
+
+  it('warns about trades with the same days to expiration', () => {
+    const trades = times(5, () => zeroDteLate(-0.7));
+
+    expect(historyWarnings(optionPlan, trades, { now })).toContainEqual({
+      rule: 'dte',
+      dte: '0dte',
+      trades: 5,
+      averageR: -0.7,
+    });
+  });
+
+  it('warns about the same days to expiration at the same time of day', () => {
+    const trades = [
+      ...times(5, () => zeroDteLate(-0.7)),
+      // Midday 0DTE entries went fine, so 0DTE alone is not the problem...
+      ...times(10, () => closedTrade(1, { symbol: 'SPY', assetClass: 'option', expiration: '2026-10-20' })),
+      // ...and late stock entries went fine, so the time of day alone isn't either.
+      ...times(10, () => closedTrade(1, { openedAt: LATE })),
+    ];
+
+    expect(historyWarnings(optionPlan, trades, { now: new Date(LATE) })).toEqual([
+      { rule: 'dteSession', dte: '0dte', sessionPart: 'close', trades: 5, averageR: -0.7 },
+    ]);
+  });
+
+  it('puts a plan expiring later in a different bucket', () => {
+    const trades = times(5, () => zeroDteLate(-0.7));
+
+    const warnings = historyWarnings({ ...optionPlan, expiration: '2026-11-20' }, trades, { now });
+
+    expect(warnings.map((w) => w.rule)).not.toContain('dte');
   });
 });
