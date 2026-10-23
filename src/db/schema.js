@@ -5,6 +5,7 @@ import {
   date,
   index,
   integer,
+  jsonb,
   numeric,
   pgEnum,
   pgTable,
@@ -156,3 +157,14 @@ export const tradeRuleChecks = pgTable(
   },
   (t) => [uniqueIndex('trade_rule_checks_trade_rule_idx').on(t.tradeId, t.ruleId)]
 );
+
+// The market context when a trade was entered (see src/lib/context). Values
+// like the option's quote can't be reconstructed later, so it's saved once,
+// at entry, and kept as captured. The JSON carries its own `version`.
+export const tradeContexts = pgTable('trade_contexts', {
+  tradeId: uuid('trade_id')
+    .primaryKey()
+    .references(() => trades.id, { onDelete: 'cascade' }),
+  context: jsonb('context').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});

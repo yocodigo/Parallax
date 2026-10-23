@@ -29,6 +29,13 @@
       "when": 1792713334675,
       "tag": "0003_add_option_contract_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792714628658,
+      "tag": "0004_add_trade_contexts",
+      "breakpoints": true
     }
   ]
 }
