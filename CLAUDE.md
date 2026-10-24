@@ -136,6 +136,8 @@ Vitest, JavaScript (not TypeScript).
   plain text, or a null review without calling Claude when the week is empty. Closed trades come
   with a computed Result line (P/L and R) that Claude quotes; it's told not to compute figures
   itself. Text only, no text-to-speech.
+- Trading setups and detector rules: `docs/private/setups.md` (git-ignored). Read it before building any detector, gate, or review feature.
+- After each commit, run the reviewer subagent on it and address every FIX before starting the next commit.
 
 ## Domain rules
 
