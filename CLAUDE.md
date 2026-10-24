@@ -42,7 +42,7 @@ Vitest, JavaScript (not TypeScript).
   option helpers, `buildContext`).
 - `src/server/`: server-only fetchers that call outside services (`marketContext.js`), tested with
   MSW in the node environment.
-- `src/db/journal.js`, `trades.js`, `settings.js`, `strategies.js`, and `contexts.js`: repository
+- `src/db/journal.js`, `trades.js`, `settings.js`, `strategies.js`, `contexts.js`, and `imports.js`: repository
   functions. They take `db` as the first argument so tests can
   pass the test database.
 - `src/db/index.js`: `getDb()`, created lazily (builds need no database) and cached on `globalThis`.
@@ -119,6 +119,17 @@ Vitest, JavaScript (not TypeScript).
   `TradeContext.jsx` shows it on demand via `GET /api/trades/[id]/context`. Entry route tests mock
   `after` and `captureContext`. Macro dates in `src/lib/context/macroCalendar.js` cover 2026-10-22
   through 2027-12-31 (BLS blocks automated requests); extend them yearly.
+- thinkorswim import (`/import`, `ThinkorswimImport.jsx`, `POST /api/imports/thinkorswim`): the
+  account statement CSV is read from its Cash Balance section (`src/lib/import/thinkorswim.js`; it
+  lists every fill with fees and a ref and ignores the statement's symbol filter). Times are in the
+  zone thinkorswim is set to (the user's is Pacific), not New York. Option fills only; stock rows are
+  listed as not understood. `pairFills` makes long trades flat to flat per contract (a sale while flat
+  closes a position from before the statement; scaled trades get weighted average prices).
+  `matchImport` skips trades entered at the same second (imported before), fills in a hand-recorded
+  entry within 5 minutes or a same-New-York-day plan with no entry, and creates the rest. Without
+  `confirm` the route only previews; with it, `applyImport` saves in one transaction (created trades
+  get a plan entry so they show in the journal) and contexts are captured with `after()`. Imports skip
+  circuit breakers and the checklist.
 - Weekly review: `WeeklyReview.jsx` (top of `/journal`) posts to `POST /api/weekly-review` on demand,
   not with SWR, since each review is a paid Claude call. The route sends the past seven days of entries
   (`src/lib/weeklyReview.js`, dates in New York time) to Claude and returns `{ review, entryCount }` as
@@ -167,8 +178,9 @@ Vitest, JavaScript (not TypeScript).
      recorded on the trade.
    - Done: strategies, rules, and a pre-entry checklist (`trade_rule_checks`), with a comparison on
      `/insights` of results when every rule was met against entries made anyway.
-   - Imports from Schwab/thinkorswim CSV exports, filling in fills on matching hand-recorded trades
-     (same symbol, direction, mode, close in time) and creating the rest. Waiting on a sample export.
+   - Done for options: imports from Schwab/thinkorswim account statement CSVs on `/import`, filling in
+     matching hand-recorded trades and creating the rest. Stock rows and a Fidelity import (where the
+     stock swing trades are) later.
    - Done: option contract fields for single calls and puts (I don't trade spreads; no legs table).
    - Done (except sector trend, earnings and ex-dividend dates, IV rank): context snapshot saved with
      each trade at entry: SPY/QQQ trend; VIX level and direction;
