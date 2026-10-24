@@ -6,7 +6,7 @@ import SiteNav from '../SiteNav';
 vi.mock('next/navigation', () => ({ usePathname: vi.fn() }));
 
 describe('SiteNav', () => {
-  it('links to the dashboard, the journal, strategies, and insights', () => {
+  it('links to the dashboard, the journal, strategies, insights, and the import', () => {
     usePathname.mockReturnValue('/');
     render(<SiteNav />);
 
@@ -14,6 +14,7 @@ describe('SiteNav', () => {
     expect(screen.getByRole('link', { name: 'Journal' })).toHaveAttribute('href', '/journal');
     expect(screen.getByRole('link', { name: 'Strategies' })).toHaveAttribute('href', '/strategies');
     expect(screen.getByRole('link', { name: 'Insights' })).toHaveAttribute('href', '/insights');
+    expect(screen.getByRole('link', { name: 'Import' })).toHaveAttribute('href', '/import');
   });
 
   it('marks the page you are on', () => {

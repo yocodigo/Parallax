@@ -8,6 +8,7 @@ const LINKS = [
   { href: '/journal', label: 'Journal' },
   { href: '/strategies', label: 'Strategies' },
   { href: '/insights', label: 'Insights' },
+  { href: '/import', label: 'Import' },
 ];
 
 export default function SiteNav() {
