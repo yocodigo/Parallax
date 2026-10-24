@@ -103,6 +103,13 @@ describe('recording a trade from the journal', () => {
     expect(screen.getByText(/filled at 210.5/i)).toBeInTheDocument();
   });
 
+  it('leaves the stop out of the summary when there is none', async () => {
+    serveJournal(plannedTrade({ assetClass: 'option', initialStop: null, target: null, plannedEntry: 1.3 }));
+    renderJournal();
+
+    expect(await screen.findByText('Entry 1.3')).toBeInTheDocument();
+  });
+
   it("shows the server's message under the field it is about", async () => {
     serveJournal(plannedTrade(), {
       respond: () =>

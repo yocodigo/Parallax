@@ -131,8 +131,10 @@ Vitest, JavaScript (not TypeScript).
 - A trade is a plan until `opened_at` is set and closed once `closed_at` is set. Status is derived,
   never stored.
 - Store facts, compute metrics: P/L, R-multiples, MAE/MFE, and expectancy are calculated, not stored.
-- A plan requires an initial stop on the losing side of the planned entry (R is measured from it).
-  A target is optional and must be on the winning side.
+- A stock or crypto plan requires an initial stop on the losing side of the planned entry (R is
+  measured from it). Options are exited by hand, so their stop is optional; without one, R stays
+  blank and only P/L shows. A stop that is given must be on the losing side. A target is optional
+  and must be on the winning side.
 - For options, prices are premiums and `multiplier` defaults to 100. "Long" means the contract was
   bought. The symbol is the underlying (SPY), with the contract in `option_type` (call/put), `strike`,
   and `expiration` (a `YYYY-MM-DD` date string; never parse it with `new Date()`, which shifts it a

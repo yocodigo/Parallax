@@ -44,7 +44,8 @@ async function fillRequiredFields() {
   await userEvent.type(screen.getByLabelText('Symbol'), 'AAPL');
   await userEvent.type(screen.getByLabelText('Quantity'), '100');
   await userEvent.type(screen.getByLabelText('Planned entry'), '210');
-  await userEvent.type(screen.getByLabelText('Initial stop'), '205');
+  // Labeled "Initial stop (optional)" on an option.
+  await userEvent.type(screen.getByLabelText(/^Initial stop/), '205');
   await userEvent.type(screen.getByLabelText('Notes'), 'Breakout over 210.');
 }
 
@@ -149,6 +150,26 @@ describe('PlanForm', () => {
       strike: 205,
       expiration: '2026-10-23',
     });
+  });
+
+  it('lets an option plan go without a stop', async () => {
+    const bodies = capturePlanRequests();
+    renderForm();
+
+    expect(screen.getByLabelText('Initial stop')).toBeRequired();
+    await userEvent.selectOptions(screen.getByLabelText('Asset class'), 'option');
+    expect(screen.getByLabelText('Initial stop (optional)')).not.toBeRequired();
+
+    await userEvent.type(screen.getByLabelText('Symbol'), 'SPY');
+    await userEvent.type(screen.getByLabelText('Quantity'), '1');
+    await userEvent.type(screen.getByLabelText('Planned entry'), '1.30');
+    await userEvent.type(screen.getByLabelText('Notes'), 'Put on the rejection.');
+    await userEvent.type(screen.getByLabelText('Strike'), '761');
+    fireEvent.change(screen.getByLabelText('Expiration'), { target: { value: '2026-10-23' } });
+    await save();
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0].plan).not.toHaveProperty('initialStop');
   });
 
   it('sends no contract for a stock', async () => {

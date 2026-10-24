@@ -51,6 +51,7 @@ export default function PlanForm({ draft, draftErrors = NO_ERRORS, onSaved }) {
   const [fieldErrors, setFieldErrors] = useState({ ...NO_ERRORS, ...draftErrors });
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
+  const isOption = form.assetClass === 'option';
 
   const set = (name) => (e) => setForm((current) => ({ ...current, [name]: e.target.value }));
 
@@ -193,8 +194,18 @@ export default function PlanForm({ draft, draftErrors = NO_ERRORS, onSaved }) {
           <input {...fieldProps('plan', 'plannedEntry')} type="number" step="any" required className={inputClass} />
         </Field>
 
-        <Field id="plan-initialStop" label="Initial stop" error={errorFor('plan', 'initialStop')}>
-          <input {...fieldProps('plan', 'initialStop')} type="number" step="any" required className={inputClass} />
+        <Field
+          id="plan-initialStop"
+          label={isOption ? 'Initial stop (optional)' : 'Initial stop'}
+          error={errorFor('plan', 'initialStop')}
+        >
+          <input
+            {...fieldProps('plan', 'initialStop')}
+            type="number"
+            step="any"
+            required={!isOption}
+            className={inputClass}
+          />
         </Field>
 
         <Field id="plan-target" label="Target" error={errorFor('plan', 'target')}>

@@ -60,9 +60,9 @@ describe('toDraft', () => {
 
     expect(draft.plan).toEqual({ symbol: 'TSLA', direction: 'short', plannedEntry: 250 });
     expect(draft.entry).not.toHaveProperty('emotion');
-    expect(Object.keys(fieldErrors.plan)).toEqual(
-      expect.arrayContaining(['mode', 'assetClass', 'quantity', 'initialStop'])
-    );
+    // No stop is asked for yet: whether one is needed depends on the asset
+    // class, which the note didn't say either.
+    expect(Object.keys(fieldErrors.plan)).toEqual(expect.arrayContaining(['mode', 'assetClass', 'quantity']));
   });
 
   it('checks the stop is on the losing side, like a typed plan', () => {

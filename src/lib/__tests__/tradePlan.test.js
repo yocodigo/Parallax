@@ -77,11 +77,25 @@ describe('parseTradePlan', () => {
     expect(parseTradePlan(longPlan).data.multiplier).toBe(1);
   });
 
-  it('requires a stop, since R is measured from it', () => {
+  it('requires a stop on a stock or crypto plan, since R is measured from it', () => {
     const result = parseTradePlan({ ...longPlan, initialStop: undefined });
 
     expect(result.success).toBe(false);
     expect(errorPaths(result)).toContain('initialStop');
+    expect(errorPaths(parseTradePlan({ ...longPlan, assetClass: 'crypto', initialStop: undefined }))).toContain(
+      'initialStop'
+    );
+  });
+
+  it('lets an option plan leave out the stop, since options are exited by hand', () => {
+    const result = parseTradePlan({ ...optionPlan, initialStop: undefined });
+
+    expect(result.success).toBe(true);
+    expect(result.data.initialStop).toBeUndefined();
+  });
+
+  it("still checks an option's stop when one is given", () => {
+    expect(errorPaths(parseTradePlan({ ...optionPlan, initialStop: 1.5 }))).toContain('initialStop');
   });
 
   it('rejects a stop on the wrong side of the entry', () => {

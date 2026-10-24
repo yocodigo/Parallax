@@ -6,9 +6,12 @@ const price = z.number().positive();
 // A stop on the wrong side of the entry is almost always a typo or a misheard
 // number, and it would make the trade's R meaningless.
 const stopOnLosingSide = (plan) =>
-  plan.direction === 'long'
-    ? plan.initialStop < plan.plannedEntry
-    : plan.initialStop > plan.plannedEntry;
+  plan.initialStop === undefined ||
+  (plan.direction === 'long' ? plan.initialStop < plan.plannedEntry : plan.initialStop > plan.plannedEntry);
+
+// Stocks and crypto need a stop, since R is measured from it. Options are
+// exited by hand, so theirs is optional; without one their R stays blank.
+const stopUnlessOption = (plan) => plan.assetClass === 'option' || plan.initialStop !== undefined;
 
 const targetOnWinningSide = (plan) =>
   plan.target === undefined ||
@@ -32,23 +35,31 @@ function checkContract(plan, ctx) {
   }
 }
 
-const schema = z
-  .object({
-    mode: z.enum(['live', 'paper', 'backtest']),
-    symbol: symbolSchema,
-    assetClass: z.enum(['stock', 'option', 'crypto']),
-    direction: z.enum(['long', 'short']),
-    quantity: z.number().positive(),
-    multiplier: z.number().int().positive().optional(),
-    plannedEntry: price,
-    initialStop: price,
-    target: price.optional(),
-    // The strategy the plan follows; its rules become the entry checklist.
-    strategyId: z.uuid().optional(),
-    // For options: the contract. The symbol is the underlying.
-    optionType: z.enum(['call', 'put']).optional(),
-    strike: price.optional(),
-    expiration: z.iso.date({ error: 'Enter the expiration as a date' }).optional(),
+const fields = z.object({
+  mode: z.enum(['live', 'paper', 'backtest']),
+  symbol: symbolSchema,
+  assetClass: z.enum(['stock', 'option', 'crypto']),
+  direction: z.enum(['long', 'short']),
+  quantity: z.number().positive(),
+  multiplier: z.number().int().positive().optional(),
+  plannedEntry: price,
+  initialStop: price.optional(),
+  target: price.optional(),
+  // The strategy the plan follows; its rules become the entry checklist.
+  strategyId: z.uuid().optional(),
+  // For options: the contract. The symbol is the underlying.
+  optionType: z.enum(['call', 'put']).optional(),
+  strike: price.optional(),
+  expiration: z.iso.date({ error: 'Enter the expiration as a date' }).optional(),
+});
+
+const schema = fields
+  // Runs even while other fields are invalid, so a missing stop is reported
+  // with everything else that's missing rather than only after it's fixed.
+  .refine(stopUnlessOption, {
+    path: ['initialStop'],
+    message: 'Enter a stop',
+    when: ({ value }) => fields.pick({ assetClass: true, initialStop: true }).safeParse(value).success,
   })
   .refine(stopOnLosingSide, {
     path: ['initialStop'],

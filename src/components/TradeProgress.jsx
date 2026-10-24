@@ -293,12 +293,14 @@ function ExitForm({ trade, onDone }) {
 }
 
 function Summary({ trade, status }) {
+  // Option trades may have no stop.
+  const stop = trade.initialStop === null ? '' : `, stop ${trade.initialStop}`;
   if (status === 'planned') {
     const target = trade.target ? `, target ${trade.target}` : '';
-    return <span>{`Entry ${trade.plannedEntry}, stop ${trade.initialStop}${target}`}</span>;
+    return <span>{`Entry ${trade.plannedEntry}${stop}${target}`}</span>;
   }
   if (status === 'open') {
-    return <span>{`Filled at ${trade.entryPrice}, stop ${trade.initialStop}`}</span>;
+    return <span>{`Filled at ${trade.entryPrice}${stop}`}</span>;
   }
 
   const pnl = profitLoss(trade);
