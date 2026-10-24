@@ -1,6 +1,7 @@
 // The shape of one bar, alone or against the bar before it. Bars use Alpaca's
 // keys: o, h, l, c, v.
 
+import { atMost } from './compare';
 import { OVERLAP_MAX } from './settings';
 
 // Gann's bar types: 'up' makes a higher high without a lower low, 'down' the
@@ -29,12 +30,8 @@ export function overlap(bar, prev) {
   return Math.max(0, shared) / range;
 }
 
-// Prices like 761.10 aren't exact in binary, so a share that is exactly 0.25
-// on paper can compute as 0.2500000000001. Comparisons allow for that.
-const EPSILON = 1e-9;
-
 // A clean break from the previous bar. A bar with no range doesn't count.
 export function hasLittleOverlap(bar, prev, max = OVERLAP_MAX) {
   const share = overlap(bar, prev);
-  return share !== null && share <= max + EPSILON;
+  return share !== null && atMost(share, max);
 }
