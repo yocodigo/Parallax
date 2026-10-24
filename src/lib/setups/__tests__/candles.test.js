@@ -59,6 +59,11 @@ describe('hasLittleOverlap', () => {
     expect(hasLittleOverlap(bar(12, 8), prev)).toBe(false); // 2 of 4
   });
 
+  it('counts exactly 25% at real prices, despite floating-point error', () => {
+    // (761.10 - 761.00) / (761.40 - 761.00) computes as 0.25000000000007105.
+    expect(hasLittleOverlap(bar(761.4, 761), bar(761.1, 760))).toBe(true);
+  });
+
   it('takes another limit', () => {
     expect(hasLittleOverlap(bar(12, 8), prev, 0.5)).toBe(true);
   });

@@ -29,8 +29,12 @@ export function overlap(bar, prev) {
   return Math.max(0, shared) / range;
 }
 
+// Prices like 761.10 aren't exact in binary, so a share that is exactly 0.25
+// on paper can compute as 0.2500000000001. Comparisons allow for that.
+const EPSILON = 1e-9;
+
 // A clean break from the previous bar. A bar with no range doesn't count.
 export function hasLittleOverlap(bar, prev, max = OVERLAP_MAX) {
   const share = overlap(bar, prev);
-  return share !== null && share <= max;
+  return share !== null && share <= max + EPSILON;
 }
