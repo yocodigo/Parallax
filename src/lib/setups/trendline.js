@@ -34,8 +34,11 @@ function position(bars, line, side, k) {
 
 // The bars from `from` to `to` that count as touches. A bar at the line is a
 // new touch only if some bar between it and the last counted touch moved
-// away; otherwise it merges into that touch, so bars sitting at the line
-// count once. Bars without enough history for the ATR are skipped.
+// away; otherwise it merges into that touch. A merged bar can itself have
+// moved away, when its far extreme reaches BOUNCE, and then the next bar at
+// the line is a new touch: that is what makes bar 7 of the four-touch example
+// its 4th touch, so a run of wide bars at the line counts every other bar.
+// Bars without enough history for the ATR are skipped.
 export function lineTouches(bars, line, side, from, to) {
   const touches = [];
   let movedAway = true;
