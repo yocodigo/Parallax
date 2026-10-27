@@ -65,3 +65,9 @@ export const N_RECLAIM = 3;
 // times the average body of the DISP_4X_LOOKBACK bars before it.
 export const DISP_4X = 4.0;
 export const DISP_4X_LOOKBACK = 4;
+
+// [3.2] A four-touch line's spacing is good when the gaps between touches
+// vary little (coefficient of variation at most SPACING_CV_MAX) or one gap is
+// at most CLOSE_GAP_SHARE of the average gap.
+export const SPACING_CV_MAX = 0.35;
+export const CLOSE_GAP_SHARE = 1 / 3;

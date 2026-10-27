@@ -2,9 +2,10 @@
 // three times, broken by a close through it on the 4th approach. Bars use
 // Alpaca's keys, oldest first; nothing after `i` is read.
 
+import { atMost } from './compare';
 import { isDisplacement } from './displacement';
 import { tradingDay } from './session';
-import { DISP_4X, DISP_4X_LOOKBACK, TRENDLINE_K } from './settings';
+import { CLOSE_GAP_SHARE, DISP_4X, DISP_4X_LOOKBACK, SPACING_CV_MAX, TRENDLINE_K } from './settings';
 import { swings } from './swings';
 import { breakOutcome, closesInside, isAway, isUnbroken, lineThrough, lineTouches, reachesLine } from './trendline';
 
@@ -74,8 +75,40 @@ function breakOnFourthApproach(bars, line, side, first, second, i) {
   return null;
 }
 
+const average = (values) => values.reduce((sum, v) => sum + v, 0) / values.length;
+
+// The quality grade of a four-touch line (setups.md 3.2): 'A' when it shows
+// both compression and good spacing (the user's reading), 'B' otherwise.
+// Compression: before a breakdown (support), each high between touches is
+// lower than the one before; before a breakout, each low between them is
+// higher. Spacing: the gaps between touches vary little, or one is much
+// shorter than the rest. Returns { grade, compression, spacing }.
+export function fourTouchGrade(bars, touches, side) {
+  const support = side === 'support';
+  let compression = true;
+  let previous = null;
+  for (let j = 1; j < touches.length; j++) {
+    const between = bars.slice(touches[j - 1] + 1, touches[j]);
+    if (between.length === 0) {
+      compression = false;
+      break;
+    }
+    const extreme = support ? Math.max(...between.map((bar) => bar.h)) : Math.min(...between.map((bar) => bar.l));
+    if (previous !== null && !(support ? extreme < previous : extreme > previous)) compression = false;
+    previous = extreme;
+  }
+
+  const gaps = touches.slice(1).map((touch, j) => touch - touches[j]);
+  const mean = average(gaps);
+  // Coefficient of variation: the gaps' standard deviation over their mean.
+  const variation = Math.sqrt(average(gaps.map((gap) => (gap - mean) ** 2))) / mean;
+  const spacing = atMost(variation, SPACING_CV_MAX) || gaps.some((gap) => atMost(gap, CLOSE_GAP_SHARE * mean));
+
+  return { grade: compression && spacing ? 'A' : 'B', compression, spacing };
+}
+
 // The trade a trap offers the other way: in on the reclaim close, stopped
-// beyond the false break's extreme.
+// beyond the extreme from the break bar to the reclaim.
 function trapTrade(bars, side, breakIndex, reclaimedAt) {
   const span = bars.slice(breakIndex, reclaimedAt + 1);
   return side === 'support'
@@ -106,17 +139,20 @@ function reportBreak(bars, candidates) {
   else if (!displacement) status = 'weak';
   else if (outcome.status === 'confirmed') status = 'valid';
   const trade = status === 'trap' ? trapTrade(bars, side, breakIndex, outcome.reclaimedAt) : null;
-  return { kind, line, touches, breakIndex, displacement, outcome, status, trade };
+  const grade = fourTouchGrade(bars, touches, side);
+  return { kind, line, touches, breakIndex, displacement, outcome, status, trade, grade };
 }
 
 // The four-touch breaks as of bar `i`, oldest first. Each is { kind ('4xBO' up
 // through resistance, '4xBD' down through support), line, touches (three,
 // then the first bar of the 4th approach), breakIndex, displacement, outcome,
-// status, trade }. Status: 'trap' when the break was reclaimed (with `trade`,
-// the other way); 'weak' when the break bar lacked a body DISP_4X times the
-// DISP_4X_LOOKBACK bars before it; 'valid' when it had one and the break was
-// confirmed; 'pending' otherwise. Lines through different pairs of swing
-// points can find the same break; each break is reported once (reportBreak).
+// status, trade, grade }. Status: 'trap' when the break was reclaimed (with
+// `trade`, the other way); 'weak' when the break bar lacked a body DISP_4X
+// times the DISP_4X_LOOKBACK bars before it; 'valid' when it had one and the
+// break was confirmed; 'pending' otherwise. `grade` is fourTouchGrade's, with
+// the 4th approach's first bar standing in for the 4th touch. Lines through
+// different pairs of swing points can find the same break; each break is
+// reported once (reportBreak).
 export function fourTouchBreaks(bars, i) {
   const pivots = swings(bars, i, TRENDLINE_K);
   const byBreak = new Map();
