@@ -37,6 +37,13 @@ describe('fourTouchGrade', () => {
     expect(fourTouchGrade(spaced(touches), touches, 'support')).toMatchObject({ spacing: true });
   });
 
+  it('sees no compression across touches with no bars between them', () => {
+    // Highs fall between the first three touches, but the last two are adjacent.
+    const touches = [0, 2, 4, 5];
+    const falling = spaced(touches, (k) => 20 - k);
+    expect(fourTouchGrade(falling, touches, 'support')).toMatchObject({ compression: false });
+  });
+
   it('is part of each break the detector reports', () => {
     expect(fourTouchBreaks(breakout, W + 11)[0].grade).toEqual({ grade: 'A', compression: true, spacing: true });
   });

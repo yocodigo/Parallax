@@ -89,12 +89,15 @@ export function fourTouchGrade(bars, touches, side) {
   let previous = null;
   for (let j = 1; j < touches.length; j++) {
     const between = bars.slice(touches[j - 1] + 1, touches[j]);
+    // Touches with no bars between them show nothing to compress. The touch
+    // rules put a bar that moved away between touches, so this is defensive.
     if (between.length === 0) {
       compression = false;
       break;
     }
     const extreme = support ? Math.max(...between.map((bar) => bar.h)) : Math.min(...between.map((bar) => bar.l));
-    if (previous !== null && !(support ? extreme < previous : extreme > previous)) compression = false;
+    const tighter = support ? extreme < previous : extreme > previous;
+    if (previous !== null && !tighter) compression = false;
     previous = extreme;
   }
 
