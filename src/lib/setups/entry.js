@@ -6,6 +6,10 @@ import { bandCross } from './direction';
 
 const MINUTE = 60_000;
 
+// The New York trading date of a bar, as YYYY-MM-DD.
+const nyDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' });
+const tradingDay = (bar) => nyDate.format(new Date(bar.t));
+
 // True when 5m bar `j` is an entry in the direction of `bias`: for a long, an
 // up candle (close above open) whose high breaks above the previous bar's
 // high, with little overlap against it; a short mirrors this. The break
@@ -26,6 +30,7 @@ export const risingVolume = (bars, j) => j >= 1 && bars[j].v > bars[j - 1].v;
 // candle that starts once that 15m bar closed and closes while the bias still
 // holds. A later 15m close with another bias (the other side, or on the band)
 // ends the search, and a 5m candle closing at that same moment is too late.
+// So does the session close: the bias doesn't carry into the next morning.
 // Returns { index, bias, risingVolume } into `bars5`, or null.
 export function findEntry(bars15, bars5, i) {
   const cross = bandCross(bars15, i);
@@ -42,8 +47,10 @@ export function findEntry(bars15, bars5, i) {
     }
   }
 
+  const day = tradingDay(bars15[i]);
   for (let j = 0; j < bars5.length; j++) {
     if (Date.parse(bars5[j].t) < start) continue;
+    if (tradingDay(bars5[j]) !== day) break;
     if (closeOf(bars5[j], 5) >= end) break;
     if (isEntryCandle(bars5, j, cross.bias)) return { index: j, bias: cross.bias, risingVolume: risingVolume(bars5, j) };
   }

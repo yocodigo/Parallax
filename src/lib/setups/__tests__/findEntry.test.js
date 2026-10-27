@@ -52,6 +52,13 @@ describe('findEntry', () => {
     expect(findEntry(fifteens(192 / 19), [flat(-5), flat(0), longEntry(5)], 20)).toMatchObject({ index: 2 });
   });
 
+  it('stops at the session close rather than carrying into the next morning', () => {
+    // The cross closes at 2:45 PM New York (18:45Z). 3:55 PM is 70 minutes
+    // later; 9:30 AM the next day is 1125 minutes later.
+    expect(findEntry(fifteens(), [flat(-5), flat(0), longEntry(70)], 20)).toMatchObject({ index: 2 });
+    expect(findEntry(fifteens(), [flat(-5), flat(0), flat(75), longEntry(1125)], 20)).toBeNull();
+  });
+
   it('is null for a 15m bar that did not cross', () => {
     expect(findEntry(fifteens(12.5), [flat(10), longEntry(15)], 21)).toBeNull();
   });
