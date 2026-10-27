@@ -3,6 +3,7 @@
 // Alpaca's keys, oldest first; nothing after `i` is read.
 
 import { isDisplacement } from './displacement';
+import { tradingDay } from './session';
 import { DISP_4X, DISP_4X_LOOKBACK, TRENDLINE_K } from './settings';
 import { swings } from './swings';
 import { breakOutcome, closesInside, isAway, isUnbroken, lineThrough, lineTouches, reachesLine } from './trendline';
@@ -12,13 +13,21 @@ const KINDS = [
   { kind: '4xBO', side: 'resistance', pivot: 'high' },
 ];
 
+// A bar's trading day, or null for a bar without a time: Alpaca bars always
+// have one, but the detector also works on bare o/h/l/c bars, as in tests.
+const dayOf = (bar) => (bar.t ? tradingDay(bar) : null);
+
 // Where a line's touches start counting: back from its first swing point for
 // as long as no bar closed through it. Touches before that point belong to the
 // same line while it held, and ignoring them could take a 5th approach for
-// the 4th when the line is drawn through later touches of a shelf.
+// the 4th when the line is drawn through later touches of a shelf. It goes no
+// further back than the start of that point's trading day (the user's
+// choice), so a sloped line can't pick up a stray touch from yesterday across
+// the overnight gap. Bars without a time count as one day.
 function lineStart(bars, line, side, anchor) {
+  const day = dayOf(bars[anchor]);
   let k = anchor;
-  while (k > 0 && closesInside(bars, line, side, k - 1)) k -= 1;
+  while (k > 0 && dayOf(bars[k - 1]) === day && closesInside(bars, line, side, k - 1)) k -= 1;
   return k;
 }
 

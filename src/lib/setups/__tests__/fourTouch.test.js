@@ -148,6 +148,17 @@ describe('fourTouchBreaks', () => {
     });
   });
 
+  it('counts touches back no further than the start of the trading day', () => {
+    // The tied shelf again, with bar 0 at 3:59 PM one day and bar 1 at 9:30 the
+    // next: the line through bars 3 and 5 starts counting at bar 1.
+    const lastClose = Date.parse('2026-10-26T19:59:00Z');
+    const nextOpen = Date.parse('2026-10-27T13:30:00Z');
+    const at = (k) => (k <= W ? lastClose - (W - k) * 60_000 : nextOpen + (k - W - 1) * 60_000);
+    const tied = withBars(breakout, { [W]: { o: 320, h: 322, l: 300.5, c: 314 } });
+    const timed = tied.map((bar, k) => ({ ...bar, t: new Date(at(k)).toISOString() }));
+    expect(fourTouchBreaks(timed, B)[0]).toMatchObject({ touches: [W + 1, W + 3, W + 5, W + 7], breakIndex: B });
+  });
+
   it('stops counting back at a close through the line', () => {
     // Bar 0 touches the shelf and bar 2 closes through it. The shelf forms again
     // with touches at 5, 7, and 9, and breaks on its 4th approach at bar 12.
