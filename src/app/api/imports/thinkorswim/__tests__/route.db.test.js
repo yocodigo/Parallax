@@ -48,6 +48,9 @@ function post({ text = STATEMENT, timeZone = 'America/Los_Angeles', mode = 'live
 }
 
 beforeEach(async () => {
+  // Let the last test's after() work finish before emptying the tables: its
+  // writes can deadlock with the TRUNCATE.
+  await Promise.all(afterWork);
   afterWork.length = 0;
   vi.mocked(captureContext).mockReset().mockResolvedValue({ version: 1 });
   await resetDb(getDb());

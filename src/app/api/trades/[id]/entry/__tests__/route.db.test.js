@@ -66,8 +66,11 @@ const post = (id, body) =>
   );
 
 beforeEach(async () => {
-  await resetDb(getDb());
+  // Let the last test's after() work finish before emptying the tables: its
+  // writes can deadlock with the TRUNCATE.
+  await Promise.all(afterWork);
   afterWork.length = 0;
+  await resetDb(getDb());
   captureContext.mockReset();
   captureContext.mockResolvedValue({ version: 1, market: { spyTrend: 'up' } });
 });
