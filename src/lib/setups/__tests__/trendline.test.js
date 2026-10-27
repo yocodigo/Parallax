@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { TRENDLINE_K } from '../settings';
 import { swings } from '../swings';
-import { isUnbroken, lineAt, lineThrough, lineTouches } from '../trendline';
+import { closesInside, isAway, isUnbroken, lineAt, lineThrough, lineTouches } from '../trendline';
 import { breakout, W } from './fixtures/fourTouch';
 
 // The mirror image: support becomes resistance at the negated price.
@@ -70,5 +70,27 @@ describe('isUnbroken', () => {
     const roof = lineThrough({ index: W + 1, price: -300.5 }, { index: W + 3, price: -300.5 });
     expect(isUnbroken(mirror(breakout), roof, 'resistance', W + 1, W + 7)).toBe(true);
     expect(isUnbroken(mirror(breakout), roof, 'resistance', W + 1, W + 8)).toBe(false);
+  });
+});
+
+describe('isAway', () => {
+  it('is true when a bar reaches BOUNCE from the line by its far extreme', () => {
+    // Bar 6's high, 303, is 2.5 above the shelf; bar 7's, 302, only 1.5.
+    expect(isAway(breakout, shelf, 'support', W + 6)).toBe(true);
+    expect(isAway(breakout, shelf, 'support', W + 7)).toBe(false);
+  });
+
+  it('is false without enough history for the ATR', () => {
+    const early = Array(5).fill({ o: 303, h: 305, l: 300.5, c: 302 });
+    expect(isAway(early, shelf, 'support', 4)).toBe(false);
+  });
+});
+
+describe('closesInside', () => {
+  it("is true for a close on the line's original side, or on the line", () => {
+    expect(closesInside(breakout, shelf, 'support', W + 7)).toBe(true);
+    expect(closesInside(breakout, shelf, 'support', W + 8)).toBe(false);
+    const onLine = breakout.map((bar, k) => (k === W + 7 ? { ...bar, c: 300.5 } : bar));
+    expect(closesInside(onLine, shelf, 'support', W + 7)).toBe(true);
   });
 });

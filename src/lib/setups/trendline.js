@@ -24,12 +24,18 @@ function position(bars, line, side, k) {
   const level = lineAt(line, k);
   const support = side === 'support';
   const near = support ? bar.l : bar.h;
-  const rightSide = support ? atLeast(bar.c, level) : atMost(bar.c, level);
   const reach = support ? bar.h - level : level - bar.l;
   return {
-    atLine: atMost(Math.abs(near - level), TOL * range) && rightSide,
+    atLine: atMost(Math.abs(near - level), TOL * range) && closesInside(bars, line, side, k),
     away: atLeast(reach, BOUNCE * range),
   };
+}
+
+// Whether bar `k` moved BOUNCE away from the line by its far extreme (its high
+// for support, its low for resistance). False without enough history for the
+// ATR.
+export function isAway(bars, line, side, k) {
+  return position(bars, line, side, k)?.away ?? false;
 }
 
 // The bars from `from` to `to` that count as touches. A bar at the line is a
@@ -55,8 +61,8 @@ export function lineTouches(bars, line, side, from, to) {
   return touches;
 }
 
-// Whether bar `k` closes back on the line's original side (on the line counts).
-function closesInside(bars, line, side, k) {
+// Whether bar `k` closes on the line's original side (on the line counts).
+export function closesInside(bars, line, side, k) {
   const level = lineAt(line, k);
   return side === 'support' ? atLeast(bars[k].c, level) : atMost(bars[k].c, level);
 }
@@ -65,9 +71,7 @@ function closesInside(bars, line, side, k) {
 // it that close back are sweeps and leave it intact.
 export function isUnbroken(bars, line, side, from, to) {
   for (let k = from; k <= to; k++) {
-    const level = lineAt(line, k);
-    const closesThrough = side === 'support' ? !atLeast(bars[k].c, level) : !atMost(bars[k].c, level);
-    if (closesThrough) return false;
+    if (!closesInside(bars, line, side, k)) return false;
   }
   return true;
 }
