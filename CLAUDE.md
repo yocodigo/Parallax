@@ -68,6 +68,14 @@ Vitest, JavaScript (not TypeScript).
 - `src/components/`: client components. They load data with SWR using `fetchJson` from `src/lib/`.
   Forms post to the API and leave validation to the server, showing its `fieldErrors` under each
   input (`Field.jsx`); after saving they call `mutate('/api/journal')` to reload the list.
+- Theme and dark mode: colors come from CSS variables, so components need no `dark:` classes.
+  `src/lib/palette.cjs` (CommonJS, for `tailwind.config.js`) points the gray, red, green, amber, and
+  blue classes and white at variables. Light values are Tailwind's own; dark swaps each shade with its
+  opposite (gray-50 and gray-950, red-800 and red-200), white becomes gray-900 (the card color), and
+  gray-500 is lightened to keep secondary text readable. Dark applies when the system is dark unless
+  `<html>` has `light`, or when it has `dark`. `ThemePicker.jsx` in the nav saves the choice
+  (`src/lib/theme.js`), and `themeScript` in the layout's `<head>` applies it before the page draws.
+  Components use only those five hues (a test checks); charts read `rgb(var(--color-…))`.
 - Tests live in `__tests__` folders next to the code they test.
   - Database tests are named `*.db.test.js`, run against the `parallax_test` database (migrated once
     per run, tables truncated before each test), one file at a time (`fileParallelism: false`).
@@ -202,8 +210,9 @@ Vitest, JavaScript (not TypeScript).
      market data, Cboe's free daily VIX history (prior close), and the published Fed/BLS schedules for
      FOMC, CPI, and jobs dates. TradingView has no data API.
    - To do: delete a journal entry from `/journal`, with a confirmation. Decide first what happens to
-     a trade whose plan entry is deleted, since trades show in the journal only through their entries.
-   - Next: dark mode (follows the system setting, with a picker to override it).
+     a trade whose plan entry is deleted: that entry holds the trade's entry and exit controls, and a
+     trade shows in the journal only through its entries.
+   - Done: dark mode, following the system setting, with a picker in the nav to override it.
    - In progress: setup detectors, gates, and the entry review, following the build order in
      `docs/private/setups.md`. Step 1 (primitives, `src/lib/setups/`) done.
 5. Last, once the product is polished: deploy to Vercel plus Neon (Postgres 17). Upgrade Next.js
