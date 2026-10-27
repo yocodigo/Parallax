@@ -48,8 +48,8 @@ export function trend(swingList) {
 
 // From the last swing low to the last swing high, or null without both.
 export function dealingRange(swingList) {
-  const [low] = lastTwo(swingList, 'low').slice(-1);
-  const [high] = lastTwo(swingList, 'high').slice(-1);
+  const low = lastTwo(swingList, 'low').at(-1);
+  const high = lastTwo(swingList, 'high').at(-1);
   return low === undefined || high === undefined ? null : { low, high };
 }
 
