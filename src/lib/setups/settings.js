@@ -29,3 +29,9 @@ export const SWING_K = 2;
 // [2.5] The middle of the dealing range, as shares of it, where entries are
 // avoided.
 export const MID_RANGE = { from: 0.4, to: 0.6 };
+
+// [2.6] Displacement: a body at least DISP_MULT times the average body of the
+// DISP_LOOKBACK bars before it, filling at least DISP_BODY_SHARE of its range.
+export const DISP_MULT = 2.0;
+export const DISP_LOOKBACK = 10;
+export const DISP_BODY_SHARE = 0.6;
