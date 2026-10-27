@@ -4,7 +4,7 @@
 
 import { atLeast, atMost } from './compare';
 import { atr } from './relative';
-import { BOUNCE, TOL } from './settings';
+import { BOUNCE, N_ACC, N_RECLAIM, TOL } from './settings';
 
 // The line through points { index, price }, any slope, flat included.
 export function lineThrough(a, b) {
@@ -55,6 +55,12 @@ export function lineTouches(bars, line, side, from, to) {
   return touches;
 }
 
+// Whether bar `k` closes back on the line's original side (on the line counts).
+function closesInside(bars, line, side, k) {
+  const level = lineAt(line, k);
+  return side === 'support' ? atLeast(bars[k].c, level) : atMost(bars[k].c, level);
+}
+
 // True when no bar from `from` to `to` closes through the line. Wicks through
 // it that close back are sweeps and leave it intact.
 export function isUnbroken(bars, line, side, from, to) {
@@ -64,4 +70,30 @@ export function isUnbroken(bars, line, side, from, to) {
     if (closesThrough) return false;
   }
   return true;
+}
+
+// What followed bar `b`, the first close through the line, as of bar `i`
+// (setups.md 2.8). Reclaimed: a close back inside within N_RECLAIM bars, which
+// wins even after acceptance. Accepted: the N_ACC closes after the break all
+// stayed beyond. Confirmed: accepted, with the reclaim window passed. Pending
+// otherwise. Returns { status, acceptedAt, reclaimedAt }.
+export function breakOutcome(bars, line, side, b, i) {
+  let reclaimedAt = null;
+  for (let k = b + 1; k <= Math.min(b + N_RECLAIM, i); k++) {
+    if (closesInside(bars, line, side, k)) {
+      reclaimedAt = k;
+      break;
+    }
+  }
+  const acceptEnd = b + N_ACC;
+  let acceptedAt = null;
+  if (acceptEnd <= i) {
+    let held = true;
+    for (let k = b + 1; k <= acceptEnd; k++) if (closesInside(bars, line, side, k)) held = false;
+    if (held) acceptedAt = acceptEnd;
+  }
+  let status = 'pending';
+  if (reclaimedAt !== null) status = 'reclaimed';
+  else if (acceptedAt !== null) status = i >= b + N_RECLAIM ? 'confirmed' : 'accepted';
+  return { status, acceptedAt, reclaimedAt };
 }

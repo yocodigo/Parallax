@@ -1,0 +1,38 @@
+import { describe, expect, it } from 'vitest';
+import { breakOutcome, lineThrough } from '../trendline';
+import { breakout, trap, W } from './fixtures/fourTouch';
+
+const mirror = (bars) => bars.map(({ o, h, l, c }) => ({ o: -o, h: -l, l: -h, c: -c }));
+const shelf = lineThrough({ index: W + 1, price: 300.5 }, { index: W + 3, price: 300.5 });
+// Bar 8 is the first close through the shelf in both sequences.
+const B = W + 8;
+
+describe('breakOutcome', () => {
+  it('is pending until enough bars have closed', () => {
+    expect(breakOutcome(breakout, shelf, 'support', B, B + 1)).toEqual({ status: 'pending', acceptedAt: null, reclaimedAt: null });
+  });
+
+  it('is accepted after two closes beyond, and confirmed once the reclaim window passes', () => {
+    expect(breakOutcome(breakout, shelf, 'support', B, B + 2)).toEqual({ status: 'accepted', acceptedAt: B + 2, reclaimedAt: null });
+    expect(breakOutcome(breakout, shelf, 'support', B, B + 3)).toEqual({ status: 'confirmed', acceptedAt: B + 2, reclaimedAt: null });
+  });
+
+  it('is reclaimed by a close back inside within three bars: the trap', () => {
+    expect(breakOutcome(trap, shelf, 'support', B, B + 1)).toEqual({ status: 'reclaimed', acceptedAt: null, reclaimedAt: B + 1 });
+  });
+
+  it('counts a reclaim even after acceptance, while the window is open', () => {
+    const lateReclaim = breakout.map((bar, k) => (k === B + 3 ? { ...bar, h: 302, c: 301 } : bar));
+    expect(breakOutcome(lateReclaim, shelf, 'support', B, B + 3)).toEqual({ status: 'reclaimed', acceptedAt: B + 2, reclaimedAt: B + 3 });
+  });
+
+  it('ignores bars after the one it is judged at', () => {
+    expect(breakOutcome(trap, shelf, 'support', B, B)).toEqual({ status: 'pending', acceptedAt: null, reclaimedAt: null });
+  });
+
+  it('works the same for resistance', () => {
+    const roof = lineThrough({ index: W + 1, price: -300.5 }, { index: W + 3, price: -300.5 });
+    expect(breakOutcome(mirror(trap), roof, 'resistance', B, B + 1).status).toBe('reclaimed');
+    expect(breakOutcome(mirror(breakout), roof, 'resistance', B, B + 3).status).toBe('confirmed');
+  });
+});

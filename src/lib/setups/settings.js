@@ -55,3 +55,8 @@ export const TRENDLINE_K = 1;
 // BOUNCE times the ATR from it.
 export const TOL = 0.1;
 export const BOUNCE = 0.25;
+
+// [2.8] After a close through a line: accepted after N_ACC more closes beyond
+// it; reclaimed by a close back inside within N_RECLAIM bars.
+export const N_ACC = 2;
+export const N_RECLAIM = 3;
