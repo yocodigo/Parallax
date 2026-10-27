@@ -71,3 +71,12 @@ export const DISP_4X_LOOKBACK = 4;
 // at most CLOSE_GAP_SHARE of the average gap.
 export const SPACING_CV_MAX = 0.35;
 export const CLOSE_GAP_SHARE = 1 / 3;
+
+// [3.1] SPY's 1m reaction at T1: rejected by a close REJECT_DIST ATRs back
+// within REJECT_BARS bars of the touch; oscillating when closes switch sides
+// twice within OSC_BARS bars; ripped by a displacement close beyond with no
+// close back within RIP_BARS bars.
+export const REJECT_DIST = 0.5;
+export const REJECT_BARS = 3;
+export const OSC_BARS = 10;
+export const RIP_BARS = 3;
