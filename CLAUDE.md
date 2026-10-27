@@ -57,7 +57,12 @@ Vitest, JavaScript (not TypeScript).
   first bar back at the line), and a close through on that approach is the break: valid with a 4x
   body and confirmed acceptance (`breakOutcome`), a trap if any line that found it saw a reclaim,
   weak without the body, graded A only with both compression and good spacing (even gaps, or one
-  much shorter than the rest).
+  much shorter than the rest). And the 1m reaction at a target level (`reactionAt` in
+  `reaction.js`): from the first bar within `TOL` of it, the first rule met decides: rejected
+  (a close `REJECT_DIST` ATRs back, from the touch bar through the next `REJECT_BARS`), ripped
+  (a displacement close beyond, held `RIP_BARS` bars), or oscillating (closes switching sides
+  twice within `OSC_BARS` bars, the touch being the first; drifting when the last close is beyond
+  and past the touch close), else none.
   Bars use Alpaca's keys (`t o h l c v`), oldest first; detectors take the index `i` of the latest
   closed bar and never read past it. Every threshold is a named default in `settings.js`, tagged
   with its setups.md section and named as the doc names it where it does. Threshold checks go
@@ -230,8 +235,8 @@ Vitest, JavaScript (not TypeScript).
    - Done: dark mode, following the system setting, with a picker in the nav to override it.
    - In progress: setup detectors, gates, and the entry review, following the build order in
      `docs/private/setups.md`. Steps 1 (primitives, `src/lib/setups/`), 2 (5m and 15m bars, 15m
-     direction), 3 (5m entry candle, 1m room check), and 4 (trendlines, four-touch breaks with their
-     grade) done.
+     direction), 3 (5m entry candle, 1m room check), 4 (trendlines, four-touch breaks with their
+     grade), and 5 (the reaction at T1) done.
 5. Last, once the product is polished: deploy to Vercel plus Neon (Postgres 17). Upgrade Next.js
    past 16.4.0 first (security advisories; 16.4.1 is two weeks old on 2026-10-28). Add auth or a
    demo mode before any journal data is public. One Playwright end-to-end test of the main flow.
