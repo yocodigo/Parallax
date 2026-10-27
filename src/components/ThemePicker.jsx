@@ -21,6 +21,8 @@ const serverChoice = () => 'system';
 
 function subscribe(listener) {
   listeners.add(listener);
+  // Browsers send storage events only to the other tabs, never the one that
+  // made the change. A null key means a tab cleared all of storage.
   const fromOtherTab = (event) => {
     if (event.key !== THEME_KEY && event.key !== null) return;
     applyTheme(document.documentElement, savedChoice());
@@ -37,13 +39,16 @@ function subscribe(listener) {
 // right before this renders, because themeScript applied the saved choice.
 export default function ThemePicker() {
   const saved = useSyncExternalStore(subscribe, savedChoice, serverChoice);
-  // A choice storage couldn't keep: it still applies to this page.
+  // A choice storage couldn't keep: it still applies to this page. Null means
+  // storage holds the choice. (Once set, it also outlasts other tabs' choices,
+  // which can't be saved either while storage refuses writes.)
   const [unsaved, setUnsaved] = useState(null);
   const choice = unsaved ?? saved;
 
   function choose(next) {
     const store = storage();
-    setUnsaved(store && saveTheme(store, next) ? null : next);
+    const stored = store !== null && saveTheme(store, next);
+    setUnsaved(stored ? null : next);
     applyTheme(document.documentElement, next);
     for (const listener of listeners) listener();
   }

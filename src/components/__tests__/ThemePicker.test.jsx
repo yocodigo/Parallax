@@ -74,4 +74,16 @@ describe('ThemePicker', () => {
     expect(screen.getByLabelText('Theme')).toHaveValue('dark');
     expect(root.classList.contains('dark')).toBe(true);
   });
+
+  it('goes back to the system setting when another tab clears storage', async () => {
+    render(<ThemePicker />);
+    await userEvent.selectOptions(screen.getByLabelText('Theme'), 'dark');
+    localStorage.clear();
+    act(() => {
+      window.dispatchEvent(new StorageEvent('storage', { key: null }));
+    });
+
+    expect(screen.getByLabelText('Theme')).toHaveValue('system');
+    expect(root.className).toBe('');
+  });
 });
