@@ -8,8 +8,9 @@ const body = (bar) => Math.abs(bar.c - bar.o);
 
 // True when bar `i`'s body, up or down, is at least `multiple` times the
 // average body of the `lookback` bars before it, and fills at least
-// `bodyShare` of the bar's range (so it isn't mostly wick). False without
-// enough bars before it or with no range.
+// `bodyShare` of the bar's range (so it isn't mostly wick). After bars with
+// no body the average is 0, so any body that fills `bodyShare` of its range
+// counts. False without enough bars before it or with no range.
 export function isDisplacement(
   bars,
   i,
