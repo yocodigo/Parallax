@@ -192,6 +192,56 @@ describe('fourTouchBreaks', () => {
     expect(fourTouchBreaks(spike, B)[0]).toMatchObject({ breakIndex: B });
   });
 
+  it('draws no line through the 4th approach itself', () => {
+    // Bars 4 and 6 tie bars 3 and 5, so the only swing lows on the shelf are
+    // bar 1 and bar 7, where the 4th approach starts; an inside bar 8 confirms
+    // bar 7, and bar 9 breaks. A line through bars 1 and 7 didn't exist yet
+    // when the 4th approach began.
+    const fitted = [
+      ...withBars(breakout.slice(0, B), {
+        [W + 4]: { o: 302, h: 306, l: 300.5, c: 305 },
+        [W + 6]: { o: 301, h: 303, l: 300.2, c: 301 },
+      }),
+      { o: 300.6, h: 301, l: 300.3, c: 300.7 },
+      { o: 300.7, h: 300.8, l: 292, c: 292.6 },
+    ];
+    expect(fourTouchBreaks(fitted, B + 1)).toEqual([]);
+  });
+
+  it("allows a line whose swing point is confirmed by the 4th approach's first bar", () => {
+    // Bar 4 ties bar 3 and bars 5 and 7 sit above bar 6, so the only swing lows
+    // are bars 1 and 6. Bar 7, where the 4th approach starts, confirms bar 6.
+    const justInTime = withBars(breakout, {
+      [W + 4]: { o: 302, h: 306, l: 300.5, c: 305 },
+      [W + 5]: { o: 305, h: 305, l: 300.4, c: 301 },
+      [W + 7]: { o: 301, h: 302, l: 300.4, c: 300.6 },
+    });
+    expect(fourTouchBreaks(justInTime, B)[0]).toMatchObject({
+      breakIndex: B,
+      line: lineThrough({ index: W + 1, price: 300.5 }, { index: W + 6, price: 300.3 }),
+    });
+  });
+
+  it('draws no line through the 4th approach even when the break confirms it', () => {
+    // A rising line through bars 1 and 10, where bar 10 starts the 4th approach
+    // and only the break bar 11's higher low makes it a swing low.
+    const rising = [
+      ...breakout.slice(0, W + 1),
+      { o: 314, h: 316, l: 300, c: 303 },
+      { o: 303, h: 310, l: 302, c: 308 },
+      { o: 308, h: 309, l: 304, c: 305 },
+      { o: 305, h: 306, l: 303, c: 304 },
+      { o: 304, h: 309, l: 303, c: 308 },
+      { o: 308, h: 312, l: 307, c: 311 },
+      { o: 311, h: 312, l: 306, c: 307 },
+      { o: 307, h: 313, l: 306, c: 312 },
+      { o: 312, h: 315, l: 310, c: 314 },
+      { o: 314, h: 315, l: 309, c: 310 },
+      { o: 310, h: 310.5, l: 309.2, c: 309.4 },
+    ];
+    expect(fourTouchBreaks(rising, W + 11)).toEqual([]);
+  });
+
   it('finds the 4xBO at resistance the same way', () => {
     expect(fourTouchBreaks(mirror(breakout), B + 3)[0]).toMatchObject({ kind: '4xBO', status: 'valid' });
     expect(fourTouchBreaks(mirror(trap), B + 1)[0]).toMatchObject({

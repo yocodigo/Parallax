@@ -36,8 +36,9 @@ function lineStart(bars, line, side, anchor) {
 // between. They can come before `first` (see lineStart). A line whose 4th
 // approach ended before the break, price moving away again, is on its 5th
 // approach and dropped; the touch count alone doesn't decide that.
-// The line must have been drawable by the break: its second swing point
-// confirmed TRENDLINE_K bars after it. Closing through is checked before
+// The line must have existed before its 4th approach: its second swing point
+// confirmed TRENDLINE_K bars after it, by the approach's first bar, so the
+// line is never fitted through the approach itself. Closing through is checked before
 // moving away, so a bar that does both is the break. Returns { touches,
 // breakIndex }; the 4th entry of touches is the first bar of the 4th
 // approach, which need not be a touch: it can be the break itself.
@@ -59,16 +60,14 @@ function breakOnFourthApproach(bars, line, side, first, second, i) {
   // came back, k ends past i and nothing is found.
   for (k += 1; k <= i; k++) if (reachesLine(bars, line, side, k)) break;
   const start = k;
+  if (second.index + TRENDLINE_K > start) return null;
 
   // It lasts until a later bar moves away, its first close through being the
   // break. As with touches, the first bar moving away doesn't end the
   // approach it starts.
 
   for (; k <= i; k++) {
-    if (!closesInside(bars, line, side, k)) {
-      if (second.index + TRENDLINE_K > k) return null;
-      return { touches: [...touches.slice(0, 3), start], breakIndex: k };
-    }
+    if (!closesInside(bars, line, side, k)) return { touches: [...touches.slice(0, 3), start], breakIndex: k };
     if (k > start && isAway(bars, line, side, k)) return null;
   }
   return null;
