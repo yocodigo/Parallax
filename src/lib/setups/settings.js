@@ -21,3 +21,11 @@ export const SPREAD_LIMITS = { average: 0.7, large: 1.3, abnormallyLarge: 2.0 };
 // bands this many standard deviations away.
 export const BOLLINGER_PERIOD = 20;
 export const BOLLINGER_DEVIATIONS = 2;
+
+// [2.5] A swing high's high must be above this many bars on each side (a
+// swing low's low below them), so it is confirmed this many bars later.
+export const SWING_K = 2;
+
+// [2.5] The middle of the dealing range, as shares of it, where entries are
+// avoided.
+export const MID_RANGE = { from: 0.4, to: 0.6 };
