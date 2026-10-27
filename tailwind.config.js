@@ -1,3 +1,6 @@
+const plugin = require('tailwindcss/plugin');
+const { lightVariables, themedColors } = require('./src/lib/palette.cjs');
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
@@ -6,7 +9,14 @@ module.exports = {
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
-    extend: {},
+    extend: {
+      // The hues the app uses read CSS variables (src/lib/palette.cjs).
+      colors: themedColors(),
+    },
   },
-  plugins: [],
-}
+  plugins: [
+    plugin(({ addBase }) => {
+      addBase({ ':root': lightVariables() });
+    }),
+  ],
+};
