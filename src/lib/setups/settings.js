@@ -45,3 +45,13 @@ export const EXTENDED_HOURS = false;
 // 1m outer band in the trade direction of at least ROOM_MIN times the 1m
 // ATR. Measuring from the close is the user's reading of the rule.
 export const ROOM_MIN = 0.5;
+
+// [2.7] Trendlines go through swing points with this many bars on each side,
+// fewer than SWING_K so touches a couple of bars apart can form a line, as in
+// the four-touch example. The user's choice; setups.md uses swing points.
+export const TRENDLINE_K = 1;
+
+// [2.7] "At the line": within TOL times the ATR of it. "Moved away": at least
+// BOUNCE times the ATR from it.
+export const TOL = 0.1;
+export const BOUNCE = 0.25;
