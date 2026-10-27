@@ -47,6 +47,20 @@ describe('swings', () => {
     expect(swings(flatTop, 5).filter((s) => s.kind === 'high')).toEqual([]);
   });
 
+  it('can find a high and a low on the same bar', () => {
+    const outside = bars([
+      [10, 9],
+      [10, 9],
+      [12, 7],
+      [10, 9],
+      [10, 9],
+    ]);
+    expect(swings(outside, 4)).toEqual([
+      { index: 2, kind: 'high', price: 12 },
+      { index: 2, kind: 'low', price: 7 },
+    ]);
+  });
+
   it('takes another number of bars on each side', () => {
     expect(swings(zigzag, 10, 1).map((s) => s.index)).toEqual([2, 4, 6, 8]);
     // With 3 a side, bar 9's 17 rules out the high at 6; the low at 4 holds.
@@ -86,6 +100,14 @@ describe('dealingRange', () => {
   it('is null without both', () => {
     expect(dealingRange(swings(zigzag, 5))).toBeNull();
   });
+
+  it('keeps the order when the last low formed above the last high', () => {
+    const list = [
+      { kind: 'high', price: 16 },
+      { kind: 'low', price: 18 },
+    ];
+    expect(dealingRange(list)).toEqual({ low: 18, high: 16 });
+  });
 });
 
 describe('isMidRange', () => {
@@ -100,5 +122,15 @@ describe('isMidRange', () => {
   it('is false outside it', () => {
     expect(isMidRange(13.9, range)).toBe(false);
     expect(isMidRange(16.1, range)).toBe(false);
+  });
+
+  it('measures the same middle when the low is above the high', () => {
+    const inverted = { low: 18, high: 16 };
+    expect(isMidRange(17, inverted)).toBe(true);
+    expect(isMidRange(16.5, inverted)).toBe(false);
+  });
+
+  it('is false for a range with no width', () => {
+    expect(isMidRange(10, { low: 10, high: 10 })).toBe(false);
   });
 });

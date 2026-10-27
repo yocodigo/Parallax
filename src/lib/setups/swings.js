@@ -34,7 +34,9 @@ const lastTwo = (list, kind) =>
 
 // From the last two swing highs and last two swing lows: 'up' for a higher
 // high and a higher low, 'down' for a lower high and a lower low, 'range'
-// for anything else. Null without two of each.
+// for anything else. Null without two of each. This is how we read "the last
+// four swings": when highs and lows alternate it's the same four, and when
+// two of a kind come in a row it still compares like with like.
 export function trend(swingList) {
   const highs = lastTwo(swingList, 'high');
   const lows = lastTwo(swingList, 'low');
@@ -52,7 +54,11 @@ export function dealingRange(swingList) {
 }
 
 // Whether `price` sits in the middle of the range (40% to 60% by default).
+// The share runs from the swing low toward the swing high, so when the low
+// formed above the high it runs downward; the band is symmetric, so it's the
+// same middle either way. A range with no width has no middle.
 export function isMidRange(price, { low, high }, { from, to } = MID_RANGE) {
+  if (high === low) return false;
   const share = (price - low) / (high - low);
   return atLeast(share, from) && atMost(share, to);
 }
