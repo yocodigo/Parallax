@@ -42,6 +42,13 @@ describe('isDisplacement', () => {
     expect(isDisplacement(flat, 10)).toBe(true);
   });
 
+  it('never counts a bar with no body, whatever the options', () => {
+    // Twice an average of 0 is 0, and with no body share required, nothing
+    // else would stop a bar whose open equals its close.
+    const flat = Array.from({ length: 5 }, () => bar(10, 10.1, 9.9, 10));
+    expect(isDisplacement(flat, 4, { multiple: 4, lookback: 4, bodyShare: 0 })).toBe(false);
+  });
+
   it('is false without 10 bars before it, or with no range', () => {
     expect(isDisplacement(after(bar(11, 13.2, 10.9, 13), 9), 9)).toBe(false);
     expect(isDisplacement(after(bar(11, 11, 11, 11)), 10)).toBe(false);
