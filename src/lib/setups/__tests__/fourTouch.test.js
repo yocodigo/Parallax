@@ -60,13 +60,13 @@ describe('fourTouchBreaks', () => {
 
   it('ignores a break that comes after price moved away from the line again', () => {
     // Bar 8 bounces 4.5 off the shelf, ending its 4th approach; bar 9 breaks.
-    // The falling line through bars 3 and 5 counts touches from bar 3, so bar
-    // 9 is its own 4th approach; only the shelf is checked here.
+    // Lines through later touches of the shelf count bar 1 too, so bar 9 is a
+    // 5th approach for every line.
     const bounced = withBars(breakout, {
       [B]: { o: 300.6, h: 305, l: 300.4, c: 304 },
       [B + 1]: { o: 304, h: 304.5, l: 292, c: 292.6 },
     });
-    expect(fourTouchBreaks(bounced, B + 1).filter((found) => found.line.slope === 0)).toEqual([]);
+    expect(fourTouchBreaks(bounced, B + 1)).toEqual([]);
   });
 
   it('skips a line that a bar closed through before the 4th touch', () => {
@@ -135,6 +135,13 @@ describe('fourTouchBreaks', () => {
     ];
     const shelf = lineThrough({ index: W + 1, price: 300.5 }, { index: W + 3, price: 300.5 });
     expect(fourTouchBreaks(throughEarly, W + 10).map((found) => found.line)).not.toContainEqual(shelf);
+  });
+
+  it("counts touches before the line's first swing point, while the line held", () => {
+    // Bar 0 ties bar 1 at 300.5, so neither is a swing low; the only line runs
+    // through bars 3 and 5. It still counts bar 0, the shelf's first touch.
+    const tied = withBars(breakout, { [W]: { o: 320, h: 322, l: 300.5, c: 314 } });
+    expect(fourTouchBreaks(tied, B)[0]).toMatchObject({ touches: [W, W + 3, W + 5, W + 7], breakIndex: B });
   });
 
   it('takes a bar that spikes away from the line and closes through it as the break', () => {

@@ -12,6 +12,15 @@ const KINDS = [
   { kind: '4xBO', side: 'resistance', pivot: 'high' },
 ];
 
+// Where a line's touches start counting: back from its first swing point for
+// as long as no bar closed through it (the user's choice), so a line drawn
+// through later touches of a shelf still counts the earlier ones.
+function lineStart(bars, line, side, anchor) {
+  let k = anchor;
+  while (k > 0 && closesInside(bars, line, side, k - 1)) k -= 1;
+  return k;
+}
+
 // The break of `line` on its 4th approach, as of bar `i`, or null (setups.md
 // 2.7 and 3.2). Three touches establish the line, with no close through it in
 // between, and the line must have been drawable by the break: its second
@@ -20,7 +29,7 @@ const KINDS = [
 // { touches, breakIndex }; the 4th entry of touches is the first bar of the
 // 4th approach, which need not be a touch: it can be the break itself.
 function breakOnFourthApproach(bars, line, side, first, second, i) {
-  const touches = lineTouches(bars, line, side, first.index, i);
+  const touches = lineTouches(bars, line, side, lineStart(bars, line, side, first.index), i);
   if (touches.length < 3) return null;
   const third = touches[2];
   if (!isUnbroken(bars, line, side, touches[0], third)) return null;
