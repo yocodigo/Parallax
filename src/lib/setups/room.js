@@ -13,7 +13,11 @@ const MINUTE = 60_000;
 // `minutes` long and `t` is their start.
 export function lastClosedBy(bars, time, minutes = 1) {
   let last = -1;
-  for (let k = 0; k < bars.length && Date.parse(bars[k].t) + minutes * MINUTE <= time; k++) last = k;
+  for (let k = 0; k < bars.length; k++) {
+    // Oldest first, so the first bar still open at `time` ends the search.
+    if (Date.parse(bars[k].t) + minutes * MINUTE > time) break;
+    last = k;
+  }
   return last;
 }
 

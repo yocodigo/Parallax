@@ -29,6 +29,11 @@ describe('roomToBand', () => {
     expect(roomToBand(later, 19, 'long', 10.8)).toEqual(roomToBand(bars, 19, 'long', 10.8));
   });
 
+  it('takes another minimum', () => {
+    // 1.2 of room is more than half the 2.25 ATR, but not 0.6 of it (1.35).
+    expect(roomToBand(bars, 19, 'long', 10.8, { min: 0.6 }).ok).toBe(false);
+  });
+
   it('is null without enough bars for the bands', () => {
     expect(roomToBand(bars, 18, 'long', 10.8)).toBeNull();
   });
@@ -41,6 +46,12 @@ describe('lastClosedBy', () => {
     // A 5m entry starting at 13:30 closes at 13:35, with the 13:34 minute.
     expect(lastClosedBy(minutes, Date.parse('2026-10-26T13:35:00Z'))).toBe(4);
     expect(lastClosedBy(minutes, Date.parse('2026-10-26T13:34:30Z'))).toBe(3);
+  });
+
+  it('works for longer bars too', () => {
+    const fives = ['13:25', '13:30'].map((time) => ({ t: `2026-10-26T${time}:00Z` }));
+    expect(lastClosedBy(fives, Date.parse('2026-10-26T13:35:00Z'), 5)).toBe(1);
+    expect(lastClosedBy(fives, Date.parse('2026-10-26T13:34:00Z'), 5)).toBe(0);
   });
 
   it('is -1 when none had', () => {
