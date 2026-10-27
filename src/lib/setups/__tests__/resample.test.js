@@ -17,9 +17,16 @@ describe('resample', () => {
     expect(resample(bars, 5)).toEqual([{ t: '2026-10-26T13:30:00.000Z', o: 10, h: 12, l: 9, c: 10.1, v: 450 }]);
   });
 
-  it('lines the bars up with the clock, so 15m bars start at the 9:30 open', () => {
-    const bars = ['13:30', '13:44', '13:45', '13:59'].map((time) => minute(time, 1, 1, 1, 1));
-    expect(resample(bars, 15).map((bar) => bar.t)).toEqual(['2026-10-26T13:30:00.000Z', '2026-10-26T13:45:00.000Z']);
+  it('lines the bars up with the clock, so 15m bars start at the 9:30 open, wherever the minutes start', () => {
+    const bars = ['13:37', '13:52'].map((time) => minute(time, 1, 1, 1, 1));
+    const asOf = new Date('2026-10-26T14:00:00Z');
+    expect(resample(bars, 15, { asOf }).map((bar) => bar.t)).toEqual(['2026-10-26T13:30:00.000Z', '2026-10-26T13:45:00.000Z']);
+  });
+
+  it('lines up with the 9:30 open in winter too, when it is 14:30Z', () => {
+    const bars = [{ t: '2026-12-01T14:37:00Z', o: 1, h: 1, l: 1, c: 1, v: 1 }];
+    const asOf = new Date('2026-12-01T14:45:00Z');
+    expect(resample(bars, 15, { asOf }).map((bar) => bar.t)).toEqual(['2026-12-01T14:30:00.000Z']);
   });
 
   it('leaves out the last bar until its period has ended', () => {
