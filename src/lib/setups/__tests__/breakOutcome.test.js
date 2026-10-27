@@ -21,6 +21,14 @@ describe('breakOutcome', () => {
     expect(breakOutcome(trap, shelf, 'support', B, B + 1)).toEqual({ status: 'reclaimed', acceptedAt: null, reclaimedAt: B + 1 });
   });
 
+  it('reports no acceptance when a reclaim came before the closes it needed', () => {
+    // The trap closes back above on bar 9, so bars 9 and 10 didn't both stay below.
+    expect(breakOutcome(trap, shelf, 'support', B, B + 2)).toEqual({ status: 'reclaimed', acceptedAt: null, reclaimedAt: B + 1 });
+    // A reclaim on the last close acceptance needed leaves it unaccepted too.
+    const reclaimOnSecond = breakout.map((bar, k) => (k === B + 2 ? { ...bar, h: 302, c: 301 } : bar));
+    expect(breakOutcome(reclaimOnSecond, shelf, 'support', B, B + 2)).toEqual({ status: 'reclaimed', acceptedAt: null, reclaimedAt: B + 2 });
+  });
+
   it('counts a reclaim even after acceptance, while the window is open', () => {
     const lateReclaim = breakout.map((bar, k) => (k === B + 3 ? { ...bar, h: 302, c: 301 } : bar));
     expect(breakOutcome(lateReclaim, shelf, 'support', B, B + 3)).toEqual({ status: 'reclaimed', acceptedAt: B + 2, reclaimedAt: B + 3 });

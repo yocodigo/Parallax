@@ -72,11 +72,12 @@ export function isUnbroken(bars, line, side, from, to) {
   return true;
 }
 
-// What followed bar `b`, the first close through the line, as of bar `i`
-// (setups.md 2.8). Reclaimed: a close back inside within N_RECLAIM bars, which
-// wins even after acceptance. Accepted: the N_ACC closes after the break all
-// stayed beyond. Confirmed: accepted, with the reclaim window passed. Pending
-// otherwise. Returns { status, acceptedAt, reclaimedAt }.
+// What followed bar `b` as of bar `i` (setups.md 2.8). `b` must be the first
+// close through the line; callers find it, and this doesn't check.
+// Reclaimed: a close back inside within N_RECLAIM bars, which wins even after
+// acceptance. Accepted: the N_ACC closes after the break all stayed beyond.
+// Confirmed: accepted, with the reclaim window passed. Pending otherwise.
+// Returns { status, acceptedAt, reclaimedAt }.
 export function breakOutcome(bars, line, side, b, i) {
   let reclaimedAt = null;
   for (let k = b + 1; k <= Math.min(b + N_RECLAIM, i); k++) {
@@ -88,6 +89,9 @@ export function breakOutcome(bars, line, side, b, i) {
   const acceptEnd = b + N_ACC;
   let acceptedAt = null;
   if (acceptEnd <= i) {
+    // Accepted only if every close it needed stayed beyond. While N_ACC is
+    // below N_RECLAIM, a close back inside here is already a reclaim, so this
+    // keeps acceptedAt null rather than claiming an acceptance that failed.
     let held = true;
     for (let k = b + 1; k <= acceptEnd; k++) if (closesInside(bars, line, side, k)) held = false;
     if (held) acceptedAt = acceptEnd;
