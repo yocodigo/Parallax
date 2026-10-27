@@ -31,7 +31,9 @@ describe('isDisplacement', () => {
   });
 
   it('counts a body of exactly 60% of the range at real prices', () => {
-    // (760.06 - 760.00) / (760.10 - 760.00) computes as 0.5999999999993179.
+    // The bars before have bodies of 0.01, so the size check passes easily and
+    // only the share is tested: (760.06 - 760.00) / (760.10 - 760.00)
+    // computes as 0.5999999999993179.
     const bars = [...Array.from({ length: 10 }, () => bar(760, 760.02, 759.99, 760.01)), bar(760, 760.1, 760, 760.06)];
     expect(isDisplacement(bars, 10)).toBe(true);
   });
@@ -43,8 +45,8 @@ describe('isDisplacement', () => {
   });
 
   it('never counts a bar with no body, whatever the options', () => {
-    // Twice an average of 0 is 0, and with no body share required, nothing
-    // else would stop a bar whose open equals its close.
+    // Any multiple of an average of 0 is 0, and with no body share required,
+    // nothing else would stop a bar whose open equals its close.
     const flat = Array.from({ length: 5 }, () => bar(10, 10.1, 9.9, 10));
     expect(isDisplacement(flat, 4, { multiple: 4, lookback: 4, bodyShare: 0 })).toBe(false);
   });
@@ -56,7 +58,7 @@ describe('isDisplacement', () => {
 
   it('averages only the `lookback` bars before it', () => {
     // Six bodies of 1, then four of 0.5: a body of 2 is 4 times the last four
-    // (0.5) but not 4 times the last ten (0.8).
+    // (0.5) but not 4 times the last ten (0.8), nor 5 times the last four.
     const bars = [
       ...Array.from({ length: 6 }, () => bar(10, 11.2, 9.8, 11)),
       ...Array.from({ length: 4 }, () => bar(10, 10.6, 9.9, 10.5)),
@@ -64,6 +66,7 @@ describe('isDisplacement', () => {
     ];
     expect(isDisplacement(bars, 10, { multiple: 4, lookback: 4 })).toBe(true);
     expect(isDisplacement(bars, 10, { multiple: 4 })).toBe(false);
+    expect(isDisplacement(bars, 10, { multiple: 5, lookback: 4 })).toBe(false);
   });
 
   it('takes another body share', () => {
