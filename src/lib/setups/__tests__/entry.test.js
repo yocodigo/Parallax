@@ -33,6 +33,10 @@ describe('isEntryCandle', () => {
     expect(isEntryCandle([bar(10.8, 12.75, 10.75, 12.6)], 0, 'long')).toBe(false);
     expect(isEntryCandle([prev, bar(10.8, 12.75, 10.75, 12.6)], 1, null)).toBe(false);
   });
+
+  it('treats only long and short as a bias, so a typo is no entry rather than a short', () => {
+    expect(isEntryCandle([prev, bar(9.2, 9.25, 7.25, 7.4)], 1, 'shrot')).toBe(false);
+  });
 });
 
 describe('risingVolume', () => {
