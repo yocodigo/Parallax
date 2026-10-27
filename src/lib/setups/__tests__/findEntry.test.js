@@ -23,6 +23,10 @@ describe('findEntry', () => {
     expect(findEntry(fifteens(), bars5, 20)).toEqual({ index: 2, bias: 'long', risingVolume: true });
   });
 
+  it('counts an entry candle that starts the moment the cross closes', () => {
+    expect(findEntry(fifteens(), [flat(-5), longEntry(0)], 20)).toMatchObject({ index: 1 });
+  });
+
   it('ignores entry candles from before the cross closed', () => {
     const bars5 = [flat(-10), longEntry(-5), flat(0)];
     expect(findEntry(fifteens(), bars5, 20)).toBeNull();
@@ -40,6 +44,12 @@ describe('findEntry', () => {
     expect(findEntry(fifteens(9), lateEntry, 20)).toBeNull();
     const inTime = [flat(-5), flat(0), longEntry(5)];
     expect(findEntry(fifteens(9), inTime, 20)).toMatchObject({ index: 2 });
+  });
+
+  it('also stops when a later 15m close lands on the middle band', () => {
+    // With bar 21 at 192 / 19, its close is its own middle band: no bias.
+    expect(findEntry(fifteens(192 / 19), [flat(-5), flat(0), flat(5), longEntry(10)], 20)).toBeNull();
+    expect(findEntry(fifteens(192 / 19), [flat(-5), flat(0), longEntry(5)], 20)).toMatchObject({ index: 2 });
   });
 
   it('is null for a 15m bar that did not cross', () => {

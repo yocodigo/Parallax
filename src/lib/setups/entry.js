@@ -30,6 +30,7 @@ export const risingVolume = (bars, j) => j >= 1 && bars[j].v > bars[j - 1].v;
 export function findEntry(bars15, bars5, i) {
   const cross = bandCross(bars15, i);
   if (!cross?.crossed) return null;
+  // `t` is when a bar opens, so it closes `minutes` later.
   const closeOf = (bar, minutes) => Date.parse(bar.t) + minutes * MINUTE;
 
   const start = closeOf(bars15[i], 15);
