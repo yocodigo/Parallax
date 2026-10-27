@@ -35,3 +35,8 @@ export const MID_RANGE = { from: 0.4, to: 0.6 };
 export const DISP_MULT = 2.0;
 export const DISP_LOOKBACK = 10;
 export const DISP_BODY_SHARE = 0.6;
+
+// Bars from the regular session only (9:30 AM to 4:00 PM New York, 6:30 AM to
+// 1:00 PM Pacific), like thinkorswim's default chart. The user's choice; it
+// isn't in setups.md.
+export const EXTENDED_HOURS = false;
