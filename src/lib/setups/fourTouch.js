@@ -82,40 +82,57 @@ function trapTrade(bars, side, breakIndex, reclaimedAt) {
     : { side: 'short', entry: bars[reclaimedAt].c, stop: Math.max(...span.map((bar) => bar.h)) };
 }
 
+// One report for a break that one or more lines found. Any of them seeing a
+// reclaim makes it a trap (3.2: "trap if any break is reclaimed"), reported
+// with the line that saw the earliest reclaim; otherwise the line through the
+// earliest swing points speaks for it.
+function reportBreak(bars, candidates) {
+  const reclaims = candidates.filter((c) => c.outcome.status === 'reclaimed');
+  const chosen = reclaims.length
+    ? reclaims.reduce((best, c) => (c.outcome.reclaimedAt < best.outcome.reclaimedAt ? c : best))
+    : candidates[0];
+  const { kind, side, line, touches, breakIndex, outcome } = chosen;
+
+  // 3.2 asks only for the 4x body, not 2.6's 60% body share, so that check is off.
+  const displacement = isDisplacement(bars, breakIndex, {
+    multiple: DISP_4X,
+    lookback: DISP_4X_LOOKBACK,
+    bodyShare: 0,
+  });
+  let status = 'pending';
+  if (outcome.status === 'reclaimed') status = 'trap';
+  else if (!displacement) status = 'weak';
+  else if (outcome.status === 'confirmed') status = 'valid';
+  const trade = status === 'trap' ? trapTrade(bars, side, breakIndex, outcome.reclaimedAt) : null;
+  return { kind, line, touches, breakIndex, displacement, outcome, status, trade };
+}
+
 // The four-touch breaks as of bar `i`, oldest first. Each is { kind ('4xBO' up
 // through resistance, '4xBD' down through support), line, touches (three,
 // then the first bar of the 4th approach), breakIndex, displacement, outcome,
-// status, trade }. Status: 'trap' when the
-// break was reclaimed (with `trade`, the other way); 'weak' when the break bar
-// lacked a body DISP_4X times the DISP_4X_LOOKBACK bars before it; 'valid'
-// when it had one and the break was confirmed; 'pending' otherwise. Lines
-// through different pairs of swing points can find the same break; each is
-// reported once, with the line through the earliest pair.
+// status, trade }. Status: 'trap' when the break was reclaimed (with `trade`,
+// the other way); 'weak' when the break bar lacked a body DISP_4X times the
+// DISP_4X_LOOKBACK bars before it; 'valid' when it had one and the break was
+// confirmed; 'pending' otherwise. Lines through different pairs of swing
+// points can find the same break; each break is reported once (reportBreak).
 export function fourTouchBreaks(bars, i) {
   const pivots = swings(bars, i, TRENDLINE_K);
-  const found = new Map();
+  const byBreak = new Map();
   for (const { kind, side, pivot } of KINDS) {
     const points = pivots.filter((s) => s.kind === pivot);
     for (let a = 0; a < points.length; a++) {
       for (let b = a + 1; b < points.length; b++) {
         const line = lineThrough(points[a], points[b]);
         const hit = breakOnFourthApproach(bars, line, side, points[a], points[b], i);
-        if (!hit || found.has(`${kind}:${hit.breakIndex}`)) continue;
-
-        const displacement = isDisplacement(bars, hit.breakIndex, {
-          multiple: DISP_4X,
-          lookback: DISP_4X_LOOKBACK,
-          bodyShare: 0,
-        });
+        if (!hit) continue;
+        const key = `${kind}:${hit.breakIndex}`;
+        if (!byBreak.has(key)) byBreak.set(key, []);
         const outcome = breakOutcome(bars, line, side, hit.breakIndex, i);
-        let status = 'pending';
-        if (outcome.status === 'reclaimed') status = 'trap';
-        else if (!displacement) status = 'weak';
-        else if (outcome.status === 'confirmed') status = 'valid';
-        const trade = status === 'trap' ? trapTrade(bars, side, hit.breakIndex, outcome.reclaimedAt) : null;
-        found.set(`${kind}:${hit.breakIndex}`, { kind, line, ...hit, displacement, outcome, status, trade });
+        byBreak.get(key).push({ kind, side, line, ...hit, outcome });
       }
     }
   }
-  return [...found.values()].sort((x, y) => x.breakIndex - y.breakIndex);
+  return [...byBreak.values()]
+    .map((candidates) => reportBreak(bars, candidates))
+    .sort((x, y) => x.breakIndex - y.breakIndex);
 }

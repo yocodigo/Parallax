@@ -251,6 +251,24 @@ describe('fourTouchBreaks', () => {
     });
   });
 
+  it('calls a break a trap when any line that found it saw a reclaim', () => {
+    // Bar 9 closes at 300.2: still under the flat shelf, but back above the
+    // slightly falling line through bars 1 and 5, which both found the break.
+    const split = withBars(breakout, { [B + 1]: { o: 292.6, h: 300.4, l: 289, c: 300.2 } });
+    expect(fourTouchBreaks(split, B + 3)).toMatchObject([
+      {
+        status: 'trap',
+        line: lineThrough({ index: W + 1, price: 300.5 }, { index: W + 5, price: 300.2 }),
+        trade: { side: 'long', entry: 300.2, stop: 289 },
+      },
+    ]);
+  });
+
+  it('otherwise reports the break with the line through the earliest swing points', () => {
+    const [found] = fourTouchBreaks(breakout, B + 3);
+    expect(found.line).toEqual(lineThrough({ index: W + 1, price: 300.5 }, { index: W + 3, price: 300.5 }));
+  });
+
   it('reports each break once, though several swing pairs draw near-identical lines', () => {
     expect(fourTouchBreaks(breakout, B + 3).filter((found) => found.breakIndex === B)).toHaveLength(1);
   });
