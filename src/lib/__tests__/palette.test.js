@@ -35,6 +35,8 @@ describe('themedColors', () => {
 });
 
 // WCAG contrast between two "r g b" strings: 4.5 is the minimum for text.
+// The constants are WCAG 2's relative luminance:
+// https://www.w3.org/TR/WCAG21/#dfn-relative-luminance
 function contrast(a, b) {
   const luminance = (rgb) =>
     rgb
@@ -99,7 +101,7 @@ describe('component colors', () => {
 
   it('use only the themed hues', () => {
     const hues = Object.keys(colors).filter((hue) => typeof colors[hue] === 'object');
-    const pattern = new RegExp(`\\b(?:bg|text|border|divide|ring|fill|stroke|from|to|outline|placeholder)-(${hues.join('|')})-\\d+`, 'g');
+    const pattern = new RegExp(`\\b(?:bg|text|border|divide|ring|fill|stroke|from|via|to|outline|placeholder|shadow|accent|caret|decoration)-(${hues.join('|')})-\\d+`, 'g');
     const strays = files('src').flatMap((path) =>
       [...readFileSync(path, 'utf8').matchAll(pattern)]
         .filter((match) => !THEMED_HUES.includes(match[1]))
