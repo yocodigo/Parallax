@@ -5,30 +5,43 @@
 import { isDisplacement } from './displacement';
 import { DISP_4X, DISP_4X_LOOKBACK, TRENDLINE_K } from './settings';
 import { swings } from './swings';
-import { breakOutcome, closesInside, isAway, isUnbroken, lineThrough, lineTouches } from './trendline';
+import { breakOutcome, closesInside, isAway, isUnbroken, lineThrough, lineTouches, reachesLine } from './trendline';
 
 const KINDS = [
   { kind: '4xBD', side: 'support', pivot: 'low' },
   { kind: '4xBO', side: 'resistance', pivot: 'high' },
 ];
 
-// The break of `line` on its 4th approach, as of bar `i`, or null. The line
-// must have been drawable by the break: its second swing point confirmed
-// TRENDLINE_K bars after it. Three touches establish it, the 4th starts the
-// approach, and the approach lasts until a bar moves away from the line; a
-// close through it before then is the break. No bar may close through the
-// line between its first and 4th touch.
+// The break of `line` on its 4th approach, as of bar `i`, or null. Three
+// touches establish the line, with no close through it in between. The 3rd
+// approach lasts until a bar moves away; a close through before then breaks
+// on the 3rd approach, which doesn't count. The 4th approach starts at the
+// next bar that reaches the line (setups.md 2.7) and lasts until a bar moves
+// away again; its first close through is the break, and can be its first bar.
+// As with touches, the first bar's own reach doesn't end it. Closing through
+// is checked before moving away, so a bar that does both is the break. The line must have been drawable by the break: its second swing
+// point confirmed TRENDLINE_K bars after it. Returns { touches, breakIndex },
+// the 4th "touch" being the first bar of the 4th approach.
 function breakOnFourthApproach(bars, line, side, first, second, i) {
   const touches = lineTouches(bars, line, side, first.index, i);
-  if (touches.length < 4) return null;
-  const fourth = touches[3];
-  if (!isUnbroken(bars, line, side, touches[0], fourth)) return null;
-  for (let k = fourth + 1; k <= i; k++) {
+  if (touches.length < 3) return null;
+  const third = touches[2];
+  if (!isUnbroken(bars, line, side, touches[0], third)) return null;
+
+  let k = third + 1;
+  for (; k <= i; k++) {
+    if (!closesInside(bars, line, side, k)) return null;
+    if (isAway(bars, line, side, k)) break;
+  }
+  for (k += 1; k <= i; k++) if (reachesLine(bars, line, side, k)) break;
+  const start = k;
+
+  for (; k <= i; k++) {
     if (!closesInside(bars, line, side, k)) {
       if (second.index + TRENDLINE_K > k) return null;
-      return { touches: touches.slice(0, 4), breakIndex: k };
+      return { touches: [...touches.slice(0, 3), start], breakIndex: k };
     }
-    if (isAway(bars, line, side, k)) return null;
+    if (k > start && isAway(bars, line, side, k)) return null;
   }
   return null;
 }

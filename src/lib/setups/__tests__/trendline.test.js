@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { TRENDLINE_K } from '../settings';
 import { swings } from '../swings';
-import { closesInside, isAway, isUnbroken, lineAt, lineThrough, lineTouches } from '../trendline';
+import { closesInside, isAway, isUnbroken, lineAt, lineThrough, lineTouches, reachesLine } from '../trendline';
 import { breakout, W } from './fixtures/fourTouch';
 
 // The mirror image: support becomes resistance at the negated price.
@@ -83,6 +83,21 @@ describe('isAway', () => {
   it('is false without enough history for the ATR', () => {
     const early = Array(5).fill({ o: 303, h: 305, l: 300.5, c: 302 });
     expect(isAway(early, shelf, 'support', 4)).toBe(false);
+  });
+});
+
+describe('reachesLine', () => {
+  it('is true when a bar comes within TOL of the line, or crosses it', () => {
+    // Bar 7's low is 0.4 under the shelf, and bar 8 trades right through it.
+    expect(reachesLine(breakout, shelf, 'support', W + 7)).toBe(true);
+    expect(reachesLine(breakout, shelf, 'support', W + 8)).toBe(true);
+    // Bar 2's low, 302, stays 1.5 above it.
+    expect(reachesLine(breakout, shelf, 'support', W + 2)).toBe(false);
+  });
+
+  it('is false without enough history for the ATR', () => {
+    const early = Array(5).fill({ o: 303, h: 305, l: 300.5, c: 302 });
+    expect(reachesLine(early, shelf, 'support', 4)).toBe(false);
   });
 });
 

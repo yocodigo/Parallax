@@ -59,12 +59,14 @@ describe('fourTouchBreaks', () => {
   });
 
   it('ignores a break that comes after price moved away from the line again', () => {
-    // Bar 8 bounces 4.5 off the shelf, ending the 4th approach; bar 9 breaks.
+    // Bar 8 bounces 4.5 off the shelf, ending its 4th approach; bar 9 breaks.
+    // The falling line through bars 3 and 5 counts touches from bar 3, so bar
+    // 9 is its own 4th approach; only the shelf is checked here.
     const bounced = withBars(breakout, {
       [B]: { o: 300.6, h: 305, l: 300.4, c: 304 },
       [B + 1]: { o: 304, h: 304.5, l: 292, c: 292.6 },
     });
-    expect(fourTouchBreaks(bounced, B + 1)).toEqual([]);
+    expect(fourTouchBreaks(bounced, B + 1).filter((found) => found.line.slope === 0)).toEqual([]);
   });
 
   it('skips a line that a bar closed through before the 4th touch', () => {
@@ -89,6 +91,23 @@ describe('fourTouchBreaks', () => {
       { o: 302, h: 308, l: 301, c: 307 },
     ];
     expect(fourTouchBreaks(late, W + 14)).toEqual([]);
+  });
+
+  it('starts the 4th approach at the first bar back at the line, which can itself break it', () => {
+    // Bars 1, 3, and 5 sit on 300.5; bar 6 moves away; bar 7 comes back within
+    // TOL and closes at 300.2, through the line, without touching it first.
+    const straight = withBars(breakout, {
+      [W + 5]: { o: 305, h: 305, l: 300.5, c: 301 },
+      [W + 6]: { o: 301, h: 303, l: 300.8, c: 301 },
+      [W + 7]: { o: 301, h: 302, l: 300.1, c: 300.2 },
+    });
+    expect(fourTouchBreaks(straight, W + 7)[0]).toMatchObject({ touches: [W + 1, W + 3, W + 5, W + 7], breakIndex: W + 7 });
+  });
+
+  it('takes a bar that spikes away from the line and closes through it as the break', () => {
+    // Bar 8 trades 2.5 above the shelf before closing at 292.6.
+    const spike = withBars(breakout, { [B]: { o: 301, h: 303, l: 292, c: 292.6 } });
+    expect(fourTouchBreaks(spike, B)[0]).toMatchObject({ breakIndex: B });
   });
 
   it('finds the 4xBO at resistance the same way', () => {

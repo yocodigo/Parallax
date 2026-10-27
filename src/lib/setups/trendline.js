@@ -38,6 +38,17 @@ export function isAway(bars, line, side, k) {
   return position(bars, line, side, k)?.away ?? false;
 }
 
+// Whether bar `k` comes back to the line: its low (high for resistance)
+// within TOL of it or past it, so a bar that crosses the line counts. This is
+// where an approach starts (setups.md 2.7). False without enough history for
+// the ATR.
+export function reachesLine(bars, line, side, k) {
+  const range = atr(bars, k);
+  if (range === null) return false;
+  const level = lineAt(line, k);
+  return side === 'support' ? atMost(bars[k].l, level + TOL * range) : atLeast(bars[k].h, level - TOL * range);
+}
+
 // The bars from `from` to `to` that count as touches. A bar at the line is a
 // new touch only if some bar between it and the last counted touch moved
 // away; otherwise it merges into that touch. A merged bar can itself have
