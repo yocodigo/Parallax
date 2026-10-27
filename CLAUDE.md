@@ -49,7 +49,15 @@ Vitest, JavaScript (not TypeScript).
   long or short by which side of the middle band each close is on, marking the close that crossed);
   the 5m entry (`isEntryCandle`: for a long, an up candle breaking the previous high with little
   overlap; `findEntry`: the first one after a cross, until the bias flips or the session closes);
-  and the 1m room to the outer band from the entry close (`roomToBand`, at least `ROOM_MIN` ATRs).
+  the 1m room to the outer band from the entry close (`roomToBand`, at least `ROOM_MIN` ATRs); and
+  four-touch breaks (`fourTouchBreaks` in `fourTouch.js`, on `trendline.js`): a line through two
+  swing points (`TRENDLINE_K` bars a side), touches within `TOL` ATRs merging until a bar moves
+  `BOUNCE` ATRs away, counted back from the first swing point while the line held, within the
+  trading day. Three touches establish it, it must exist by the 4th approach (which starts at the
+  first bar back at the line), and a close through on that approach is the break: valid with a 4x
+  body and confirmed acceptance (`breakOutcome`), a trap if any line that found it saw a reclaim,
+  weak without the body, graded A only with both compression and good spacing (even gaps, or one
+  much shorter than the rest).
   Bars use Alpaca's keys (`t o h l c v`), oldest first; detectors take the index `i` of the latest
   closed bar and never read past it. Every threshold is a named default in `settings.js`, tagged
   with its setups.md section and named as the doc names it where it does. Threshold checks go
@@ -222,7 +230,8 @@ Vitest, JavaScript (not TypeScript).
    - Done: dark mode, following the system setting, with a picker in the nav to override it.
    - In progress: setup detectors, gates, and the entry review, following the build order in
      `docs/private/setups.md`. Steps 1 (primitives, `src/lib/setups/`), 2 (5m and 15m bars, 15m
-     direction), and 3 (5m entry candle, 1m room check) done.
+     direction), 3 (5m entry candle, 1m room check), and 4 (trendlines, four-touch breaks with their
+     grade) done.
 5. Last, once the product is polished: deploy to Vercel plus Neon (Postgres 17). Upgrade Next.js
    past 16.4.0 first (security advisories; 16.4.1 is two weeks old on 2026-10-28). Add auth or a
    demo mode before any journal data is public. One Playwright end-to-end test of the main flow.

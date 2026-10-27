@@ -96,6 +96,7 @@ export function fourTouchGrade(bars, touches, side) {
       break;
     }
     const extreme = support ? Math.max(...between.map((bar) => bar.h)) : Math.min(...between.map((bar) => bar.l));
+    // The first gap has nothing before it to compare with.
     const tighter = support ? extreme < previous : extreme > previous;
     if (previous !== null && !tighter) compression = false;
     previous = extreme;

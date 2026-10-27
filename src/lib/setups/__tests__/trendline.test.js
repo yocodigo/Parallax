@@ -75,7 +75,8 @@ describe('isUnbroken', () => {
 
 describe('isAway', () => {
   it('is true when a bar reaches BOUNCE from the line by its far extreme', () => {
-    // Bar 6's high, 303, is 2.5 above the shelf; bar 7's, 302, only 1.5.
+    // Bar 6's high, 303, is 2.5 above the shelf; bar 7's, 302, only 1.5. BOUNCE
+    // times the ATR is about 1.85 at bar 6 and 1.76 at bar 7.
     expect(isAway(breakout, shelf, 'support', W + 6)).toBe(true);
     expect(isAway(breakout, shelf, 'support', W + 7)).toBe(false);
   });
