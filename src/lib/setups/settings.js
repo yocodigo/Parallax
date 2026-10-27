@@ -16,3 +16,8 @@ export const VOLUME_LIMITS = { low: 0.5, average: 0.7, high: 1.3, abnormallyHigh
 
 // [2.2] Range (spread) against the average range: each class starts at its limit.
 export const SPREAD_LIMITS = { average: 0.7, large: 1.3, abnormallyLarge: 2.0 };
+
+// [2.3] Bollinger Bands: the average of this many closes, with the outer
+// bands this many standard deviations away.
+export const BOLLINGER_PERIOD = 20;
+export const BOLLINGER_DEVIATIONS = 2;
