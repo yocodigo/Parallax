@@ -26,6 +26,28 @@ function lightVariables() {
   return variables;
 }
 
+// Each shade's opposite on the scale, so light text on a dark background
+// keeps the contrast dark text had on a light one.
+const OPPOSITE = { 50: 950, 100: 900, 200: 800, 300: 700, 400: 600, 500: 500, 600: 400, 700: 300, 800: 200, 900: 100, 950: 50 };
+
+// gray-500 maps to itself, which leaves the most common secondary text at a
+// contrast of 3.7 on dark cards. This mix of gray-500 and gray-400 gives 4.8,
+// as gray-500 has on white.
+const DARK_OVERRIDES = { 'gray-500': '#7f8693' };
+
+// Variables for dark mode: each shade takes its opposite's color, and white
+// (the card background) becomes gray-900, a step above the gray-950 page.
+function darkVariables() {
+  const variables = { '--color-white': channels(colors.gray[900]) };
+  for (const hue of THEMED_HUES) {
+    for (const shade of Object.keys(colors[hue])) {
+      const name = `${hue}-${shade}`;
+      variables[`--color-${name}`] = channels(DARK_OVERRIDES[name] ?? colors[hue][OPPOSITE[shade]]);
+    }
+  }
+  return variables;
+}
+
 // Tailwind color settings that read the variables. <alpha-value> keeps
 // opacity modifiers such as bg-blue-600/50 working.
 function themedColors() {
@@ -37,4 +59,4 @@ function themedColors() {
   return themed;
 }
 
-module.exports = { THEMED_HUES, lightVariables, themedColors };
+module.exports = { THEMED_HUES, darkVariables, lightVariables, themedColors };

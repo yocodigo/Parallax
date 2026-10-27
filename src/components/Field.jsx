@@ -1,7 +1,7 @@
 // A labeled form control with its error message underneath. The error's id is
 // `${id}-error`, so the control can point at it with aria-describedby.
 export const inputClass =
-  'w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none aria-[invalid=true]:border-red-400';
+  'w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none aria-[invalid=true]:border-red-400';
 
 export default function Field({ id, label, error, className = '', children }) {
   return (
