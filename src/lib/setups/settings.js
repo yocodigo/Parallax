@@ -40,3 +40,8 @@ export const DISP_BODY_SHARE = 0.6;
 // 1:00 PM Pacific), like thinkorswim's default chart. The user's choice; it
 // isn't in setups.md.
 export const EXTENDED_HOURS = false;
+
+// [3.1] The 1m confidence check: room from the entry candle's close to the
+// 1m outer band in the trade direction of at least ROOM_MIN times the 1m
+// ATR. Measuring from the close is the user's reading of the rule.
+export const ROOM_MIN = 0.5;
