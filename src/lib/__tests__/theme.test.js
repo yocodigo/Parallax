@@ -29,19 +29,19 @@ describe('readTheme', () => {
 
 describe('saveTheme', () => {
   it('saves light or dark, and forgets the choice for system', () => {
-    saveTheme(localStorage, 'light');
+    expect(saveTheme(localStorage, 'light')).toBe(true);
     expect(localStorage.getItem('theme')).toBe('light');
-    saveTheme(localStorage, 'system');
+    expect(saveTheme(localStorage, 'system')).toBe(true);
     expect(localStorage.getItem('theme')).toBeNull();
   });
 
-  it('ignores storage that throws', () => {
+  it('says so when storage throws', () => {
     const blocked = {
       setItem() {
         throw new Error('blocked');
       },
     };
-    expect(() => saveTheme(blocked, 'dark')).not.toThrow();
+    expect(saveTheme(blocked, 'dark')).toBe(false);
   });
 });
 

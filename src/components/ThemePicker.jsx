@@ -1,26 +1,49 @@
 'use client';
 
-import { useSyncExternalStore } from 'react';
-import { applyTheme, readTheme, saveTheme } from '@/lib/theme';
+import { useState, useSyncExternalStore } from 'react';
+import { applyTheme, readTheme, saveTheme, THEME_KEY } from '@/lib/theme';
+
+// localStorage itself can throw, in a sandboxed frame for example.
+function storage() {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
 
 // The saved choice lives in localStorage. useSyncExternalStore reads it in the
-// browser and uses 'system' on the server, and re-reads it when choose()
-// tells its listeners the choice changed.
+// browser and uses 'system' on the server, and re-reads it when choose() tells
+// its listeners the choice changed, or when another tab changes it.
 const listeners = new Set();
+const savedChoice = () => (storage() ? readTheme(storage()) : 'system');
+const serverChoice = () => 'system';
+
 function subscribe(listener) {
   listeners.add(listener);
-  return () => listeners.delete(listener);
+  const fromOtherTab = (event) => {
+    if (event.key !== THEME_KEY && event.key !== null) return;
+    applyTheme(document.documentElement, savedChoice());
+    listener();
+  };
+  window.addEventListener('storage', fromOtherTab);
+  return () => {
+    listeners.delete(listener);
+    window.removeEventListener('storage', fromOtherTab);
+  };
 }
-const savedChoice = () => readTheme(localStorage);
-const serverChoice = () => 'system';
 
 // Light, dark, or whatever the system is set to. The page already looks
 // right before this renders, because themeScript applied the saved choice.
 export default function ThemePicker() {
-  const choice = useSyncExternalStore(subscribe, savedChoice, serverChoice);
+  const saved = useSyncExternalStore(subscribe, savedChoice, serverChoice);
+  // A choice storage couldn't keep: it still applies to this page.
+  const [unsaved, setUnsaved] = useState(null);
+  const choice = unsaved ?? saved;
 
   function choose(next) {
-    saveTheme(localStorage, next);
+    const store = storage();
+    setUnsaved(store && saveTheme(store, next) ? null : next);
     applyTheme(document.documentElement, next);
     for (const listener of listeners) listener();
   }

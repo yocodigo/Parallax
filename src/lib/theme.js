@@ -3,25 +3,27 @@
 // <html>. Only an explicit choice sets a class, so 'system' keeps following
 // the setting when it changes, at sunset for example.
 
-const KEY = 'theme';
+export const THEME_KEY = 'theme';
 const EXPLICIT = ['light', 'dark'];
 
 // The saved choice, or 'system'. Storage can be blocked, so reads may throw.
 export function readTheme(storage) {
   try {
-    const choice = storage.getItem(KEY);
+    const choice = storage.getItem(THEME_KEY);
     return EXPLICIT.includes(choice) ? choice : 'system';
   } catch {
     return 'system';
   }
 }
 
+// Saves the choice, returning false when storage refused it.
 export function saveTheme(storage, choice) {
   try {
-    if (EXPLICIT.includes(choice)) storage.setItem(KEY, choice);
-    else storage.removeItem(KEY);
+    if (EXPLICIT.includes(choice)) storage.setItem(THEME_KEY, choice);
+    else storage.removeItem(THEME_KEY);
+    return true;
   } catch {
-    // Not remembered; the choice still applies to this page.
+    return false;
   }
 }
 
@@ -31,4 +33,4 @@ export function applyTheme(root, choice) {
 
 // Runs in <head> before the page draws, so a saved choice doesn't flash the
 // other theme first. Plain ES5 with no imports, since it's inlined as text.
-export const themeScript = `try{var t=localStorage.getItem('${KEY}');if(t==='light'||t==='dark')document.documentElement.classList.add(t)}catch(e){}`;
+export const themeScript = `try{var t=localStorage.getItem('${THEME_KEY}');if(t==='light'||t==='dark')document.documentElement.classList.add(t)}catch(e){}`;
