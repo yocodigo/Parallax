@@ -46,7 +46,8 @@ export function trend(swingList) {
   return 'range';
 }
 
-// From the last swing low to the last swing high, or null without both.
+// From the last swing low to the last swing high, or null without both. Not
+// sorted: when the last low formed above the last high, `low` > `high`.
 export function dealingRange(swingList) {
   const low = lastTwo(swingList, 'low').at(-1);
   const high = lastTwo(swingList, 'high').at(-1);
@@ -55,8 +56,8 @@ export function dealingRange(swingList) {
 
 // Whether `price` sits in the middle of the range (40% to 60% by default).
 // The share runs from the swing low toward the swing high, so when the low
-// formed above the high it runs downward; the band is symmetric, so it's the
-// same middle either way. A range with no width has no middle.
+// formed above the high it runs downward. The default band is symmetric, so
+// it's the same middle either way. A range with no width has no middle.
 export function isMidRange(price, { low, high }, { from, to } = MID_RANGE) {
   if (high === low) return false;
   const share = (price - low) / (high - low);
