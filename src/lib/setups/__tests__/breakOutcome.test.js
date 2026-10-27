@@ -37,6 +37,12 @@ describe('breakOutcome', () => {
     expect(breakOutcome(lateReclaim, shelf, 'support', B, B + 3)).toEqual({ status: 'reclaimed', acceptedAt: B + 2, reclaimedAt: B + 3 });
   });
 
+  it('stays confirmed when a close comes back inside after the reclaim window', () => {
+    // Bar 12 is four bars after the break, one past the window.
+    const lateReturn = [...breakout, { o: 281, h: 302, l: 280, c: 301 }];
+    expect(breakOutcome(lateReturn, shelf, 'support', B, B + 4)).toEqual({ status: 'confirmed', acceptedAt: B + 2, reclaimedAt: null });
+  });
+
   it('ignores bars after the one it is judged at', () => {
     expect(breakOutcome(trap, shelf, 'support', B, B)).toEqual({ status: 'pending', acceptedAt: null, reclaimedAt: null });
   });
