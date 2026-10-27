@@ -40,6 +40,14 @@ Vitest, JavaScript (not TypeScript).
   including `meta/`). Never hand-edit a migration that has been applied.
 - `src/lib/context/`: pure pieces of the entry context snapshot (indicators, macro calendar, VIX,
   option helpers, `buildContext`).
+- `src/lib/setups/`: pure building blocks for the setup detectors in `docs/private/setups.md`: bar
+  type, close location, and overlap (`candles`); ATR and volume and range classes against prior
+  bars (`relative`); `bollinger`; swings, trend, dealing range, and mid-range (`swings`); and
+  `displacement`. Bars use Alpaca's keys (`o h l c v`), oldest first; functions take the index `i`
+  of the latest closed bar and never read past it. Every threshold is a named default in
+  `settings.js`, tagged with its setups.md section and named as the doc names it where it does.
+  Threshold checks go through `atMost`/`atLeast` (`compare.js`), which allow for floating-point
+  error in decimal prices (761.40 − 761.00 isn't exactly 0.4).
 - `src/server/`: server-only fetchers that call outside services (`marketContext.js`), tested with
   MSW in the node environment.
 - `src/db/journal.js`, `trades.js`, `settings.js`, `strategies.js`, `contexts.js`, and `imports.js`: repository
@@ -193,9 +201,12 @@ Vitest, JavaScript (not TypeScript).
      VIX and the earnings and economic calendars need a data source beyond Alpaca. Plan: Alpaca for
      market data, Cboe's free daily VIX history (prior close), and the published Fed/BLS schedules for
      FOMC, CPI, and jobs dates. TradingView has no data API.
+   - In progress: setup detectors, gates, and the entry review, following the build order in
+     `docs/private/setups.md`. Step 1 (primitives, `src/lib/setups/`) done.
 5. Last, once the product is polished: deploy to Vercel plus Neon (Postgres 17). Upgrade Next.js
    past 16.4.0 first (security advisories; 16.4.1 is two weeks old on 2026-10-28). Add auth or a
    demo mode before any journal data is public. One Playwright end-to-end test of the main flow.
+6. Performance dashboard: docs/private/dashboard.md (git-ignored).
 
 ## Gotchas
 
