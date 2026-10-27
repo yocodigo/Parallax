@@ -89,8 +89,8 @@ export function breakOutcome(bars, line, side, b, i) {
   const acceptEnd = b + N_ACC;
   let acceptedAt = null;
   if (acceptEnd <= i) {
-    // Accepted only if every close it needed stayed beyond. While N_ACC is
-    // below N_RECLAIM, a close back inside here is already a reclaim, so this
+    // Accepted only if every close it needed stayed beyond. While N_ACC is at
+    // most N_RECLAIM, a close back inside here is already a reclaim, so this
     // keeps acceptedAt null rather than claiming an acceptance that failed.
     let held = true;
     for (let k = b + 1; k <= acceptEnd; k++) if (closesInside(bars, line, side, k)) held = false;
