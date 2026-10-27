@@ -3,12 +3,15 @@
 // Renders a correlation matrix as a colored grid. Green = positive,
 // red = negative, faint = uncorrelated. Purely presentational: it
 // receives the matrix from a parent and renders it.
-function cellColor(value) {
-  // value in [-1, 1] → hsl. Positive greens, negative reds.
+// The theme's green or red at an opacity that grows with the correlation's
+// strength (value in [-1, 1]). Capped at 0.45 so the number on the cell stays
+// readable in light and dark mode.
+const MAX_OPACITY = 0.45;
+
+export function cellColor(value) {
   const magnitude = Math.min(Math.abs(value), 1);
-  const hue = value >= 0 ? 152 : 0; // green vs red
-  const light = 96 - magnitude * 46; // stronger corr = darker
-  return `hsl(${hue} 60% ${light}%)`;
+  const hue = value >= 0 ? 'green' : 'red';
+  return `rgb(var(--color-${hue}-600) / ${Math.round(magnitude * MAX_OPACITY * 1000) / 1000})`;
 }
 
 export default function CorrelationHeatmap({ matrix }) {

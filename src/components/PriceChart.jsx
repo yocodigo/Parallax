@@ -18,6 +18,10 @@ import { TIMEFRAMES, windowsFor, clampWindow} from '@/lib/timeframes';
 
 const COLORS = ['#2563eb', '#dc2626', '#059669', '#d97706', '#7c3aed'];
 
+// Grid, axes, and tooltip in the theme's colors, so they follow dark mode.
+// Recharts passes these to SVG attributes and inline styles, where var() works.
+const theme = (name) => `rgb(var(--color-${name}))`;
+
 // Group timeframes for <optgroup> rendering, preserving table order.
 const TIMEFRAME_GROUPS = TIMEFRAMES.reduce((groups, tf) => {
   const g = groups.find((x) => x.label === tf.group);
@@ -143,22 +147,28 @@ export default function PriceChart() {
         <div className="h-96 rounded-lg border border-gray-200 bg-white p-4">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data.series} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <CartesianGrid strokeDasharray="3 3" stroke={theme('gray-200')} />
               <XAxis
                 dataKey="date"
-                tick={{ fontSize: 11 }}
+                tick={{ fontSize: 11, fill: theme('gray-500') }}
                 minTickGap={40}
-                stroke="#9ca3af"
+                stroke={theme('gray-400')}
               />
               <YAxis
-                tick={{ fontSize: 11 }}
+                tick={{ fontSize: 11, fill: theme('gray-500') }}
                 domain={['auto', 'auto']}
-                stroke="#9ca3af"
+                stroke={theme('gray-400')}
                 tickFormatter={(v) => `$${v}`}
               />
               <Tooltip
                 formatter={(v) => `$${Number(v).toFixed(2)}`}
-                contentStyle={{ fontSize: 12, borderRadius: 6 }}
+                contentStyle={{
+                  fontSize: 12,
+                  borderRadius: 6,
+                  backgroundColor: theme('white'),
+                  borderColor: theme('gray-200'),
+                }}
+                labelStyle={{ color: theme('gray-900') }}
               />
               <Legend wrapperStyle={{ fontSize: 12 }} />
               {data.symbols.map((symbol, i) => (
