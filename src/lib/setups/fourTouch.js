@@ -24,8 +24,9 @@ function lineStart(bars, line, side, anchor) {
 
 // The break of `line` on its 4th approach, as of bar `i`, or null (setups.md
 // 2.7 and 3.2). Three touches establish the line, with no close through it in
-// between. They can come before `first` (see lineStart), so a line already
-// touched four times before the break is past its 4th approach and dropped.
+// between. They can come before `first` (see lineStart). A line whose 4th
+// approach ended before the break, price moving away again, is on its 5th
+// approach and dropped; the touch count alone doesn't decide that.
 // The line must have been drawable by the break: its second swing point
 // confirmed TRENDLINE_K bars after it. Closing through is checked before
 // moving away, so a bar that does both is the break. Returns { touches,
