@@ -40,8 +40,8 @@ function subscribe(listener) {
 export default function ThemePicker() {
   const saved = useSyncExternalStore(subscribe, savedChoice, serverChoice);
   // A choice storage couldn't keep: it still applies to this page. Null means
-  // storage holds the choice. (Once set, it also outlasts other tabs' choices,
-  // which can't be saved either while storage refuses writes.)
+  // storage holds the choice. While set, it wins over changes from other tabs;
+  // those couldn't have been saved anyway, since storage is refusing writes.
   const [unsaved, setUnsaved] = useState(null);
   const choice = unsaved ?? saved;
 

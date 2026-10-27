@@ -10,8 +10,10 @@ const MAX_OPACITY = 0.45;
 
 export function cellColor(value) {
   const magnitude = Math.min(Math.abs(value), 1);
-  const hue = value >= 0 ? 'green' : 'red';
-  return `rgb(var(--color-${hue}-600) / ${Math.round(magnitude * MAX_OPACITY * 1000) / 1000})`;
+  const color = value >= 0 ? 'green' : 'red';
+  // Rounded to 3 decimals so float noise (0.22500000000000003) stays out of the CSS.
+  const opacity = Math.round(magnitude * MAX_OPACITY * 1000) / 1000;
+  return `rgb(var(--color-${color}-600) / ${opacity})`;
 }
 
 export default function CorrelationHeatmap({ matrix }) {

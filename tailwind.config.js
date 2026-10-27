@@ -27,6 +27,7 @@ module.exports = {
       const dark = { ...darkVariables(), colorScheme: 'dark' };
       addBase({
         ':root': { ...lightVariables(), colorScheme: 'light' },
+        // :not(.light) lets a saved light choice win over a dark system setting.
         '@media (prefers-color-scheme: dark)': { ':root:not(.light)': dark },
         ':root.dark': dark,
       });
