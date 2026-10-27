@@ -141,7 +141,38 @@ describe('fourTouchBreaks', () => {
     // Bar 0 ties bar 1 at 300.5, so neither is a swing low; the only line runs
     // through bars 3 and 5. It still counts bar 0, the shelf's first touch.
     const tied = withBars(breakout, { [W]: { o: 320, h: 322, l: 300.5, c: 314 } });
-    expect(fourTouchBreaks(tied, B)[0]).toMatchObject({ touches: [W, W + 3, W + 5, W + 7], breakIndex: B });
+    expect(fourTouchBreaks(tied, B)[0]).toMatchObject({
+      touches: [W, W + 3, W + 5, W + 7],
+      breakIndex: B,
+      line: lineThrough({ index: W + 3, price: 300.5 }, { index: W + 5, price: 300.2 }),
+    });
+  });
+
+  it('stops counting back at a close through the line', () => {
+    // Bar 0 touches the shelf and bar 2 closes through it. The shelf forms again
+    // with touches at 5, 7, and 9, and breaks on its 4th approach at bar 12.
+    // Counting bar 0 would make the line look broken between its touches.
+    const reformed = [
+      ...breakout.slice(0, W),
+      { o: 320, h: 321, l: 300.5, c: 303 },
+      { o: 303, h: 310, l: 302, c: 308 },
+      { o: 308, h: 308.5, l: 298, c: 299 },
+      { o: 299, h: 309, l: 298, c: 308 },
+      { o: 308, h: 311, l: 303, c: 309 },
+      { o: 309, h: 309.5, l: 300.5, c: 303 },
+      { o: 303, h: 310, l: 302, c: 308 },
+      { o: 308, h: 309, l: 300.5, c: 302 },
+      { o: 302, h: 306, l: 301, c: 305 },
+      { o: 305, h: 305, l: 300.4, c: 301 },
+      { o: 301, h: 303, l: 300.6, c: 302 },
+      { o: 302, h: 302, l: 300.3, c: 300.7 },
+      { o: 300.7, h: 300.9, l: 292, c: 292.5 },
+    ];
+    expect(fourTouchBreaks(reformed, W + 12)[0]).toMatchObject({
+      touches: [W + 5, W + 7, W + 9, W + 11],
+      breakIndex: W + 12,
+      line: lineThrough({ index: W + 5, price: 300.5 }, { index: W + 7, price: 300.5 }),
+    });
   });
 
   it('takes a bar that spikes away from the line and closes through it as the break', () => {

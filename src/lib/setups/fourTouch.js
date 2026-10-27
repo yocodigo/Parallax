@@ -13,8 +13,9 @@ const KINDS = [
 ];
 
 // Where a line's touches start counting: back from its first swing point for
-// as long as no bar closed through it (the user's choice), so a line drawn
-// through later touches of a shelf still counts the earlier ones.
+// as long as no bar closed through it. Touches before that point belong to the
+// same line while it held, and ignoring them could take a 5th approach for
+// the 4th when the line is drawn through later touches of a shelf.
 function lineStart(bars, line, side, anchor) {
   let k = anchor;
   while (k > 0 && closesInside(bars, line, side, k - 1)) k -= 1;
@@ -23,11 +24,13 @@ function lineStart(bars, line, side, anchor) {
 
 // The break of `line` on its 4th approach, as of bar `i`, or null (setups.md
 // 2.7 and 3.2). Three touches establish the line, with no close through it in
-// between, and the line must have been drawable by the break: its second
-// swing point confirmed TRENDLINE_K bars after it. Closing through is checked
-// before moving away, so a bar that does both is the break. Returns
-// { touches, breakIndex }; the 4th entry of touches is the first bar of the
-// 4th approach, which need not be a touch: it can be the break itself.
+// between. They can come before `first` (see lineStart), so a line already
+// touched four times before the break is past its 4th approach and dropped.
+// The line must have been drawable by the break: its second swing point
+// confirmed TRENDLINE_K bars after it. Closing through is checked before
+// moving away, so a bar that does both is the break. Returns { touches,
+// breakIndex }; the 4th entry of touches is the first bar of the 4th
+// approach, which need not be a touch: it can be the break itself.
 function breakOnFourthApproach(bars, line, side, first, second, i) {
   const touches = lineTouches(bars, line, side, lineStart(bars, line, side, first.index), i);
   if (touches.length < 3) return null;
