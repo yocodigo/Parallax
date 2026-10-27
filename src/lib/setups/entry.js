@@ -3,13 +3,9 @@
 
 import { hasLittleOverlap } from './candles';
 import { bandCross } from './direction';
+import { tradingDay } from './session';
 
 const MINUTE = 60_000;
-
-// The New York trading date of a bar. The en-CA locale formats it as
-// YYYY-MM-DD, so two days compare as plain strings.
-const nyDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' });
-const tradingDay = (bar) => nyDate.format(new Date(bar.t));
 
 // True when 5m bar `j` is an entry in the direction of `bias`: for a long, an
 // up candle (close above open) whose high breaks above the previous bar's

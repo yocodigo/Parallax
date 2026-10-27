@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { sessionBars } from '../session';
+import { sessionBars, tradingDay } from '../session';
 
 const at = (iso) => ({ t: iso, o: 1, h: 1, l: 1, c: 1, v: 1 });
 const times = (bars) => bars.map((bar) => bar.t);
+
+describe('tradingDay', () => {
+  it("gives a bar's New York date, which can differ from its UTC date", () => {
+    expect(tradingDay(at('2026-10-26T13:30:00Z'))).toBe('2026-10-26');
+    // 3:30 UTC on the 27th is 11:30 PM on the 26th in New York.
+    expect(tradingDay(at('2026-10-27T03:30:00Z'))).toBe('2026-10-26');
+  });
+});
 
 describe('sessionBars', () => {
   it('keeps 9:30 AM to 3:59 PM New York, the regular session, on a summer (EDT) day', () => {
