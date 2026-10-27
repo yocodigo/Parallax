@@ -17,6 +17,13 @@ describe('SiteNav', () => {
     expect(screen.getByRole('link', { name: 'Import' })).toHaveAttribute('href', '/import');
   });
 
+  it('offers a theme picker', () => {
+    usePathname.mockReturnValue('/');
+    render(<SiteNav />);
+
+    expect(screen.getByLabelText('Theme')).toBeInTheDocument();
+  });
+
   it('marks the page you are on', () => {
     usePathname.mockReturnValue('/journal');
     render(<SiteNav />);

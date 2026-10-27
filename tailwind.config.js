@@ -19,12 +19,16 @@ module.exports = {
     },
   },
   plugins: [
-    // Light colors by default; dark ones when the system is set to dark.
-    // color-scheme gives form controls and scrollbars the matching look.
+    // Light colors by default; dark ones when the system is set to dark,
+    // unless the theme picker chose light, or when it chose dark (classes on
+    // <html>, src/lib/theme.js). color-scheme gives form controls and
+    // scrollbars the matching look.
     plugin(({ addBase }) => {
+      const dark = { ...darkVariables(), colorScheme: 'dark' };
       addBase({
         ':root': { ...lightVariables(), colorScheme: 'light' },
-        '@media (prefers-color-scheme: dark)': { ':root': { ...darkVariables(), colorScheme: 'dark' } },
+        '@media (prefers-color-scheme: dark)': { ':root:not(.light)': dark },
+        ':root.dark': dark,
       });
     }),
   ],

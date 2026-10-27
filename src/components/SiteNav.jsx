@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import ThemePicker from './ThemePicker';
 
 const LINKS = [
   { href: '/', label: 'Dashboard' },
@@ -16,7 +17,7 @@ export default function SiteNav() {
 
   return (
     <nav className="border-b border-gray-200 bg-white">
-      <div className="mx-auto flex max-w-6xl gap-6 px-6 text-sm">
+      <div className="mx-auto flex max-w-6xl items-center gap-6 px-6 text-sm">
         {LINKS.map(({ href, label }) => {
           const current = pathname === href;
           return (
@@ -34,6 +35,9 @@ export default function SiteNav() {
             </Link>
           );
         })}
+        <div className="ml-auto">
+          <ThemePicker />
+        </div>
       </div>
     </nav>
   );
