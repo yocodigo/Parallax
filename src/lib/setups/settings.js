@@ -60,3 +60,8 @@ export const BOUNCE = 0.25;
 // it; reclaimed by a close back inside within N_RECLAIM bars.
 export const N_ACC = 2;
 export const N_RECLAIM = 3;
+
+// [3.2] A four-touch break is valid when its bar's body is at least DISP_4X
+// times the average body of the DISP_4X_LOOKBACK bars before it.
+export const DISP_4X = 4.0;
+export const DISP_4X_LOOKBACK = 4;
