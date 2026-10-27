@@ -201,6 +201,9 @@ Vitest, JavaScript (not TypeScript).
      VIX and the earnings and economic calendars need a data source beyond Alpaca. Plan: Alpaca for
      market data, Cboe's free daily VIX history (prior close), and the published Fed/BLS schedules for
      FOMC, CPI, and jobs dates. TradingView has no data API.
+   - To do: delete a journal entry from `/journal`, with a confirmation. Decide first what happens to
+     a trade whose plan entry is deleted, since trades show in the journal only through their entries.
+   - Next: dark mode (follows the system setting, with a picker to override it).
    - In progress: setup detectors, gates, and the entry review, following the build order in
      `docs/private/setups.md`. Step 1 (primitives, `src/lib/setups/`) done.
 5. Last, once the product is polished: deploy to Vercel plus Neon (Postgres 17). Upgrade Next.js
