@@ -99,6 +99,18 @@ describe('reachesLine', () => {
     const early = Array(5).fill({ o: 303, h: 305, l: 300.5, c: 302 });
     expect(reachesLine(early, shelf, 'support', 4)).toBe(false);
   });
+
+  it('counts a bar that comes within TOL without crossing the line', () => {
+    // A low of 300.9 stays 0.4 above the shelf, inside TOL (about 0.7).
+    const near = breakout.map((bar, k) => (k === W + 7 ? { o: 301.5, h: 302, l: 300.9, c: 301 } : bar));
+    expect(reachesLine(near, shelf, 'support', W + 7)).toBe(true);
+  });
+
+  it('works the same for resistance', () => {
+    const roof = lineThrough({ index: W + 1, price: -300.5 }, { index: W + 3, price: -300.5 });
+    expect(reachesLine(mirror(breakout), roof, 'resistance', W + 7)).toBe(true);
+    expect(reachesLine(mirror(breakout), roof, 'resistance', W + 2)).toBe(false);
+  });
 });
 
 describe('closesInside', () => {

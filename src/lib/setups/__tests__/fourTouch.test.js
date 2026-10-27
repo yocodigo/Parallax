@@ -101,7 +101,40 @@ describe('fourTouchBreaks', () => {
       [W + 6]: { o: 301, h: 303, l: 300.8, c: 301 },
       [W + 7]: { o: 301, h: 302, l: 300.1, c: 300.2 },
     });
-    expect(fourTouchBreaks(straight, W + 7)[0]).toMatchObject({ touches: [W + 1, W + 3, W + 5, W + 7], breakIndex: W + 7 });
+    expect(fourTouchBreaks(straight, W + 7)[0]).toMatchObject({
+      touches: [W + 1, W + 3, W + 5, W + 7],
+      breakIndex: W + 7,
+    });
+  });
+
+  it('waits for the first bar that comes back to the line, past bars that stay clear', () => {
+    // After bar 6 moves away, bar 7 stays clear of the shelf, bar 8 comes back
+    // within TOL, and bar 9 closes through.
+    const gap = [
+      ...breakout.slice(0, W + 7),
+      { o: 301, h: 304, l: 301.5, c: 303 },
+      { o: 303, h: 303.2, l: 300.4, c: 300.8 },
+      { o: 300.8, h: 301, l: 292, c: 292.6 },
+    ];
+    const expected = { touches: [W + 1, W + 3, W + 5, W + 8], breakIndex: W + 9 };
+    expect(fourTouchBreaks(gap, W + 9)[0]).toMatchObject({ kind: '4xBD', ...expected });
+    expect(fourTouchBreaks(mirror(gap), W + 9)[0]).toMatchObject({ kind: '4xBO', ...expected });
+  });
+
+  it('skips a line that a bar closed through between its touches', () => {
+    // Bar 5 closes at 300.3, under the shelf, between touches 2 and 3; the shelf
+    // is touched again at bar 7 and broken at bar 10.
+    const throughEarly = [
+      ...breakout.slice(0, W + 5),
+      { o: 305, h: 305, l: 300, c: 300.3 },
+      { o: 300.3, h: 304, l: 301, c: 303.5 },
+      { o: 303.5, h: 304, l: 300.5, c: 302 },
+      { o: 302, h: 305, l: 301.5, c: 304.5 },
+      { o: 304.5, h: 305, l: 300.6, c: 301 },
+      { o: 301, h: 301.2, l: 290, c: 290.5 },
+    ];
+    const shelf = lineThrough({ index: W + 1, price: 300.5 }, { index: W + 3, price: 300.5 });
+    expect(fourTouchBreaks(throughEarly, W + 10).map((found) => found.line)).not.toContainEqual(shelf);
   });
 
   it('takes a bar that spikes away from the line and closes through it as the break', () => {

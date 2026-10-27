@@ -12,29 +12,35 @@ const KINDS = [
   { kind: '4xBO', side: 'resistance', pivot: 'high' },
 ];
 
-// The break of `line` on its 4th approach, as of bar `i`, or null. Three
-// touches establish the line, with no close through it in between. The 3rd
-// approach lasts until a bar moves away; a close through before then breaks
-// on the 3rd approach, which doesn't count. The 4th approach starts at the
-// next bar that reaches the line (setups.md 2.7) and lasts until a bar moves
-// away again; its first close through is the break, and can be its first bar.
-// As with touches, the first bar's own reach doesn't end it. Closing through
-// is checked before moving away, so a bar that does both is the break. The line must have been drawable by the break: its second swing
-// point confirmed TRENDLINE_K bars after it. Returns { touches, breakIndex },
-// the 4th "touch" being the first bar of the 4th approach.
+// The break of `line` on its 4th approach, as of bar `i`, or null (setups.md
+// 2.7 and 3.2). Three touches establish the line, with no close through it in
+// between, and the line must have been drawable by the break: its second
+// swing point confirmed TRENDLINE_K bars after it. Closing through is checked
+// before moving away, so a bar that does both is the break. Returns
+// { touches, breakIndex }; the 4th entry of touches is the first bar of the
+// 4th approach, which need not be a touch: it can be the break itself.
 function breakOnFourthApproach(bars, line, side, first, second, i) {
   const touches = lineTouches(bars, line, side, first.index, i);
   if (touches.length < 3) return null;
   const third = touches[2];
   if (!isUnbroken(bars, line, side, touches[0], third)) return null;
 
+  // The 3rd approach lasts until a bar moves away. A close through before
+  // then breaks on the 3rd approach, which doesn't count.
   let k = third + 1;
   for (; k <= i; k++) {
     if (!closesInside(bars, line, side, k)) return null;
     if (isAway(bars, line, side, k)) break;
   }
+  // The 4th approach starts at the first bar after the one that moved away
+  // (hence k + 1) that reaches the line. If price never moved away, or never
+  // came back, k ends past i and nothing is found.
   for (k += 1; k <= i; k++) if (reachesLine(bars, line, side, k)) break;
   const start = k;
+
+  // It lasts until a later bar moves away, its first close through being the
+  // break. As with touches, the first bar moving away doesn't end the
+  // approach it starts.
 
   for (; k <= i; k++) {
     if (!closesInside(bars, line, side, k)) {
@@ -56,8 +62,9 @@ function trapTrade(bars, side, breakIndex, reclaimedAt) {
 }
 
 // The four-touch breaks as of bar `i`, oldest first. Each is { kind ('4xBO' up
-// through resistance, '4xBD' down through support), line, touches,
-// breakIndex, displacement, outcome, status, trade }. Status: 'trap' when the
+// through resistance, '4xBD' down through support), line, touches (three,
+// then the first bar of the 4th approach), breakIndex, displacement, outcome,
+// status, trade }. Status: 'trap' when the
 // break was reclaimed (with `trade`, the other way); 'weak' when the break bar
 // lacked a body DISP_4X times the DISP_4X_LOOKBACK bars before it; 'valid'
 // when it had one and the break was confirmed; 'pending' otherwise. Lines
