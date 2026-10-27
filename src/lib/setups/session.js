@@ -9,5 +9,7 @@ import { EXTENDED_HOURS } from './settings';
 // no after-hours minutes.
 export function sessionBars(bars, { extendedHours = EXTENDED_HOURS } = {}) {
   if (extendedHours) return bars;
+  // minutesSinceOpen is null outside 9:30 to 16:00 New York, and 0 at 9:30,
+  // hence !== null rather than a truthiness check.
   return bars.filter((bar) => minutesSinceOpen(new Date(bar.t)) !== null);
 }

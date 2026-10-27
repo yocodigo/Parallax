@@ -12,6 +12,7 @@ function biasAt(bars, i) {
   const bands = bollinger(bars, i);
   if (!bands) return null;
   const { c } = bars[i];
+  // Not at most the middle: above it by more than rounding error.
   if (!atMost(c, bands.middle)) return { bias: 'long', middle: bands.middle };
   if (!atLeast(c, bands.middle)) return { bias: 'short', middle: bands.middle };
   return { bias: null, middle: bands.middle };
