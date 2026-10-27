@@ -46,8 +46,11 @@ Vitest, JavaScript (not TypeScript).
   (`swings`); `displacement`. Timeframes: minute bars are kept to the regular session
   (`sessionBars`, with `EXTENDED_HOURS` off) and combined into clock-aligned 5m and 15m bars
   (`resample`, which leaves out the bar still forming). Signals: the 15m direction (`bandCross`:
-  long or short by which side of the middle band each close is on, marking the close that crossed).
-  Bars use Alpaca's keys (`t o h l c v`), oldest first; functions take the index `i` of the latest
+  long or short by which side of the middle band each close is on, marking the close that crossed);
+  the 5m entry (`isEntryCandle`: for a long, an up candle breaking the previous high with little
+  overlap; `findEntry`: the first one after a cross, until the bias flips or the session closes);
+  and the 1m room to the outer band from the entry close (`roomToBand`, at least `ROOM_MIN` ATRs).
+  Bars use Alpaca's keys (`t o h l c v`), oldest first; detectors take the index `i` of the latest
   closed bar and never read past it. Every threshold is a named default in `settings.js`, tagged
   with its setups.md section and named as the doc names it where it does. Threshold checks go
   through `atMost`/`atLeast` (`compare.js`), which allow for floating-point error in decimal
@@ -218,8 +221,8 @@ Vitest, JavaScript (not TypeScript).
      trade shows in the journal only through its entries.
    - Done: dark mode, following the system setting, with a picker in the nav to override it.
    - In progress: setup detectors, gates, and the entry review, following the build order in
-     `docs/private/setups.md`. Steps 1 (primitives, `src/lib/setups/`) and 2 (5m and 15m bars, 15m
-     direction) done.
+     `docs/private/setups.md`. Steps 1 (primitives, `src/lib/setups/`), 2 (5m and 15m bars, 15m
+     direction), and 3 (5m entry candle, 1m room check) done.
 5. Last, once the product is polished: deploy to Vercel plus Neon (Postgres 17). Upgrade Next.js
    past 16.4.0 first (security advisories; 16.4.1 is two weeks old on 2026-10-28). Add auth or a
    demo mode before any journal data is public. One Playwright end-to-end test of the main flow.

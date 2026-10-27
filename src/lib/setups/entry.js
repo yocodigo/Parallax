@@ -6,7 +6,8 @@ import { bandCross } from './direction';
 
 const MINUTE = 60_000;
 
-// The New York trading date of a bar, as YYYY-MM-DD.
+// The New York trading date of a bar. The en-CA locale formats it as
+// YYYY-MM-DD, so two days compare as plain strings.
 const nyDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' });
 const tradingDay = (bar) => nyDate.format(new Date(bar.t));
 
@@ -31,6 +32,8 @@ export const risingVolume = (bars, j) => j >= 1 && bars[j].v > bars[j - 1].v;
 // holds. A later 15m close with another bias (the other side, or on the band)
 // ends the search, and a 5m candle closing at that same moment is too late.
 // So does the session close: the bias doesn't carry into the next morning.
+// (Strictly, the end of the New York date, which is the 4:00 PM close while
+// EXTENDED_HOURS is off; with it on, after-hours bars would still count.)
 // Returns { index, bias, risingVolume } into `bars5`, or null.
 export function findEntry(bars15, bars5, i) {
   const cross = bandCross(bars15, i);

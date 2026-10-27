@@ -53,8 +53,9 @@ describe('findEntry', () => {
   });
 
   it('stops at the session close rather than carrying into the next morning', () => {
-    // The cross closes at 2:45 PM New York (18:45Z). 3:55 PM is 70 minutes
-    // later; 9:30 AM the next day is 1125 minutes later.
+    // The cross closes at 2:45 PM New York (18:45Z). Offsets are minutes after
+    // that: 70 is 3:55 PM, 75 an after-hours bar starting at 4:00 PM, and 1125
+    // is 9:30 AM the next day.
     expect(findEntry(fifteens(), [flat(-5), flat(0), longEntry(70)], 20)).toMatchObject({ index: 2 });
     expect(findEntry(fifteens(), [flat(-5), flat(0), flat(75), longEntry(1125)], 20)).toBeNull();
   });
