@@ -35,13 +35,13 @@ function lineStart(bars, line, side, anchor) {
 // 2.7 and 3.2). Three touches establish the line, with no close through it in
 // between. They can come before `first` (see lineStart). A line whose 4th
 // approach ended before the break, price moving away again, is on its 5th
-// approach and dropped; the touch count alone doesn't decide that.
-// The line must have existed before its 4th approach: its second swing point
-// confirmed TRENDLINE_K bars after it, by the approach's first bar, so the
-// line is never fitted through the approach itself. Closing through is checked before
-// moving away, so a bar that does both is the break. Returns { touches,
-// breakIndex }; the 4th entry of touches is the first bar of the 4th
-// approach, which need not be a touch: it can be the break itself.
+// approach and dropped; the touch count alone doesn't decide that. The line
+// must exist before its 4th approach: its second swing point must be
+// confirmed (TRENDLINE_K bars later) no later than the approach's first bar,
+// so the line is never fitted through the approach itself. Closing through is
+// checked before moving away, so a bar that does both is the break. Returns
+// { touches, breakIndex }; the 4th entry of touches is the first bar of the
+// 4th approach, which need not be a touch: it can be the break itself.
 function breakOnFourthApproach(bars, line, side, first, second, i) {
   const touches = lineTouches(bars, line, side, lineStart(bars, line, side, first.index), i);
   if (touches.length < 3) return null;
@@ -65,9 +65,10 @@ function breakOnFourthApproach(bars, line, side, first, second, i) {
   // It lasts until a later bar moves away, its first close through being the
   // break. As with touches, the first bar moving away doesn't end the
   // approach it starts.
-
   for (; k <= i; k++) {
-    if (!closesInside(bars, line, side, k)) return { touches: [...touches.slice(0, 3), start], breakIndex: k };
+    if (!closesInside(bars, line, side, k)) {
+      return { touches: [...touches.slice(0, 3), start], breakIndex: k };
+    }
     if (k > start && isAway(bars, line, side, k)) return null;
   }
   return null;
@@ -85,7 +86,8 @@ function trapTrade(bars, side, breakIndex, reclaimedAt) {
 // One report for a break that one or more lines found. Any of them seeing a
 // reclaim makes it a trap (3.2: "trap if any break is reclaimed"), reported
 // with the line that saw the earliest reclaim; otherwise the line through the
-// earliest swing points speaks for it.
+// earliest swing points speaks for it (candidates arrive in swing-pair order,
+// earliest first).
 function reportBreak(bars, candidates) {
   const reclaims = candidates.filter((c) => c.outcome.status === 'reclaimed');
   const chosen = reclaims.length

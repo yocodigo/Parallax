@@ -123,7 +123,8 @@ describe('fourTouchBreaks', () => {
 
   it('skips a line that a bar closed through between its touches', () => {
     // Bar 5 closes at 300.3, under the shelf, between touches 2 and 3; the shelf
-    // is touched again at bar 7 and broken at bar 10.
+    // is touched again at bar 7 and broken at bar 10. Only the shelf is checked:
+    // other lines may still find the bar-10 break.
     const throughEarly = [
       ...breakout.slice(0, W + 5),
       { o: 305, h: 305, l: 300, c: 300.3 },
@@ -153,6 +154,8 @@ describe('fourTouchBreaks', () => {
     // next: the line through bars 3 and 5 starts counting at bar 1.
     const lastClose = Date.parse('2026-10-26T19:59:00Z');
     const nextOpen = Date.parse('2026-10-27T13:30:00Z');
+    // Bars up to bar 0 count back a minute each from 3:59 PM; later bars count
+    // forward from 9:30 the next day.
     const at = (k) => (k <= W ? lastClose - (W - k) * 60_000 : nextOpen + (k - W - 1) * 60_000);
     const tied = withBars(breakout, { [W]: { o: 320, h: 322, l: 300.5, c: 314 } });
     const timed = tied.map((bar, k) => ({ ...bar, t: new Date(at(k)).toISOString() }));
@@ -248,6 +251,18 @@ describe('fourTouchBreaks', () => {
       kind: '4xBO',
       status: 'trap',
       trade: { side: 'short', entry: -302, stop: -292 },
+    });
+  });
+
+  it('stops a trap beyond the lowest low from the break to the reclaim', () => {
+    // Bar 9 dips to 290 below the break bar's 292 low, and bar 10 reclaims.
+    const deeper = withBars(trap, {
+      [B + 1]: { o: 292.6, h: 294, l: 290, c: 293 },
+      [B + 2]: { o: 293, h: 303, l: 292.5, c: 302 },
+    });
+    expect(fourTouchBreaks(deeper, B + 2)[0]).toMatchObject({
+      status: 'trap',
+      trade: { side: 'long', entry: 302, stop: 290 },
     });
   });
 
