@@ -33,7 +33,8 @@ export function reactionAt(bars, level, bias, from, i) {
   if (touch < 0) return null;
 
   // Which side of the level a close is on: 1 beyond it (the trade's way), -1
-  // back, 0 on it.
+  // back, 0 on it. The compare helpers count a close within rounding error of
+  // the level as on it, so 1 and -1 mean clearly past it.
   const side = (k) => {
     const c = bars[k].c;
     if (long ? !atMost(c, level) : !atLeast(c, level)) return 1;
@@ -41,6 +42,7 @@ export function reactionAt(bars, level, bias, from, i) {
     return 0;
   };
   const decided = (kind, k, extra) => ({ kind, touchIndex: touch, decidedAt: k, ...extra });
+  // The oscillation window's last bar: the touch is the first of its OSC_BARS.
   const last = touch + OSC_BARS - 1;
   let switches = 0;
   let lastSide = 0;
@@ -48,6 +50,8 @@ export function reactionAt(bars, level, bias, from, i) {
 
   for (let k = touch; k <= i; k++) {
     const c = bars[k].c;
+    // ATR through bar k, as in the other detectors, so a wide rejection bar
+    // raises its own threshold slightly.
     const rejectAt = REJECT_DIST * atr(bars, k);
     if (k <= touch + REJECT_BARS && (long ? atMost(c, level - rejectAt) : atLeast(c, level + rejectAt))) {
       return decided('rejected', k);

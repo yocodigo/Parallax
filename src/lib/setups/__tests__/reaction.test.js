@@ -73,6 +73,27 @@ describe('reactionAt', () => {
     expect(reactionAt(bars, 100, 'long', W, W + 2)).toMatchObject({ kind: 'oscillating', decidedAt: W + 2 });
   });
 
+  it('gives up a rip on a close right on the level', () => {
+    const bars = at(
+      touch,
+      bar(99.8, 101.6, 99.7, 101.5),
+      bar(101.5, 101.6, 99.9, 100),
+      bar(100, 100.4, 99.9, 100.2),
+      bar(100.2, 100.5, 100.1, 100.3)
+    );
+    expect(reactionAt(bars, 100, 'long', W, W + 4)).toEqual({ kind: null, touchIndex: W });
+  });
+
+  it('lets a rip that starts inside the 10 bars finish after them', () => {
+    // Bars 1-7 hover under the level; bar 8 closes above with displacement and
+    // holds through bar 11, two bars past the window's last bar (9).
+    const hover = bar(99.6, 99.8, 99.5, 99.7);
+    const above = bar(101.2, 101.5, 101, 101.3);
+    const bars = at(touch, ...Array(7).fill(hover), bar(99.7, 101.3, 99.6, 101.2), above, above, above);
+    expect(reactionAt(bars, 100, 'long', W, W + 9)).toEqual({ kind: null, touchIndex: W });
+    expect(reactionAt(bars, 100, 'long', W, W + 11)).toEqual({ kind: 'ripped', touchIndex: W, decidedAt: W + 11 });
+  });
+
   it('is none when 10 bars pass with no reaction', () => {
     const hover = bar(99.6, 99.9, 99.5, 99.7);
     const bars = at(touch, ...Array(9).fill(hover));
