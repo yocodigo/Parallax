@@ -44,6 +44,15 @@ describe('parseJournalEntry', () => {
     expect(parseJournalEntry({ ...review, emotion: 'regretful' }).success).toBe(true);
   });
 
+  it('accepts the entered_before_confirmation, mid_range_entry, and entered_in_lockout mistakes', () => {
+    const result = parseJournalEntry({
+      ...review,
+      mistakes: ['entered_before_confirmation', 'mid_range_entry', 'entered_in_lockout'],
+    });
+
+    expect(result.success).toBe(true);
+  });
+
   it('accepts only known mistakes and removes duplicates', () => {
     const result = parseJournalEntry({
       ...review,

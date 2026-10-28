@@ -23,6 +23,9 @@ export const MISTAKES = [
   'oversized',
   'revenge_trade',
   'exited_early',
+  'entered_before_confirmation',
+  'mid_range_entry',
+  'entered_in_lockout',
 ];
 
 export const EMOTION_LABELS = {
@@ -46,6 +49,9 @@ export const MISTAKE_LABELS = {
   oversized: 'Oversized',
   revenge_trade: 'Revenge trade',
   exited_early: 'Exited early',
+  entered_before_confirmation: 'Entered before confirmation',
+  mid_range_entry: 'Mid-range entry',
+  entered_in_lockout: 'Entered in lockout',
 };
 
 const schema = z
