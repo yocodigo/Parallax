@@ -261,3 +261,43 @@ Vitest, JavaScript (not TypeScript).
   rather than relying on Vitest's globals.
 - Next 16 error boundaries get `{ error, retry }`; `retry()` refetches and re-renders. `reset()` is the
   older, rarely wanted variant.
+
+## Working efficiently
+
+Context is the budget. Follow these in every session.
+
+- **Read narrowly.** Open only the files the current commit touches. When a spec is relevant,
+  read the named section, not the whole file. Never read a file "for context" without a
+  specific question it answers.
+- **Search before reading.** Use grep or glob to find the lines that matter, then open just
+  those. Don't scan whole directories.
+- **One commit at a time.** If the request implies several commits, say so, do the first, and
+  stop. Don't start the next without being asked.
+- **Don't echo code.** Never paste a file's contents, a full diff, or long tool output back
+  into the conversation. Name the file and line and describe the change in a sentence.
+- **Summaries are short.** After each commit: what changed, why, and anything I should check,
+  in a few lines. No bullet-by-bullet walkthroughs unless I ask.
+- **Delegate the reviewer.** Run the reviewer subagent on the commit. It reads the diff in its
+  own context, so don't re-read or re-explain the diff yourself afterward — just report its
+  verdict and act on FIX items.
+- **Don't re-verify what CI covers.** Lint, tests, and build run in CI and I run them locally.
+  Run them when a commit needs proof it's green, not repeatedly while iterating.
+- **Ask before exploring.** If a task would need reading more than a handful of files, say
+  what you'd need to read and why, and wait.
+- **Prefer edits to rewrites.** Change the lines that need changing; don't rewrite whole files.
+- **Stop at done.** When the commit is made and reported, end the turn. No proactive next
+  steps, cleanups, or refactors I didn't ask for.
+- **Flag the session boundary.** When a commit finishes a roadmap item, or the session has run
+  several commits, end your summary with one line: "Good point to start a fresh session." Say
+  which model fits the next item: the smaller one for tests, CRUD, refactors, and docs; the
+  stronger one for detectors, data modeling, and design.
+- **Signal the model and effort I should use.** Before starting a roadmap item or any sizable
+  piece of work, open with one line: what you're about to do, and the model and effort that fit
+  it. Use this mapping:
+  - Sonnet, medium effort: tests, CRUD, API routes, refactors, docs, parsers, UI wiring
+  - Sonnet, high effort: detectors and other intricate logic that is fully specified in a spec file
+  - Opus, high effort: data modeling, ambiguous design decisions, the visual design pass
+
+  Then wait for me to confirm or switch before you start. If I'm already on a heavier setting
+  than the work needs, say so — cheaper is the default, and only flag heavier when the task is
+  genuinely ambiguous.
