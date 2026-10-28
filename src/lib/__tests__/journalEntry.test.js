@@ -68,6 +68,23 @@ describe('parseJournalEntry', () => {
   it('rejects a trade link that is not a valid id', () => {
     expect(errorPaths(parseJournalEntry({ ...review, tradeId: 'abc' }))).toContain('tradeId');
   });
+
+  it('accepts emotionalControl from 1 to 10 on a review, and only on a review', () => {
+    expect(parseJournalEntry({ ...review, emotionalControl: 1 }).success).toBe(true);
+    expect(parseJournalEntry({ ...review, emotionalControl: 10 }).success).toBe(true);
+    expect(errorPaths(parseJournalEntry({ ...review, emotionalControl: 0 }))).toContain(
+      'emotionalControl'
+    );
+    expect(errorPaths(parseJournalEntry({ ...review, emotionalControl: 11 }))).toContain(
+      'emotionalControl'
+    );
+    expect(errorPaths(parseJournalEntry({ ...review, emotionalControl: 5.5 }))).toContain(
+      'emotionalControl'
+    );
+
+    const plan = { kind: 'plan', notes: 'Breaking out of the range.', emotionalControl: 7 };
+    expect(errorPaths(parseJournalEntry(plan))).toContain('emotionalControl');
+  });
 });
 
 describe('labels', () => {

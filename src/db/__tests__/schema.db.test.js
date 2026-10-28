@@ -93,6 +93,33 @@ describe('journal_entries table', () => {
     expect(entry.tradeId).toBeNull();
     expect(entry.notes).toBe('Waiting for a VWAP reclaim');
   });
+
+  it('stores emotionalControl on a review', async () => {
+    const [entry] = await db
+      .insert(journalEntries)
+      .values({ kind: 'review', notes: 'Chased the open again', emotionalControl: 4 })
+      .returning();
+
+    expect(entry.emotionalControl).toBe(4);
+  });
+
+  it('rejects emotionalControl outside 1-10', async () => {
+    await expect(
+      db
+        .insert(journalEntries)
+        .values({ kind: 'review', notes: 'Chased the open again', emotionalControl: 0 })
+    ).rejects.toMatchObject({ cause: { constraint: 'journal_entries_emotional_control_range' } });
+  });
+
+  it('rejects emotionalControl on a plan', async () => {
+    await expect(
+      db
+        .insert(journalEntries)
+        .values({ kind: 'plan', notes: 'Waiting for a VWAP reclaim', emotionalControl: 4 })
+    ).rejects.toMatchObject({
+      cause: { constraint: 'journal_entries_emotional_control_review_only' },
+    });
+  });
 });
 describe('circuit_breaker_settings table', () => {
   it('starts with every limit off, counting live trades', async () => {

@@ -1,0 +1,3 @@
+ALTER TABLE "journal_entries" ADD COLUMN "emotional_control" integer;--> statement-breakpoint
+ALTER TABLE "journal_entries" ADD CONSTRAINT "journal_entries_emotional_control_range" CHECK ("journal_entries"."emotional_control" IS NULL OR "journal_entries"."emotional_control" BETWEEN 1 AND 10);--> statement-breakpoint
+ALTER TABLE "journal_entries" ADD CONSTRAINT "journal_entries_emotional_control_review_only" CHECK ("journal_entries"."emotional_control" IS NULL OR "journal_entries"."kind" = 'review');

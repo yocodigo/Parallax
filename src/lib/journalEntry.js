@@ -65,11 +65,17 @@ const schema = z
       .array(z.enum(MISTAKES))
       .default([])
       .transform((list) => [...new Set(list)]),
+    emotionalControl: z.int().min(1).max(10).optional(),
   })
   // A thesis is about a holding, so it has to say which one.
   .refine((entry) => entry.kind !== 'thesis' || entry.symbol !== undefined, {
     path: ['symbol'],
     message: 'A thesis needs a symbol',
+  })
+  // Emotional control rates how well a review went, not a plan or thesis.
+  .refine((entry) => entry.kind === 'review' || entry.emotionalControl === undefined, {
+    path: ['emotionalControl'],
+    message: 'Emotional control is only for a review',
   });
 
 export function parseJournalEntry(input) {

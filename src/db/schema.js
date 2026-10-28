@@ -119,9 +119,20 @@ export const journalEntries = pgTable(
     notes: text('notes').notNull(),
     emotion: text('emotion'),
     mistakes: text('mistakes').array().notNull().default(sql`'{}'::text[]`),
+    emotionalControl: integer('emotional_control'),
     ...timestamps,
   },
-  (t) => [index('journal_entries_trade_id_idx').on(t.tradeId)]
+  (t) => [
+    index('journal_entries_trade_id_idx').on(t.tradeId),
+    check(
+      'journal_entries_emotional_control_range',
+      sql`${t.emotionalControl} IS NULL OR ${t.emotionalControl} BETWEEN 1 AND 10`
+    ),
+    check(
+      'journal_entries_emotional_control_review_only',
+      sql`${t.emotionalControl} IS NULL OR ${t.kind} = 'review'`
+    ),
+  ]
 );
 
 // The trader's own circuit breakers. One row (id 1); a null limit is off.
