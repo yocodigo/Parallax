@@ -33,9 +33,12 @@ export function replayStops({ bars, entryIndex, bias, t1 = null, rules }) {
   const day = tradingDay(fill);
   const reachesT1 = (bar) => t1 !== null && (long ? atLeast(bar.h, t1) : atMost(bar.l, t1));
 
-  // 5m bars and when each closes, for S1.
+  // 5m bars for S1. Each is checked once, at the first 1m bar ending at or
+  // after its close, so its close is known by then and a minute missing from
+  // the feed can't skip it. The first to check closes after the entry.
   const fives = resample(bars, 5);
-  const fiveCloses = new Map(fives.map((bar, j) => [endOf(bar, 5), j]));
+  let nextFive = fives.findIndex((bar) => endOf(bar, 5) > endOf(fill, 1));
+  if (nextFive < 0) nextFive = fives.length;
   const backAcrossMiddle = (j) => {
     const bands = bollinger(fives, j);
     if (!bands) return false;
@@ -60,9 +63,10 @@ export function replayStops({ bars, entryIndex, bias, t1 = null, rules }) {
     if (rules.includes('S2') && (long ? !atLeast(bar.c, stopLevel) : !atMost(bar.c, stopLevel))) {
       return exit(k, bar.c, 'S2');
     }
-    const five = fiveCloses.get(endOf(bar, 1));
-    if (rules.includes('S1') && five !== undefined && backAcrossMiddle(five)) {
-      return exit(k, bar.c, 'S1');
+    while (nextFive < fives.length && endOf(fives[nextFive], 5) <= endOf(bar, 1)) {
+      const j = nextFive++;
+      // Out at the 5m close that crossed back.
+      if (rules.includes('S1') && backAcrossMiddle(j)) return exit(k, fives[j].c, 'S1');
     }
     if (rules.includes('S3') && t1 !== null && Date.parse(bar.t) >= Date.parse(fill.t) + TIME_STOP * MINUTE) {
       return exit(k, bar.c, 'S3');

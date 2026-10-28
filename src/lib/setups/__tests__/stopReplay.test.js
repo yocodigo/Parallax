@@ -46,6 +46,19 @@ describe('replayStops', () => {
     });
   });
 
+  it('S1 still checks a 5m close whose last minute is missing from the feed', () => {
+    // The same dip, but no bar traded in the 5m bar's last minute (bar 114),
+    // so its close is known at the next bar, which starts at 15:25.
+    const dip = { o: 500, h: 500.1, l: 499.85, c: 499.9 };
+    const full = after({ [E + 1]: dip, [E + 2]: dip, [E + 3]: dip, [E + 4]: dip });
+    const bars = full.filter((_, k) => k !== E + 4);
+    expect(replayStops({ bars, entryIndex: E, bias: 'long', rules: ['S1'] })).toMatchObject({
+      exitIndex: E + 4,
+      exitPrice: 499.9,
+      reason: 'S1',
+    });
+  });
+
   it('S3 exits when T1 is not reached within 15 minutes of the entry', () => {
     const bars = after();
     expect(replayStops({ bars, entryIndex: E, bias: 'long', t1: 502, rules: ['S3'] })).toMatchObject({
