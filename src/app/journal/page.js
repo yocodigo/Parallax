@@ -1,3 +1,4 @@
+import DailyPlanForm from '@/components/DailyPlanForm';
 import JournalEntries from '@/components/JournalEntries';
 import PlanForm from '@/components/PlanForm';
 import ReviewForm from '@/components/ReviewForm';
@@ -21,6 +22,7 @@ export default function JournalPage() {
       <div className="mb-8 space-y-6">
         <WeeklyReview />
         <VoiceNote />
+        <DailyPlanForm />
         <PlanForm />
         <ReviewForm />
       </div>
