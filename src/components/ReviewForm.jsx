@@ -92,7 +92,7 @@ export default function ReviewForm({ draft, draftErrors, onSaved }) {
       notes: form.notes,
       emotion: orUndefined(form.emotion),
       mistakes: form.mistakes,
-      emotionalControl: orUndefined(form.emotionalControl) && Number(form.emotionalControl),
+      emotionalControl: form.emotionalControl === '' ? undefined : Number(form.emotionalControl),
     };
 
     try {
