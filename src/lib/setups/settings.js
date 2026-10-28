@@ -80,3 +80,7 @@ export const REJECT_DIST = 0.5;
 export const REJECT_BARS = 3;
 export const OSC_BARS = 10;
 export const RIP_BARS = 3;
+
+// [5] The planned time stop S3: out if T1 isn't reached within this many
+// minutes of the entry.
+export const TIME_STOP = 15;
