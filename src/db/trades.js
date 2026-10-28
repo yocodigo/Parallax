@@ -38,6 +38,16 @@ export async function recordExit(db, id, { exitPrice, closedAt, exitReason, exit
   return trade ?? null;
 }
 
+// One symbol's closed trades, oldest entry first. `mode` limits it to live,
+// paper, or backtest trades.
+export async function listClosedTrades(db, { symbol, mode } = {}) {
+  return db
+    .select()
+    .from(trades)
+    .where(and(isNotNull(trades.closedAt), eq(trades.symbol, symbol), mode ? eq(trades.mode, mode) : undefined))
+    .orderBy(trades.openedAt);
+}
+
 // Closed trades, each once, with `mistakes`: every tag from the journal
 // entries about it (repeats included; the ledger counts each mistake once per
 // trade). `mode` limits it to live, paper, or backtest trades.

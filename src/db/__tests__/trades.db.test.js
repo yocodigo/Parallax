@@ -3,6 +3,7 @@ import { journalEntries, trades } from '../schema';
 import { createTestDb, resetDb } from '../testing';
 import {
   getTrade,
+  listClosedTrades,
   listClosedTradesWithMistakes,
   listClosedTradesWithRuleChecks,
   listRecentTrades,
@@ -100,6 +101,29 @@ describe('recordExit', () => {
 
     expect(await recordExit(db, trade.id, { ...exit, exitPrice: 90 })).toBeNull();
     expect((await getTrade(db, trade.id)).exitPrice).toBe(105);
+  });
+});
+
+describe('listClosedTrades', () => {
+  const closed = (values) =>
+    insertTrade({ ...values, entryPrice: 100, exitPrice: 101, closedAt: new Date('2026-10-22T15:00:00Z') });
+
+  it("returns one symbol's closed trades, oldest entry first", async () => {
+    const later = await closed({ openedAt: new Date('2026-10-21T14:00:00Z') });
+    const earlier = await closed({ openedAt: new Date('2026-10-20T14:00:00Z') });
+    await closed({ symbol: 'QQQ', openedAt: new Date('2026-10-20T15:00:00Z') });
+    await insertTrade({ entryPrice: 100, openedAt: new Date('2026-10-20T16:00:00Z') });
+
+    const rows = await listClosedTrades(db, { symbol: 'SPY' });
+    expect(rows.map((trade) => trade.id)).toEqual([earlier.id, later.id]);
+  });
+
+  it('can be limited to one mode', async () => {
+    await closed({ openedAt: new Date('2026-10-20T14:00:00Z') });
+    const live = await closed({ mode: 'live', openedAt: new Date('2026-10-21T14:00:00Z') });
+
+    const rows = await listClosedTrades(db, { symbol: 'SPY', mode: 'live' });
+    expect(rows.map((trade) => trade.id)).toEqual([live.id]);
   });
 });
 
