@@ -11,9 +11,15 @@ describe('stopReport', () => {
       averageR: 0.125,
       byReason: { t1: 1, S2: 2, close: 1 },
       cutBeforeT1: 1,
+      cutBeforeT1ByReason: { S2: 1 },
       cutBeforeT1Share: 0.25,
       averageRWhenCut: -1,
     });
+  });
+
+  it('says which rule of a combination cut trades before T1', () => {
+    const results = [run('S1', -0.5, true), run('S2', -1, true), run('S2', -1, true), run('S1', -0.4)];
+    expect(stopReport(results).cutBeforeT1ByReason).toEqual({ S1: 1, S2: 2 });
   });
 
   it('leaves out trades without an R from the averages, not the counts', () => {
@@ -28,6 +34,7 @@ describe('stopReport', () => {
       averageR: null,
       byReason: {},
       cutBeforeT1: 0,
+      cutBeforeT1ByReason: {},
       cutBeforeT1Share: null,
       averageRWhenCut: null,
     });
