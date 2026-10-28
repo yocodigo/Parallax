@@ -1,0 +1,27 @@
+// A summary of one set of stop rules replayed over many trades (setups.md
+// section 5's evaluation). Each result is what replayStops returned.
+
+// The average of the values that aren't null, or null if none are.
+function averageOf(values) {
+  const known = values.filter((value) => value !== null);
+  return known.length ? known.reduce((sum, value) => sum + value, 0) / known.length : null;
+}
+
+// { trades, averageR, byReason (how many exited by T1, each rule, or the
+// close), cutBeforeT1 (stop exits on trades that reached T1 later that day),
+// cutBeforeT1Share (of all trades), averageRWhenCut (the R of those exits,
+// what being wrong cost) }. Trades without an R count everywhere but in the
+// averages.
+export function stopReport(results) {
+  const byReason = {};
+  for (const { reason } of results) byReason[reason] = (byReason[reason] ?? 0) + 1;
+  const cut = results.filter((result) => result.t1Later);
+  return {
+    trades: results.length,
+    averageR: averageOf(results.map((result) => result.r)),
+    byReason,
+    cutBeforeT1: cut.length,
+    cutBeforeT1Share: results.length ? cut.length / results.length : null,
+    averageRWhenCut: averageOf(cut.map((result) => result.r)),
+  };
+}
