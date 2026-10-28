@@ -9,6 +9,10 @@ import { sessionBars, tradingDay } from '@/lib/setups/session';
 const ROUTE = '/api/insights/stops';
 const BARS_URL = 'https://data.alpaca.markets/v2/stocks/bars';
 const DAY_MS = 24 * 60 * 60 * 1000;
+// How far back to fetch before a day's first entry: the 5m bands need about
+// 100 minutes of earlier session, and 4 calendar days still reaches a trading
+// day after a 3-day weekend.
+const LOOKBACK_DAYS = 4;
 // S3 needs each trade's T1, from the daily fib levels still to come.
 const RULE_SETS = [['S1'], ['S2'], ['S1', 'S2']];
 
@@ -70,8 +74,8 @@ export const GET = withErrorLogging(ROUTE, async (request) => {
   }
   const headers = { 'APCA-API-KEY-ID': keyId, 'APCA-API-SECRET-KEY': secretKey };
 
-  // One fetch per trading day, reaching back a few days so the 5m bands have
-  // history at the open.
+  // One fetch per trading day, reaching back LOOKBACK_DAYS so the 5m bands
+  // have history at the open.
   const byDay = new Map();
   for (const trade of closed) {
     const day = dayOf(trade);
@@ -83,7 +87,7 @@ export const GET = withErrorLogging(ROUTE, async (request) => {
     const first = dayTrades[0].openedAt.getTime();
     const last = dayTrades.at(-1).openedAt.getTime();
     const end = new Date(Math.min(last + DAY_MS, Date.now()));
-    const { bars, error } = await fetchBars(new Date(first - 4 * DAY_MS), end, headers);
+    const { bars, error } = await fetchBars(new Date(first - LOOKBACK_DAYS * DAY_MS), end, headers);
     if (error) {
       const id = requestId(request);
       logError('Alpaca bars error', { route: ROUTE, requestId: id, ...error });
