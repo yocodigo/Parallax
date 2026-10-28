@@ -108,6 +108,19 @@ describe('ReviewForm', () => {
     });
   });
 
+  it('sends emotionalControl as a number', async () => {
+    serveJournal([]);
+    const bodies = captureReviews();
+    renderForm();
+
+    await userEvent.type(screen.getByLabelText('Notes'), 'Stayed calm through the chop.');
+    await userEvent.type(screen.getByLabelText('Emotional control'), '8');
+    await save();
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0]).toMatchObject({ emotionalControl: 8 });
+  });
+
   it('can save a review that is not about one trade', async () => {
     serveJournal([]);
     const bodies = captureReviews();
@@ -202,6 +215,7 @@ describe('ReviewForm', () => {
             symbol: 'NVDA',
             emotion: 'frustrated',
             mistakes: ['moved_stop', 'oversized'],
+            emotionalControl: 3,
           },
         }}
         draftErrors={{ plan: {}, entry: { symbol: ['Invalid symbol'] } }}
@@ -211,6 +225,7 @@ describe('ReviewForm', () => {
     expect(screen.getByLabelText('Notes')).toHaveValue('Moved my stop.');
     expect(screen.getByLabelText('Symbol')).toHaveValue('NVDA');
     expect(screen.getByLabelText('Emotion')).toHaveValue('frustrated');
+    expect(screen.getByLabelText('Emotional control')).toHaveValue(3);
     expect(screen.getByLabelText('Moved stop')).toBeChecked();
     expect(screen.getByLabelText('Oversized')).toBeChecked();
     expect(screen.getByLabelText('Entered late')).not.toBeChecked();

@@ -7,7 +7,14 @@ import { EMOTION_LABELS, EMOTIONS, MISTAKE_LABELS, MISTAKES } from '@/lib/journa
 import Field, { inputClass } from './Field';
 import { capitalize, describeTrade } from './JournalEntries';
 
-const EMPTY_FORM = { tradeId: '', symbol: '', notes: '', emotion: '', mistakes: [] };
+const EMPTY_FORM = {
+  tradeId: '',
+  symbol: '',
+  notes: '',
+  emotion: '',
+  mistakes: [],
+  emotionalControl: '',
+};
 
 const orUndefined = (value) => (value === '' ? undefined : value);
 
@@ -29,6 +36,7 @@ function formFromDraft({ entry = {} }) {
     notes: entry.notes ?? '',
     emotion: entry.emotion ?? '',
     mistakes: MISTAKES.filter((m) => entry.mistakes?.includes(m)),
+    emotionalControl: entry.emotionalControl ?? '',
   };
 }
 
@@ -84,6 +92,7 @@ export default function ReviewForm({ draft, draftErrors, onSaved }) {
       notes: form.notes,
       emotion: orUndefined(form.emotion),
       mistakes: form.mistakes,
+      emotionalControl: orUndefined(form.emotionalControl) && Number(form.emotionalControl),
     };
 
     try {
@@ -168,6 +177,22 @@ export default function ReviewForm({ draft, draftErrors, onSaved }) {
               </option>
             ))}
           </select>
+        </Field>
+
+        <Field
+          id="review-emotionalControl"
+          label="Emotional control"
+          error={errorFor('emotionalControl')}
+          className="w-32"
+        >
+          <input
+            {...fieldProps('emotionalControl')}
+            type="number"
+            min={1}
+            max={10}
+            placeholder="1-10"
+            className={inputClass}
+          />
         </Field>
 
         <button
