@@ -72,6 +72,7 @@ export function replayStops({ bars, entryIndex, bias, t1 = null, rules }) {
 
   for (; k < bars.length && tradingDay(bars[k]) === day; k++) {
     const bar = bars[k];
+    // Without a gap this finds nothing: the previous bar checked up to here.
     const inGap = s1By(Date.parse(bar.t), k - 1);
     if (inGap) return inGap;
     if (reachesT1(bar)) return exit(k, t1, 't1');
@@ -80,6 +81,8 @@ export function replayStops({ bars, entryIndex, bias, t1 = null, rules }) {
     }
     const withBar = s1By(endOf(bar, 1), k);
     if (withBar) return withBar;
+    // Comparing start times fires at the close of the bar ending TIME_STOP
+    // minutes after the entry, which is the fill bar's close.
     if (rules.includes('S3') && t1 !== null && Date.parse(bar.t) >= Date.parse(fill.t) + TIME_STOP * MINUTE) {
       return exit(k, bar.c, 'S3');
     }

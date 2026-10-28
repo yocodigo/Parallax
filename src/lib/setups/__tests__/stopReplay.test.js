@@ -158,6 +158,25 @@ describe('replayStops', () => {
     });
   });
 
+  it('leaves R blank when the fill bar closed on its far extreme', () => {
+    const bars = after({ [E]: { o: 500.5, h: 500.6, l: 499.8, c: 499.8 } });
+    expect(replayStops({ bars, entryIndex: E, bias: 'long', rules: ['S2'] }).r).toBeNull();
+  });
+
+  it('works the same for a short with S1 and T1', () => {
+    const dip = { o: 500, h: 500.1, l: 499.85, c: 499.9 };
+    const s1 = mirror(after({ [E + 1]: dip, [E + 2]: dip, [E + 3]: dip, [E + 4]: dip }));
+    expect(replayStops({ bars: s1, entryIndex: E, bias: 'short', rules: ['S1'] })).toMatchObject({
+      exitPrice: -499.9,
+      reason: 'S1',
+    });
+    const t1 = mirror(after({ [E + 3]: { o: 500.3, h: 502.2, l: 500.2, c: 501 } }));
+    expect(replayStops({ bars: t1, entryIndex: E, bias: 'short', t1: -502, rules: ['S2'] })).toMatchObject({
+      exitPrice: -502,
+      reason: 't1',
+    });
+  });
+
   it('works the same for a short', () => {
     const bars = mirror(after({ [E + 2]: { o: 500.3, h: 500.3, l: 499.6, c: 499.7 } }));
     expect(replayStops({ bars, entryIndex: E, bias: 'short', rules: ['S2'] })).toMatchObject({
