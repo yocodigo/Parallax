@@ -40,8 +40,12 @@ function serveBars(response = () => HttpResponse.json({ bars: { SPY: spyBars }, 
   return requests;
 }
 
-// A closed call on `symbol`, filled 20 seconds into bar 110.
-async function closedCall({ symbol = 'SPY', mode = 'live' } = {}) {
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// A closed call on `symbol`, filled 20 seconds into bar `minute`, `days` days
+// after the bars' day.
+async function closedCall({ symbol = 'SPY', mode = 'live', minute = 110, days = 0 } = {}) {
+  const openedAt = new Date(OPEN + days * DAY_MS + minute * MINUTE + 20_000);
   const [trade] = await getDb()
     .insert(trades)
     .values({
@@ -56,8 +60,8 @@ async function closedCall({ symbol = 'SPY', mode = 'live' } = {}) {
       plannedEntry: 1.2,
       entryPrice: 1.2,
       exitPrice: 1,
-      openedAt: new Date(OPEN + 110 * MINUTE + 20_000),
-      closedAt: new Date(OPEN + 115 * MINUTE),
+      openedAt,
+      closedAt: new Date(openedAt.getTime() + 5 * MINUTE),
     })
     .returning();
   return trade;
@@ -99,6 +103,61 @@ describe('GET /api/insights/stops', () => {
     expect(requests).toHaveLength(1);
     expect(requests[0].searchParams.get('symbols')).toBe('SPY');
     expect(requests[0].searchParams.get('timeframe')).toBe('1Min');
+  });
+
+  it('fetches each trading day once, for every trade that day', async () => {
+    const requests = serveBars();
+    await closedCall();
+    await closedCall({ minute: 115 });
+
+    expect(await (await get()).json()).toMatchObject({ replayed: 2, skipped: 0 });
+    expect(requests).toHaveLength(1);
+  });
+
+  it("fetches another day separately, and skips a trade the day's bars don't cover", async () => {
+    // The fake feed only has the first day, so the next day's trade has no bars.
+    const requests = serveBars();
+    await closedCall();
+    await closedCall({ days: 1 });
+
+    expect(await (await get()).json()).toMatchObject({ replayed: 1, skipped: 1 });
+    expect(requests).toHaveLength(2);
+  });
+
+  it('asks for the bars from 4 days before the entry to a day after it', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-01T00:00:00Z'));
+    try {
+      const requests = serveBars();
+      const trade = await closedCall();
+      await get();
+
+      const params = requests[0].searchParams;
+      expect(params.get('start')).toBe(new Date(trade.openedAt.getTime() - 4 * DAY_MS).toISOString());
+      expect(params.get('end')).toBe(new Date(trade.openedAt.getTime() + DAY_MS).toISOString());
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("follows Alpaca's pages", async () => {
+    const requests = serveBars();
+    server.use(
+      http.get(BARS_URL, ({ request }) => {
+        const url = new URL(request.url);
+        requests.push(url);
+        const second = url.searchParams.get('page_token') === 'next';
+        return HttpResponse.json({
+          bars: { SPY: second ? spyBars.slice(100) : spyBars.slice(0, 100) },
+          next_page_token: second ? null : 'next',
+        });
+      })
+    );
+    await closedCall();
+
+    const body = await (await get()).json();
+    expect(requests).toHaveLength(2);
+    expect(body.ruleSets[1].byReason).toEqual({ S2: 1 });
   });
 
   it('can be limited to one mode', async () => {
