@@ -1,7 +1,15 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { createTestDb, resetDb } from '../testing';
-import { circuitBreakerSettings, journalEntries, strategies, strategyRules, tradeRuleChecks, trades } from '../schema';
+import {
+  circuitBreakerSettings,
+  dailyPlans,
+  journalEntries,
+  strategies,
+  strategyRules,
+  tradeRuleChecks,
+  trades,
+} from '../schema';
 
 const db = createTestDb();
 
@@ -165,5 +173,32 @@ describe('strategies and rules', () => {
     await expect(
       db.insert(tradeRuleChecks).values({ tradeId: trade.id, ruleId: rule.id, ruleText: rule.text, met: false })
     ).rejects.toThrow();
+  });
+});
+
+describe('daily_plans table', () => {
+  const dayPlan = {
+    tradeDate: '2026-10-28',
+    ltfDirection: 'bullish',
+    ltfFib50: 681.2,
+    ltfFib100: 684.5,
+  };
+
+  it('keeps the levels to the cent and leaves the second fib empty', async () => {
+    const [saved] = await db.insert(dailyPlans).values(dayPlan).returning();
+
+    expect(saved).toMatchObject({ ltfFib50: 681.2, htfDirection: null, htfFib50: null, notes: null });
+  });
+
+  it('rejects half a second fib', async () => {
+    await expect(db.insert(dailyPlans).values({ ...dayPlan, htfFib50: 686 })).rejects.toMatchObject({
+      cause: { constraint: 'daily_plans_htf_fib_complete' },
+    });
+  });
+
+  it('holds one plan per day', async () => {
+    await db.insert(dailyPlans).values(dayPlan);
+
+    await expect(db.insert(dailyPlans).values(dayPlan)).rejects.toThrow();
   });
 });

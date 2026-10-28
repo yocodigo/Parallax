@@ -23,6 +23,8 @@ export const exitReason = pgEnum('exit_reason', ['target', 'stop', 'time', 'disc
 export const journalKind = pgEnum('journal_kind', ['plan', 'review', 'thesis']);
 // Edge rules describe the setup; discipline rules are about risk and process.
 export const ruleKind = pgEnum('rule_kind', ['edge', 'discipline']);
+// The way a fib extension runs, from its 50% towards its 100%.
+export const fibDirection = pgEnum('fib_direction', ['bullish', 'bearish']);
 
 const price = (name) => numeric(name, { precision: 18, scale: 6, mode: 'number' });
 
@@ -168,3 +170,32 @@ export const tradeContexts = pgTable('trade_contexts', {
   context: jsonb('context').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+// [3.1] The day's fib extensions, anchored by hand around the open. The working
+// lower-timeframe fib gives T1 (its 50%) and T2 (its 100%); the optional
+// higher-timeframe one is the next target if price pivots against the first.
+// One plan per trading day, re-saved when the anchors change.
+export const dailyPlans = pgTable(
+  'daily_plans',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    // A New York trading date, kept as a string so it never shifts a day west.
+    tradeDate: date('trade_date', { mode: 'string' }).notNull(),
+    ltfDirection: fibDirection('ltf_direction').notNull(),
+    ltfFib50: price('ltf_fib_50').notNull(),
+    ltfFib100: price('ltf_fib_100').notNull(),
+    htfDirection: fibDirection('htf_direction'),
+    htfFib50: price('htf_fib_50'),
+    htfFib100: price('htf_fib_100'),
+    notes: text('notes'),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex('daily_plans_trade_date_key').on(t.tradeDate),
+    // Half a fib is no target, so the second one's three fields go together.
+    check(
+      'daily_plans_htf_fib_complete',
+      sql`num_nulls(${t.htfDirection}, ${t.htfFib50}, ${t.htfFib100}) IN (0, 3)`
+    ),
+  ]
+);

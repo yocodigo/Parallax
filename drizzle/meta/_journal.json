@@ -36,6 +36,13 @@
       "when": 1792714628658,
       "tag": "0004_add_trade_contexts",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793224914511,
+      "tag": "0005_daily_plans",
+      "breakpoints": true
     }
   ]
 }
