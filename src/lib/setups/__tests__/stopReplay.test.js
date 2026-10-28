@@ -47,15 +47,37 @@ describe('replayStops', () => {
   });
 
   it('S1 still checks a 5m close whose last minute is missing from the feed', () => {
-    // The same dip, but no bar traded in the 5m bar's last minute (bar 114),
-    // so its close is known at the next bar, which starts at 15:25.
+    // The same dip, but no bar traded in the 5m bar's last minute (bar 114).
+    // Its 15:25 close is known when the next bar starts; the exit points to
+    // the last bar before it.
     const dip = { o: 500, h: 500.1, l: 499.85, c: 499.9 };
     const full = after({ [E + 1]: dip, [E + 2]: dip, [E + 3]: dip, [E + 4]: dip });
     const bars = full.filter((_, k) => k !== E + 4);
     expect(replayStops({ bars, entryIndex: E, bias: 'long', rules: ['S1'] })).toMatchObject({
-      exitIndex: E + 4,
+      exitIndex: E + 3,
       exitPrice: 499.9,
       reason: 'S1',
+    });
+  });
+
+  it('takes an S1 exit that closed during the gap before anything on the bar after it', () => {
+    // The 5m bar closed under the band at 15:25, in the gap; the bar after the
+    // gap reaches T1. S1 came first, at the last bar before its close, and T1
+    // came later.
+    const dip = { o: 500, h: 500.1, l: 499.85, c: 499.9 };
+    const full = after({
+      [E + 1]: dip,
+      [E + 2]: dip,
+      [E + 3]: dip,
+      [E + 4]: dip,
+      [E + 5]: { o: 501, h: 502.1, l: 500.9, c: 502 },
+    });
+    const bars = full.filter((_, k) => k !== E + 4);
+    expect(replayStops({ bars, entryIndex: E, bias: 'long', t1: 502, rules: ['S1'] })).toMatchObject({
+      exitIndex: E + 3,
+      exitPrice: 499.9,
+      reason: 'S1',
+      t1Later: true,
     });
   });
 
