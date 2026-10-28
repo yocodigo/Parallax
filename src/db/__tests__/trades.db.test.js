@@ -128,7 +128,7 @@ describe('listClosedTrades', () => {
 });
 
 describe('listClosedTradesWithMistakes', () => {
-  const closed = { ...entry, ...exit, exitReason: 'stop', exitPrice: 98 };
+  const closed = { ...entry, ...exit, exitReason: 'invalidation', exitPrice: 98 };
 
   async function tag(trade, kind, mistakes) {
     await db.insert(journalEntries).values({ tradeId: trade.id, kind, notes: 'Notes', mistakes });

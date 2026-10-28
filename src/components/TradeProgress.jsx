@@ -6,6 +6,7 @@ import { BREAKER_LABELS, describeBreaker } from '@/lib/circuitBreakers';
 import { apiErrorMessage, fetchJson } from '@/lib/fetchJson';
 import { formatProfitLoss, formatR } from '@/lib/format';
 import { profitLoss, rMultiple, tradeStatus } from '@/lib/tradeMetrics';
+import { EXIT_REASONS, EXIT_REASON_LABELS } from '@/lib/tradeFill';
 import Field, { inputClass } from './Field';
 import TradeContext from './TradeContext';
 
@@ -13,13 +14,6 @@ const buttonClass =
   'rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50';
 const secondaryButtonClass =
   'rounded-md border border-gray-300 px-3 py-1 text-xs text-gray-700 hover:bg-gray-50';
-
-const EXIT_REASONS = [
-  ['target', 'Target hit'],
-  ['stop', 'Stop hit'],
-  ['time', 'Time'],
-  ['discretionary', 'Discretionary'],
-];
 
 const STATUS_STYLES = {
   planned: 'bg-gray-100 text-gray-700',
@@ -256,9 +250,9 @@ function ExitForm({ trade, onDone }) {
           <Field id={`${trade.id}-exitReason`} label="Reason" error={errorFor('exitReason')}>
             <select {...fieldProps('exitReason')} className={inputClass}>
               <option value="">Choose…</option>
-              {EXIT_REASONS.map(([value, label]) => (
+              {EXIT_REASONS.map((value) => (
                 <option key={value} value={value}>
-                  {label}
+                  {EXIT_REASON_LABELS[value]}
                 </option>
               ))}
             </select>

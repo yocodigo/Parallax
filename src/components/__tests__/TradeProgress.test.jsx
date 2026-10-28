@@ -181,7 +181,7 @@ describe('recording a trade from the journal', () => {
         ...opened,
         exitPrice: 205,
         closedAt: '2026-10-21T15:00:00.000Z',
-        exitReason: 'stop',
+        exitReason: 'invalidation',
         exitedPerPlan: true,
       })
     );

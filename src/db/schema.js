@@ -19,7 +19,19 @@ export const tradeMode = pgEnum('trade_mode', ['live', 'paper', 'backtest']);
 export const assetClass = pgEnum('asset_class', ['stock', 'option', 'crypto']);
 export const direction = pgEnum('direction', ['long', 'short']);
 export const optionType = pgEnum('option_type', ['call', 'put']);
-export const exitReason = pgEnum('exit_reason', ['target', 'stop', 'time', 'discretionary']);
+export const exitReason = pgEnum('exit_reason', [
+  'invalidation',
+  'target',
+  'fib_rejection',
+  'planned_partial',
+  'structural_trail',
+  'planned_time_exit',
+  'sweep_scare',
+  'adverse_candle',
+  'pnl_moved',
+  'time_in_trade',
+  'felt_heavy',
+]);
 export const journalKind = pgEnum('journal_kind', ['plan', 'review', 'thesis']);
 // Edge rules describe the setup; discipline rules are about risk and process.
 export const ruleKind = pgEnum('rule_kind', ['edge', 'discipline']);

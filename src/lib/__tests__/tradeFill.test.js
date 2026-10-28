@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { parseTradeEntry, parseTradeExit } from '../tradeFill';
+import { EXIT_REASONS, parseTradeEntry, parseTradeExit } from '../tradeFill';
 
 const now = new Date('2026-10-22T20:00:00Z');
 const openTrade = { openedAt: new Date('2026-10-20T14:00:00Z') };
@@ -67,6 +67,18 @@ describe('parseTradeExit', () => {
     expect(errorsOf(parseTradeExit({ ...exit, exitReason: 'felt like it' }, openTrade, { now }))).toHaveProperty(
       'exitReason'
     );
+  });
+
+  it('accepts every reason on the exit ladder', () => {
+    for (const exitReason of EXIT_REASONS) {
+      expect(parseTradeExit({ ...exit, exitReason }, openTrade, { now }).success).toBe(true);
+    }
+  });
+
+  it('rejects the old pre-ladder reasons', () => {
+    for (const exitReason of ['stop', 'time', 'discretionary']) {
+      expect(errorsOf(parseTradeExit({ ...exit, exitReason }, openTrade, { now }))).toHaveProperty('exitReason');
+    }
   });
 
   it('requires saying whether the exit followed the plan', () => {
