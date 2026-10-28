@@ -2,7 +2,17 @@ import { z } from 'zod';
 import { symbolSchema } from './symbol';
 
 // Stored as lowercase keys; the journal page shows friendly labels.
-export const EMOTIONS = ['calm', 'hesitant', 'fomo', 'fearful', 'greedy', 'frustrated', 'overconfident'];
+export const EMOTIONS = [
+  'calm',
+  'hesitant',
+  'fomo',
+  'fearful',
+  'greedy',
+  'frustrated',
+  'overconfident',
+  'impatient',
+  'regretful',
+];
 
 export const MISTAKES = [
   'entered_late',
@@ -23,6 +33,8 @@ export const EMOTION_LABELS = {
   greedy: 'Greedy',
   frustrated: 'Frustrated',
   overconfident: 'Overconfident',
+  impatient: 'Impatient',
+  regretful: 'Regretful',
 };
 
 export const MISTAKE_LABELS = {

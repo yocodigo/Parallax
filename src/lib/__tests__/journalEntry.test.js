@@ -39,6 +39,11 @@ describe('parseJournalEntry', () => {
     expect(errorPaths(parseJournalEntry({ ...review, emotion: 'bored' }))).toContain('emotion');
   });
 
+  it('accepts the impatient and regretful emotions', () => {
+    expect(parseJournalEntry({ ...review, emotion: 'impatient' }).success).toBe(true);
+    expect(parseJournalEntry({ ...review, emotion: 'regretful' }).success).toBe(true);
+  });
+
   it('accepts only known mistakes and removes duplicates', () => {
     const result = parseJournalEntry({
       ...review,
