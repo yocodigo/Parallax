@@ -36,6 +36,8 @@ export function replayTrades(trades, barsFor, ruleSets, { t1For = () => null } =
   let skipped = 0;
   for (const trade of trades) {
     const bars = barsFor(trade);
+    // The replay enters at the fill bar's close, so its entry can differ a
+    // little from the journal's fill time and price.
     const entryIndex = fillBarIndex(bars, trade.openedAt);
     if (entryIndex === null) {
       skipped += 1;

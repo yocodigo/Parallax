@@ -14,6 +14,7 @@ describe('tradeBias', () => {
 
   it('flips for a sold option', () => {
     expect(tradeBias({ assetClass: 'option', direction: 'short', optionType: 'put' })).toBe('long');
+    expect(tradeBias({ assetClass: 'option', direction: 'short', optionType: 'call' })).toBe('short');
   });
 
   it("takes a stock trade's direction", () => {
@@ -58,6 +59,14 @@ describe('replayTrades', () => {
     bars[12] = { ...bars[12], o: 500.3, h: 501, l: 500.2, c: 500.9 };
     const put = { assetClass: 'option', direction: 'long', optionType: 'put', openedAt: new Date(OPEN + 10 * MINUTE) };
     expect(replayTrades([put], () => bars, [['S2']]).ruleSets[0].byReason).toEqual({ S2: 1 });
+  });
+
+  it("uses each trade's T1", () => {
+    // Bar 12 trades up to 502, the T1 given for the trade.
+    const bars = minutes(30);
+    bars[12] = { ...bars[12], h: 502.1 };
+    const report = replayTrades([trade(OPEN + 10 * MINUTE)], () => bars, [['S2']], { t1For: () => 502 });
+    expect(report.ruleSets[0].byReason).toEqual({ t1: 1 });
   });
 
   it('skips trades without a bar covering the fill', () => {
