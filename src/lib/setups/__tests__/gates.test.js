@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { EMOTIONS, MISTAKES } from '../../journalEntry';
-import { directionGate, entryGate, locationGate, sizeGate, stateGate, targetGate, windowGate } from '../gates';
+import { directionGate, entryGate, gradeGates, locationGate, sizeGate, stateGate, targetGate, windowGate } from '../gates';
 
 // New York times, the clock the app keeps. setups.md writes the lockouts on
 // the user's Pacific clock: 6:30-6:45, 8:00-11:00, 11:45-12:00.
@@ -149,5 +149,47 @@ describe('locationGate', () => {
   it("can't judge without a price or a range", () => {
     expect(locationGate(null, range)).toBe('unknown');
     expect(locationGate(55, null)).toBe('unknown');
+  });
+});
+
+describe('gradeGates', () => {
+  // A trade that meets every gate, as an option (so size is judged too).
+  const metTrade = {
+    assetClass: 'option',
+    openedAt: at('10:15'),
+    quantity: 1,
+    direction: 'long',
+    entryPrice: 10,
+    dailyPlan: { tradeDate: '2026-10-28' },
+    planEntry: { emotion: 'calm', mistakes: [] },
+    bars15: flatThen(12),
+    directionBarIndex: 20,
+    entryBar: { h: 20, l: 15 },
+    entryPrevBar: { h: 10, l: 5 },
+    dealingRange: { low: 0, high: 100 },
+  };
+
+  it('grades every gate, including size, for an option trade', () => {
+    expect(gradeGates(metTrade)).toEqual({
+      window: 'met',
+      direction: 'met',
+      entry: 'met',
+      location: 'met',
+      target: 'met',
+      state: 'met',
+      size: 'met',
+    });
+  });
+
+  it('leaves out size for a stock or crypto trade', () => {
+    const result = gradeGates({ ...metTrade, assetClass: 'stock', quantity: 500 });
+    expect(result).not.toHaveProperty('size');
+  });
+
+  it('misses one gate without affecting the others', () => {
+    const result = gradeGates({ ...metTrade, openedAt: at('12:30') });
+    expect(result.window).toBe('missed');
+    expect(result.state).toBe('met');
+    expect(result.size).toBe('met');
   });
 });

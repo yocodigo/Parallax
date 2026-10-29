@@ -97,3 +97,34 @@ export function locationGate(price, range) {
   if (price == null || !range) return UNKNOWN;
   return isMidRange(price, range) ? MISSED : MET;
 }
+
+// All of a trade's gates, keyed by name. Size OK is Joel's options rule (1-2
+// contracts); a stock or crypto swing has no contract count to judge by it,
+// so the gate is left off rather than graded against every trade. Stop OK
+// isn't here yet: nothing records which stop rule (S1/S2/S3, section 5) was
+// chosen before entry.
+export function gradeGates({
+  assetClass,
+  openedAt,
+  quantity,
+  direction,
+  entryPrice,
+  dailyPlan,
+  planEntry,
+  bars15,
+  directionBarIndex,
+  entryBar,
+  entryPrevBar,
+  dealingRange,
+}) {
+  const gates = {
+    window: windowGate(openedAt),
+    direction: directionGate(bars15, directionBarIndex, direction),
+    entry: entryGate(entryBar, entryPrevBar),
+    location: locationGate(entryPrice, dealingRange),
+    target: targetGate(dailyPlan),
+    state: stateGate(planEntry),
+  };
+  if (assetClass === 'option') gates.size = sizeGate(quantity);
+  return gates;
+}
