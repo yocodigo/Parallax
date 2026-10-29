@@ -10,6 +10,7 @@ const emptyPlan = {
   plannedEntry: null,
   initialStop: null,
   target: null,
+  stopRule: null,
 };
 
 // What Claude returns: every field present, null when the note didn't say.
@@ -36,6 +37,7 @@ describe('toDraft', () => {
       plannedEntry: 210,
       initialStop: 205,
       target: 220,
+      stopRule: 'S2',
     };
 
     const { draft, fieldErrors } = toDraft(

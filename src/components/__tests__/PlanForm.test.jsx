@@ -198,6 +198,29 @@ describe('PlanForm', () => {
     expect(bodies[0].plan).not.toHaveProperty('strategyId');
   });
 
+  it('sends the stop rule chosen before entry', async () => {
+    const bodies = capturePlanRequests();
+    renderForm();
+
+    await fillRequiredFields();
+    await userEvent.selectOptions(screen.getByLabelText('Stop rule'), 'S2');
+    await save();
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0].plan.stopRule).toBe('S2');
+  });
+
+  it('sends no stop rule when none is chosen', async () => {
+    const bodies = capturePlanRequests();
+    renderForm();
+
+    await fillRequiredFields();
+    await save();
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0].plan).not.toHaveProperty('stopRule');
+  });
+
   it('shows the error when the plan cannot be saved', async () => {
     capturePlanRequests(() =>
       HttpResponse.json({ error: 'Database unavailable', requestId: 'req-123' }, { status: 500 })

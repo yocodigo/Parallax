@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { EMOTIONS, MISTAKES, parseJournalEntry } from './journalEntry';
-import { parseTradePlan } from './tradePlan';
+import { parseTradePlan, STOP_RULES } from './tradePlan';
 
 // The shape Claude fills in from a transcript. Every field is required and
 // null when the note didn't say, so a missing price is never guessed. The
@@ -22,6 +22,7 @@ export const draftOutputSchema = z.object({
       plannedEntry: z.number().nullable(),
       initialStop: z.number().nullable(),
       target: z.number().nullable(),
+      stopRule: z.enum(STOP_RULES).nullable().describe('The stop rule they chose: S1, S2, or S3 (setups.md section 5)'),
     })
     .nullable()
     .describe('For a plan only; null for a review'),

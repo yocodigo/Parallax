@@ -4,6 +4,7 @@ import { useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { apiErrorMessage, fetchJson } from '@/lib/fetchJson';
 import { EMOTION_LABELS, EMOTIONS } from '@/lib/journalEntry';
+import { STOP_RULES, STOP_RULE_LABELS } from '@/lib/tradePlan';
 import Field, { inputClass } from './Field';
 import HistoryWarnings from './HistoryWarnings';
 
@@ -19,6 +20,7 @@ const EMPTY_FORM = {
   notes: '',
   emotion: '',
   strategyId: '',
+  stopRule: '',
   optionType: 'call',
   strike: '',
   expiration: '',
@@ -87,6 +89,7 @@ export default function PlanForm({ draft, draftErrors = NO_ERRORS, onSaved }) {
         initialStop: toNumber(form.initialStop),
         target: toNumber(form.target),
         strategyId: orUndefined(form.strategyId),
+        stopRule: orUndefined(form.stopRule),
         // The contract only goes with an option, even if typed before
         // switching the asset class back.
         ...(form.assetClass === 'option' && {
@@ -210,6 +213,17 @@ export default function PlanForm({ draft, draftErrors = NO_ERRORS, onSaved }) {
 
         <Field id="plan-target" label="Target" error={errorFor('plan', 'target')}>
           <input {...fieldProps('plan', 'target')} type="number" step="any" placeholder="Optional" className={inputClass} />
+        </Field>
+
+        <Field id="plan-stopRule" label="Stop rule" error={errorFor('plan', 'stopRule')}>
+          <select {...fieldProps('plan', 'stopRule')} className={inputClass}>
+            <option value="">Not chosen</option>
+            {STOP_RULES.map((rule) => (
+              <option key={rule} value={rule}>
+                {STOP_RULE_LABELS[rule]}
+              </option>
+            ))}
+          </select>
         </Field>
       </div>
 

@@ -17,6 +17,15 @@ const targetOnWinningSide = (plan) =>
   plan.target === undefined ||
   (plan.direction === 'long' ? plan.target > plan.plannedEntry : plan.target < plan.plannedEntry);
 
+// The stop rules a plan can choose from (setups.md section 5), with the
+// label the picker shows for each.
+export const STOP_RULES = ['S1', 'S2', 'S3'];
+export const STOP_RULE_LABELS = {
+  S1: 'S1 · 5m band close',
+  S2: 'S2 · 1m structure',
+  S3: 'S3 · planned time stop',
+};
+
 const CONTRACT_FIELDS = [
   ['optionType', 'call or put'],
   ['strike', 'strike'],
