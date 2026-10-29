@@ -98,17 +98,23 @@ export function locationGate(price, range) {
   return isMidRange(price, range) ? MISSED : MET;
 }
 
+// Stop OK: a stop rule (S1/S2/S3, section 5) was chosen before entry.
+// Unknown, not missed, without one recorded: most plans so far predate the
+// field, and the plan form doesn't require it yet.
+export function stopGate(stopRule) {
+  return stopRule ? MET : UNKNOWN;
+}
+
 // All of a trade's gates, keyed by name. Size OK is Joel's options rule (1-2
 // contracts); a stock or crypto swing has no contract count to judge by it,
-// so the gate is left off rather than graded against every trade. Stop OK
-// isn't here yet: nothing records which stop rule (S1/S2/S3, section 5) was
-// chosen before entry.
+// so the gate is left off rather than graded against every trade.
 export function gradeGates({
   assetClass,
   openedAt,
   quantity,
   direction,
   entryPrice,
+  stopRule,
   dailyPlan,
   planEntry,
   bars15,
@@ -124,6 +130,7 @@ export function gradeGates({
     location: locationGate(entryPrice, dealingRange),
     target: targetGate(dailyPlan),
     state: stateGate(planEntry),
+    stop: stopGate(stopRule),
   };
   if (assetClass === 'option') gates.size = sizeGate(quantity);
   return gates;

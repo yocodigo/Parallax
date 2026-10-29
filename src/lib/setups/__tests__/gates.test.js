@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { EMOTIONS, MISTAKES } from '../../journalEntry';
-import { directionGate, entryGate, gradeGates, locationGate, sizeGate, stateGate, targetGate, windowGate } from '../gates';
+import {
+  directionGate,
+  entryGate,
+  gradeGates,
+  locationGate,
+  sizeGate,
+  stateGate,
+  stopGate,
+  targetGate,
+  windowGate,
+} from '../gates';
 
 // New York times, the clock the app keeps. setups.md writes the lockouts on
 // the user's Pacific clock: 6:30-6:45, 8:00-11:00, 11:45-12:00.
@@ -152,6 +162,21 @@ describe('locationGate', () => {
   });
 });
 
+describe('stopGate', () => {
+  it('is met when a stop rule was chosen', () => {
+    expect(stopGate('S1')).toBe('met');
+    expect(stopGate('S2')).toBe('met');
+    expect(stopGate('S3')).toBe('met');
+  });
+
+  // A blank stop rule reads as a gap in the journal, not a lapse: most plans
+  // so far predate this field, and the plan form doesn't require it yet.
+  it("can't judge a plan that never recorded one", () => {
+    expect(stopGate(null)).toBe('unknown');
+    expect(stopGate(undefined)).toBe('unknown');
+  });
+});
+
 describe('gradeGates', () => {
   // A trade that meets every gate, as an option (so size is judged too).
   const metTrade = {
@@ -160,6 +185,7 @@ describe('gradeGates', () => {
     quantity: 1,
     direction: 'long',
     entryPrice: 10,
+    stopRule: 'S1',
     dailyPlan: { tradeDate: '2026-10-28' },
     planEntry: { emotion: 'calm', mistakes: [] },
     bars15: flatThen(12),
@@ -169,7 +195,7 @@ describe('gradeGates', () => {
     dealingRange: { low: 0, high: 100 },
   };
 
-  it('grades every gate, including size, for an option trade', () => {
+  it('grades every gate, including size and stop, for an option trade', () => {
     expect(gradeGates(metTrade)).toEqual({
       window: 'met',
       direction: 'met',
@@ -178,6 +204,7 @@ describe('gradeGates', () => {
       target: 'met',
       state: 'met',
       size: 'met',
+      stop: 'met',
     });
   });
 
@@ -191,5 +218,10 @@ describe('gradeGates', () => {
     expect(result.window).toBe('missed');
     expect(result.state).toBe('met');
     expect(result.size).toBe('met');
+    expect(result.stop).toBe('met');
+  });
+
+  it("can't judge the stop gate without a recorded stop rule", () => {
+    expect(gradeGates({ ...metTrade, stopRule: null }).stop).toBe('unknown');
   });
 });
