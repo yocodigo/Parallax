@@ -9,6 +9,7 @@ import { profitLoss, rMultiple, tradeStatus } from '@/lib/tradeMetrics';
 import { EXIT_REASONS, EXIT_REASON_LABELS } from '@/lib/tradeFill';
 import Field, { inputClass } from './Field';
 import TradeContext from './TradeContext';
+import TradeGates from './TradeGates';
 
 const buttonClass =
   'rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50';
@@ -341,6 +342,7 @@ function Excursions({ trade, status }) {
 export default function TradeProgress({ trade, canRecord }) {
   const [recording, setRecording] = useState(false);
   const [showContext, setShowContext] = useState(false);
+  const [showGates, setShowGates] = useState(false);
   const status = tradeStatus(trade);
   const nextStep = { planned: 'entry', open: 'exit' }[status];
 
@@ -367,6 +369,16 @@ export default function TradeProgress({ trade, canRecord }) {
             Context at entry
           </button>
         )}
+        {status !== 'planned' && (
+          <button
+            type="button"
+            onClick={() => setShowGates((shown) => !shown)}
+            aria-expanded={showGates}
+            className={secondaryButtonClass}
+          >
+            Gates
+          </button>
+        )}
         {canRecord && nextStep && !recording && (
           <button type="button" onClick={() => setRecording(true)} className={secondaryButtonClass}>
             {`Record ${nextStep}`}
@@ -376,6 +388,11 @@ export default function TradeProgress({ trade, canRecord }) {
       {showContext && (
         <div className="mt-2">
           <TradeContext tradeId={trade.id} />
+        </div>
+      )}
+      {showGates && (
+        <div className="mt-2">
+          <TradeGates tradeId={trade.id} />
         </div>
       )}
       {recording && nextStep === 'entry' && <EntryForm trade={trade} onDone={() => setRecording(false)} />}

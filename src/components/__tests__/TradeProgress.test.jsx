@@ -394,3 +394,30 @@ describe('context at entry', () => {
     expect(screen.queryByRole('button', { name: 'Context at entry' })).not.toBeInTheDocument();
   });
 });
+
+describe('gates', () => {
+  it('loads the pre-entry gates only when asked', async () => {
+    const requested = [];
+    server.use(
+      http.get('*/api/trades/:id/gates', ({ params }) => {
+        requested.push(params.id);
+        return HttpResponse.json({ gates: null, reason: 'No gates to grade for this trade.' });
+      })
+    );
+    serveJournal(plannedTrade(opened));
+    renderJournal();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Gates' }));
+
+    expect(await screen.findByText('No gates to grade for this trade.')).toBeInTheDocument();
+    expect(requested).toEqual([TRADE_ID]);
+  });
+
+  it('is not offered before the trade is entered', async () => {
+    serveJournal(plannedTrade());
+    renderJournal();
+
+    await screen.findByText('Planned');
+    expect(screen.queryByRole('button', { name: 'Gates' })).not.toBeInTheDocument();
+  });
+});
