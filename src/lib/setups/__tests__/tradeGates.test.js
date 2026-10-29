@@ -56,7 +56,9 @@ const FILL_SESSION_SPECS = [
   { o: 10.1, h: 10.8, l: 10.05, c: 10.2 },
   { o: 10.2, h: 10.3, l: 10.12, c: 10 },
   { o: 10.15, h: 10.6, l: 10.1, c: 10.5 },
-  { o: 10.5, h: 11.05, l: 10.45, c: 11 },
+  // Opens at 10.2, the middle of the 9.5-10.8 range, so a fill in its first
+  // minutes is a mid-range entry.
+  { o: 10.2, h: 11.05, l: 10.2, c: 11 },
   { o: 11.02, h: 12.05, l: 11, c: 12 },
   { o: 11.5, h: 12.04, l: 11.05, c: 11.6 },
 ];
@@ -101,10 +103,32 @@ describe('gradeTradeGates', () => {
     expect(gradeTradeGates(call, BARS, records)).toMatchObject({ direction: 'met' });
   });
 
-  it('ignores the bars that had not closed at the fill', () => {
-    // Index 15 closed after the fill and overlaps index 14 completely; the
-    // entry gate must still judge index 14, the last bar closed before it.
+  it('judges the entry on the last 5m bar closed at the fill, whenever that is', () => {
+    // Index 15 overlaps index 14 completely. At 10:47 it hadn't closed, so
+    // the entry reads index 14 and passes; five minutes later it is itself
+    // the last closed bar, and the same trade fails.
     expect(gradeTradeGates(trade(), BARS, records).entry).toBe('met');
+    expect(gradeTradeGates(trade({ openedAt: at('10:52') }), BARS, records)).toMatchObject({
+      entry: 'missed',
+      direction: 'met',
+    });
+  });
+
+  it('reads the location from the underlying at the fill, not the trade price', () => {
+    // 10:37: SPY last closed at 10.20, the middle of the 9.5-10.8 range,
+    // while the trade itself was filled at 12.
+    expect(gradeTradeGates(trade({ openedAt: at('10:37') }), BARS, records).location).toBe('missed');
+  });
+
+  it("can't judge the bar gates before the session has a closed 5m bar", () => {
+    // 09:33. The previous session's bars are no help: its last 5m bar is 17
+    // hours earlier, and its swings are a different day's structure.
+    expect(gradeTradeGates(trade({ openedAt: at('09:33') }), BARS, records)).toMatchObject({
+      entry: 'unknown',
+      location: 'unknown',
+      direction: 'unknown',
+      window: 'missed',
+    });
   });
 
   it("can't judge the direction before the 15m bar that crossed has closed", () => {

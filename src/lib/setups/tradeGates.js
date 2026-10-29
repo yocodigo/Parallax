@@ -17,20 +17,27 @@ import { dealingRange, swings } from './swings';
 
 const MINUTE = 60_000;
 
-// The newest bar of `bars`, as an index, if it belongs to `day`. Resampling
-// with `asOf` the fill already drops the period the fill fell inside, so the
-// newest bar left is the last one that closed before the entry — unless the
-// fill came so early that it was the previous session's.
-function lastIndexOfDay(bars, day) {
-  const i = bars.length - 1;
-  return i >= 0 && tradingDay(bars[i]) === day ? i : null;
+// The bars from the start of `day`, a trailing slice: they are chronological
+// and resampling with `asOf` the fill has already dropped everything that
+// hadn't closed. So the last bar left is the last one that closed before the
+// entry, and the slice is empty when none had closed yet that session.
+//
+// The entry candle, the bar before it, and the swings all stop at the
+// overnight gap, the way findEntry stops a bias there. Comparing the
+// session's first 5m bar against the previous afternoon's last one would
+// measure a seventeen-hour gap as a clean break.
+function sessionOf(bars, day) {
+  const start = bars.findIndex((bar) => tradingDay(bar) === day);
+  return start < 0 ? [] : bars.slice(start);
 }
 
 // The 15m bar that set the bias: the newest close before the entry that
 // crossed the middle band (section 3.1's cross). Searched back over the
 // fill's own session only, the way findEntry reads a cross — a bias doesn't
 // carry into the next morning, so a session with no cross before the fill set
-// no bias at all.
+// no bias at all. That leaves a trade taken on something other than a cross
+// (a 4x break, say) unknown here, where section 8's wording alone would judge
+// it from the last closed 15m bar. **(confirm)**
 function crossIndex(bars15, day) {
   for (let i = bars15.length - 1; i >= 0; i--) {
     if (tradingDay(bars15[i]) !== day) return null;
@@ -43,6 +50,11 @@ function crossIndex(bars15, day) {
 // ended before the fill. The trade's own entryPrice can't serve here — for an
 // option it's the premium, which says nothing about where SPY sat in its
 // range, and section 1 runs every detector on the underlying.
+//
+// Minute bars, where the entry gate reads a 5m bar, so the two gates sit on
+// different clocks: this one wants the closest price to the fill, and that
+// minute usually falls inside a 5m period still forming. An overlap needs a
+// finished bar, so the entry gate waits for one.
 function underlyingAt(bars, asOf, day) {
   const time = asOf.getTime();
   for (let i = bars.length - 1; i >= 0; i--) {
@@ -72,17 +84,20 @@ export function gradeTradeGates(trade, bars = [], { dailyPlan = null, planEntry 
 
   const asOf = trade.openedAt;
   const day = tradingDay({ t: asOf.toISOString() });
+  // The 15m bars keep the earlier sessions, since the bands need twenty bars
+  // of history; only the cross itself has to be the fill's own (crossIndex).
   const bars15 = resample(bars, 15, { asOf });
-  const bars5 = resample(bars, 5, { asOf });
+  const bars5 = sessionOf(resample(bars, 5, { asOf }), day);
   // The 5m bar the entry is judged on is the last one that closed before the
   // fill, not the setup's ideal entry candle: section 3.1 enters at the close
   // of a 5m candle, and grading the candle findEntry picks would pass by
   // definition, since finding it requires the overlap this gate asks about.
-  const i5 = lastIndexOfDay(bars5, day);
+  // Section 8 says only "5m entry candle". **(confirm)**
+  const i5 = bars5.length - 1;
   // The dealing range comes from the 5m swings, the timeframe the entry was
   // taken on (section 1). setups.md doesn't say which one mid-range is read
   // from. **(confirm)**
-  const range = i5 === null ? null : dealingRange(swings(bars5, i5));
+  const range = i5 < 0 ? null : dealingRange(swings(bars5, i5));
 
   return gradeGates({
     ...recorded,
@@ -91,8 +106,8 @@ export function gradeTradeGates(trade, bars = [], { dailyPlan = null, planEntry 
     entryPrice: underlyingAt(bars, asOf, day),
     bars15,
     directionBarIndex: crossIndex(bars15, day),
-    entryBar: i5 === null ? null : bars5[i5],
-    entryPrevBar: i5 === null || i5 < 1 ? null : bars5[i5 - 1],
+    entryBar: bars5[i5] ?? null,
+    entryPrevBar: bars5[i5 - 1] ?? null,
     dealingRange: range,
   });
 }
