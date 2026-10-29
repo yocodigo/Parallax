@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { EMOTIONS, MISTAKES } from '../../journalEntry';
-import { sizeGate, stateGate, targetGate, windowGate } from '../gates';
+import { directionGate, entryGate, locationGate, sizeGate, stateGate, targetGate, windowGate } from '../gates';
 
 // New York times, the clock the app keeps. setups.md writes the lockouts on
 // the user's Pacific clock: 6:30-6:45, 8:00-11:00, 11:45-12:00.
@@ -85,5 +85,69 @@ describe('stateGate', () => {
   it('reads values the journal still records', () => {
     expect(EMOTIONS).toContain('calm');
     expect(MISTAKES).toContain('revenge_trade');
+  });
+});
+
+// Twenty closes at 10, so the middle band starts at exactly 10, then `rest`.
+const closes = (values) => values.map((c) => ({ c }));
+const flatThen = (...rest) => closes([...Array(20).fill(10), ...rest]);
+
+describe('directionGate', () => {
+  it('is met when the 15m bias matches the trade direction', () => {
+    expect(directionGate(flatThen(12), 20, 'long')).toBe('met');
+    expect(directionGate(flatThen(8), 20, 'short')).toBe('met');
+  });
+
+  it('misses when the bias is the other side', () => {
+    expect(directionGate(flatThen(12), 20, 'short')).toBe('missed');
+    expect(directionGate(flatThen(8), 20, 'long')).toBe('missed');
+  });
+
+  it("can't judge without 20 bars ending at i for the bands", () => {
+    expect(directionGate(flatThen(), 18, 'long')).toBe('unknown');
+  });
+
+  it("can't judge a trade with no recorded direction", () => {
+    expect(directionGate(flatThen(12), 20, null)).toBe('unknown');
+  });
+});
+
+describe('entryGate', () => {
+  // Bars use Alpaca's keys: h and l are all overlap() reads.
+  const bar = (h, l) => ({ h, l });
+
+  it('is met with little or no overlap against the bar before', () => {
+    expect(entryGate(bar(20, 15), bar(10, 5))).toBe('met');
+  });
+
+  it('misses with heavy overlap against the bar before', () => {
+    expect(entryGate(bar(10, 5), bar(10, 5))).toBe('missed');
+  });
+
+  it("can't judge an entry candle with no range", () => {
+    expect(entryGate(bar(5, 5), bar(10, 5))).toBe('unknown');
+  });
+
+  it("can't judge without both bars", () => {
+    expect(entryGate(null, bar(10, 5))).toBe('unknown');
+    expect(entryGate(bar(10, 5), null)).toBe('unknown');
+  });
+});
+
+describe('locationGate', () => {
+  const range = { low: 0, high: 100 };
+
+  it('is met outside the middle of the dealing range', () => {
+    expect(locationGate(10, range)).toBe('met');
+    expect(locationGate(90, range)).toBe('met');
+  });
+
+  it('misses in the middle of the dealing range', () => {
+    expect(locationGate(55, range)).toBe('missed');
+  });
+
+  it("can't judge without a price or a range", () => {
+    expect(locationGate(null, range)).toBe('unknown');
+    expect(locationGate(55, null)).toBe('unknown');
   });
 });
