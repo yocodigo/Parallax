@@ -64,10 +64,12 @@ describe('listImportCandidates', () => {
 });
 
 describe('applyImport', () => {
-  it('creates new trades, each with a plan entry so it shows in the journal', async () => {
-    const { created, filled } = await applyImport(db, [
-      { action: 'create', values: { mode: 'live', ...CONTRACT, ...facts } },
-    ]);
+  it('creates new trades, each with a plan entry naming the broker', async () => {
+    const { created, filled } = await applyImport(
+      db,
+      [{ action: 'create', values: { mode: 'live', ...CONTRACT, ...facts } }],
+      { source: 'thinkorswim' }
+    );
 
     expect(filled).toEqual([]);
     expect(created).toHaveLength(1);
@@ -76,10 +78,23 @@ describe('applyImport', () => {
     expect(entries).toEqual([expect.objectContaining({ kind: 'plan', notes: 'Imported from thinkorswim.' })]);
   });
 
+  it('names whichever broker the import came from', async () => {
+    const { created } = await applyImport(
+      db,
+      [{ action: 'create', values: { mode: 'live', symbol: 'CVX', assetClass: 'stock', direction: 'long', ...facts } }],
+      { source: 'Fidelity' }
+    );
+
+    const entries = await db.select().from(journalEntries).where(eq(journalEntries.tradeId, created[0].id));
+    expect(entries).toEqual([expect.objectContaining({ notes: 'Imported from Fidelity.' })]);
+  });
+
   it("fills in matched trades with the broker's fills, keeping the rest", async () => {
     const plan = await insertTrade({ target: 2 });
 
-    const { filled } = await applyImport(db, [{ action: 'fill', tradeId: plan.id, values: facts }]);
+    const { filled } = await applyImport(db, [{ action: 'fill', tradeId: plan.id, values: facts }], {
+      source: 'thinkorswim',
+    });
 
     expect(filled).toEqual([expect.objectContaining({ id: plan.id, ...facts, target: 2, plannedEntry: 1.25 })]);
     expect(await db.select().from(journalEntries)).toEqual([]);
@@ -88,16 +103,23 @@ describe('applyImport', () => {
   it('does nothing for skipped trades', async () => {
     const trade = await insertTrade(facts);
 
-    expect(await applyImport(db, [{ action: 'skip', tradeId: trade.id }])).toEqual({ created: [], filled: [] });
+    expect(await applyImport(db, [{ action: 'skip', tradeId: trade.id }], { source: 'thinkorswim' })).toEqual({
+      created: [],
+      filled: [],
+    });
   });
 
   it('changes nothing when any part fails', async () => {
     await expect(
-      applyImport(db, [
-        { action: 'create', values: { mode: 'live', ...CONTRACT, ...facts } },
-        // Closed before it opened: the database refuses it.
-        { action: 'create', values: { mode: 'live', ...CONTRACT, ...facts, closedAt: new Date('2026-10-22T00:00:00Z') } },
-      ])
+      applyImport(
+        db,
+        [
+          { action: 'create', values: { mode: 'live', ...CONTRACT, ...facts } },
+          // Closed before it opened: the database refuses it.
+          { action: 'create', values: { mode: 'live', ...CONTRACT, ...facts, closedAt: new Date('2026-10-22T00:00:00Z') } },
+        ],
+        { source: 'thinkorswim' }
+      )
     ).rejects.toThrow();
 
     expect(await db.select().from(trades)).toEqual([]);

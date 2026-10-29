@@ -19,9 +19,9 @@ export async function listImportCandidates(db, { mode, symbols, since }) {
 
 // Carries out matchImport's actions in one transaction, so a failed import
 // changes nothing. A created trade gets a plan entry, since the journal lists
-// trades through their entries. Returns { created, filled }, the trades as
-// saved.
-export async function applyImport(db, actions) {
+// trades through their entries, naming `source` (the broker the import came
+// from). Returns { created, filled }, the trades as saved.
+export async function applyImport(db, actions, { source } = {}) {
   return db.transaction(async (tx) => {
     const created = [];
     const filled = [];
@@ -30,7 +30,7 @@ export async function applyImport(db, actions) {
         const [trade] = await tx.insert(trades).values(values).returning();
         await tx
           .insert(journalEntries)
-          .values({ kind: 'plan', tradeId: trade.id, notes: 'Imported from thinkorswim.' });
+          .values({ kind: 'plan', tradeId: trade.id, notes: `Imported from ${source}.` });
         created.push(trade);
       } else if (action === 'fill') {
         const [trade] = await tx.update(trades).set(values).where(eq(trades.id, tradeId)).returning();

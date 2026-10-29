@@ -79,7 +79,7 @@ export const POST = withErrorLogging(ROUTE, async (request) => {
   };
   if (!confirm) return NextResponse.json(body);
 
-  const { created, filled } = await applyImport(db, actions);
+  const { created, filled } = await applyImport(db, actions, { source: 'thinkorswim' });
 
   // As when an entry is recorded by hand. By now the option's quote is too
   // old to keep, but the bars around the entry still tell its context.
