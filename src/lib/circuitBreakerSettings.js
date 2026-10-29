@@ -6,6 +6,7 @@ export const DEFAULT_BREAKER_SETTINGS = {
   maxTradesPerDay: null,
   cooldownAfterLosses: null,
   cooldownMinutes: null,
+  maxDailyLossOptionsDollars: null,
   modes: ['live'],
 };
 
@@ -19,6 +20,7 @@ const schema = z
     maxTradesPerDay: count(),
     cooldownAfterLosses: count(),
     cooldownMinutes: count(),
+    maxDailyLossOptionsDollars: limit(z.number()),
     modes: z
       .array(z.enum(['live', 'paper', 'backtest']))
       .min(1, 'Choose at least one mode')

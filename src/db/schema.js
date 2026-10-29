@@ -162,6 +162,8 @@ export const circuitBreakerSettings = pgTable(
     maxTradesPerDay: integer('max_trades_per_day'),
     cooldownAfterLosses: integer('cooldown_after_losses'),
     cooldownMinutes: integer('cooldown_minutes'),
+    // Options have no stop and so no R; their own daily limit is in dollars.
+    maxDailyLossOptionsDollars: numeric('max_daily_loss_options_dollars', { precision: 8, scale: 2, mode: 'number' }),
     modes: tradeMode('modes').array().notNull().default(sql`'{live}'::trade_mode[]`),
     updatedAt: timestamp('updated_at', { withTimezone: true })
       .notNull()

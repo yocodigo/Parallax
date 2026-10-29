@@ -5,11 +5,19 @@ import { circuitBreakerSettings } from './schema';
 import { listRecentTrades } from './trades';
 
 // The settings row without its bookkeeping columns.
-const pickSettings = ({ maxDailyLossR, maxTradesPerDay, cooldownAfterLosses, cooldownMinutes, modes }) => ({
+const pickSettings = ({
   maxDailyLossR,
   maxTradesPerDay,
   cooldownAfterLosses,
   cooldownMinutes,
+  maxDailyLossOptionsDollars,
+  modes,
+}) => ({
+  maxDailyLossR,
+  maxTradesPerDay,
+  cooldownAfterLosses,
+  cooldownMinutes,
+  maxDailyLossOptionsDollars,
   modes,
 });
 

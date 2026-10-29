@@ -9,6 +9,7 @@ const settings = {
   maxTradesPerDay: 4,
   cooldownAfterLosses: 3,
   cooldownMinutes: 60,
+  maxDailyLossOptionsDollars: 30,
   modes: ['live'],
 };
 
@@ -26,6 +27,23 @@ function trade({ r = 1, openedAt = '2026-10-22T14:00:00Z', closedAt = '2026-10-2
     fees: 0,
     openedAt: new Date(openedAt),
     closedAt: open ? null : new Date(closedAt),
+  };
+}
+
+// An option trade with this dollar P/L (options have no stop and so no R;
+// the dollar breaker reads profitLoss directly), closed at `closedAt`.
+function optionTrade({ pnl = -10, closedAt = '2026-10-22T15:00:00Z', mode = 'live' } = {}) {
+  return {
+    mode,
+    assetClass: 'option',
+    direction: 'long',
+    quantity: 1,
+    multiplier: 1,
+    entryPrice: 0,
+    exitPrice: pnl,
+    fees: 0,
+    openedAt: new Date('2026-10-22T14:00:00Z'),
+    closedAt: new Date(closedAt),
   };
 }
 
@@ -103,6 +121,27 @@ describe('circuitBreakers', () => {
     expect(breakers(paper)).toEqual([]);
     expect(breakers(paper, { modes: ['live', 'paper'] })).toContain('dailyLoss');
   });
+
+  it('trips the options dollar loss limit once today’s closed option trades reach it', () => {
+    const trades = [optionTrade({ pnl: -18 }), optionTrade({ pnl: -12 })];
+
+    const result = circuitBreakers({ ...settings, maxDailyLossR: null }, trades, { now });
+
+    expect(result.tripped).toContainEqual({ breaker: 'dailyLossOptionsDollars', limitDollars: 30, todayDollars: -30 });
+    expect(result.today).toMatchObject({ optionsDollars: -30 });
+  });
+
+  it('leaves the options dollar limit alone for stock and crypto trades', () => {
+    const trades = [trade({ r: -3 })]; // a $300 stock loss, far past the $30 options limit
+
+    expect(breakers(trades, { maxDailyLossR: null })).toEqual([]);
+  });
+
+  it('a profitable option trade does not count toward the options dollar loss', () => {
+    const trades = [optionTrade({ pnl: -20 }), optionTrade({ pnl: 50 })];
+
+    expect(breakers(trades, { maxDailyLossR: null })).toEqual([]);
+  });
 });
 
 describe('describeBreaker', () => {
@@ -113,6 +152,9 @@ describe('describeBreaker', () => {
     expect(describeBreaker({ breaker: 'tradesPerDay', limit: 4, today: 4 })).toBe(
       'Trade limit reached: 4 of 4 trades today.'
     );
+    expect(describeBreaker({ breaker: 'dailyLossOptionsDollars', limitDollars: 30, todayDollars: -32.5 })).toBe(
+      'Options daily loss limit reached: -$32.50 today against a limit of $30.00.'
+    );
   });
 
   it('gives the end of a cool-down in New York time', () => {
@@ -122,6 +164,11 @@ describe('describeBreaker', () => {
   });
 
   it('has a short label for each breaker', () => {
-    expect(BREAKER_LABELS).toEqual({ dailyLoss: 'Daily loss limit', tradesPerDay: 'Trade limit', cooldown: 'Cool-down' });
+    expect(BREAKER_LABELS).toEqual({
+      dailyLoss: 'Daily loss limit',
+      tradesPerDay: 'Trade limit',
+      cooldown: 'Cool-down',
+      dailyLossOptionsDollars: 'Options daily loss limit',
+    });
   });
 });

@@ -10,6 +10,7 @@ const settings = {
   maxTradesPerDay: 5,
   cooldownAfterLosses: 3,
   cooldownMinutes: 60,
+  maxDailyLossOptionsDollars: 30,
   modes: ['live', 'paper'],
 };
 

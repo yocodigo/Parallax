@@ -9,6 +9,7 @@ const settings = {
   maxTradesPerDay: 5,
   cooldownAfterLosses: 3,
   cooldownMinutes: 60,
+  maxDailyLossOptionsDollars: 30,
   modes: ['live'],
 };
 
@@ -24,9 +25,20 @@ describe('parseBreakerSettings', () => {
   });
 
   it('requires limits above zero, and whole numbers for counts and minutes', () => {
-    const result = parseBreakerSettings({ ...settings, maxDailyLossR: 0, maxTradesPerDay: 2.5, cooldownMinutes: -5 });
+    const result = parseBreakerSettings({
+      ...settings,
+      maxDailyLossR: 0,
+      maxTradesPerDay: 2.5,
+      cooldownMinutes: -5,
+      maxDailyLossOptionsDollars: 0,
+    });
 
-    expect(Object.keys(errorsOf(result)).sort()).toEqual(['cooldownMinutes', 'maxDailyLossR', 'maxTradesPerDay']);
+    expect(Object.keys(errorsOf(result)).sort()).toEqual([
+      'cooldownMinutes',
+      'maxDailyLossOptionsDollars',
+      'maxDailyLossR',
+      'maxTradesPerDay',
+    ]);
   });
 
   it('needs both halves of the cool-down, or neither', () => {
@@ -48,6 +60,7 @@ describe('DEFAULT_BREAKER_SETTINGS', () => {
       maxTradesPerDay: null,
       cooldownAfterLosses: null,
       cooldownMinutes: null,
+      maxDailyLossOptionsDollars: null,
       modes: ['live'],
     });
   });

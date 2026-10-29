@@ -17,6 +17,7 @@ const settings = {
   maxTradesPerDay: null,
   cooldownAfterLosses: null,
   cooldownMinutes: null,
+  maxDailyLossOptionsDollars: null,
   modes: ['paper'],
 };
 
@@ -54,7 +55,7 @@ describe('/api/circuit-breakers', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
       settings: DEFAULT_BREAKER_SETTINGS,
-      status: { tripped: [], today: { r: 0, trades: 0 }, losingStreak: 0 },
+      status: { tripped: [], today: { r: 0, trades: 0, optionsDollars: 0 }, losingStreak: 0 },
     });
   });
 
