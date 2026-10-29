@@ -11,10 +11,11 @@ const settings = {
   maxTradesPerDay: null,
   cooldownAfterLosses: 3,
   cooldownMinutes: 60,
+  maxDailyLossOptionsDollars: 30,
   modes: ['live'],
 };
 
-const quietDay = { tripped: [], today: { r: -1.2, trades: 2 }, losingStreak: 1 };
+const quietDay = { tripped: [], today: { r: -1.2, trades: 2, optionsDollars: 0 }, losingStreak: 1 };
 
 // Serve the breakers; a PUT saves the body and answers like the real route.
 // Returns the bodies saved.
@@ -52,6 +53,7 @@ describe('CircuitBreakers', () => {
     expect(screen.getByLabelText('Max trades per day')).toHaveValue(null);
     expect(screen.getByLabelText('Cool-down after losses in a row')).toHaveValue(3);
     expect(screen.getByLabelText('Cool-down minutes')).toHaveValue(60);
+    expect(screen.getByLabelText('Daily max loss, options ($)')).toHaveValue(30);
     expect(screen.getByRole('checkbox', { name: 'Live' })).toBeChecked();
     expect(screen.getByRole('checkbox', { name: 'Paper' })).not.toBeChecked();
   });
@@ -88,6 +90,9 @@ describe('CircuitBreakers', () => {
       maxTradesPerDay: 4,
       cooldownAfterLosses: 3,
       cooldownMinutes: 60,
+      // Untouched, but must still be sent: the PUT replaces the whole row,
+      // so leaving it out would silently turn the options breaker off.
+      maxDailyLossOptionsDollars: 30,
       modes: ['live', 'paper'],
     });
     expect(await screen.findByText('Saved.')).toBeInTheDocument();

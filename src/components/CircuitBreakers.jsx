@@ -18,6 +18,7 @@ const LIMITS = [
   ['maxTradesPerDay', 'Max trades per day', '1'],
   ['cooldownAfterLosses', 'Cool-down after losses in a row', '1'],
   ['cooldownMinutes', 'Cool-down minutes', '1'],
+  ['maxDailyLossOptionsDollars', 'Daily max loss, options ($)', 'any'],
 ];
 
 // Inputs hold strings; a blank limit is off, which the server stores as null.
