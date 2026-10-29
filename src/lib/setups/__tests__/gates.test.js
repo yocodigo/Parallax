@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { EMOTIONS, MISTAKES } from '../../journalEntry';
 import { sizeGate, stateGate, targetGate, windowGate } from '../gates';
 
 // New York times, the clock the app keeps. setups.md writes the lockouts on
@@ -23,6 +24,15 @@ describe('windowGate', () => {
     expect(windowGate(at('09:44'))).toBe('missed');
     expect(windowGate(at('09:45'))).toBe('met');
   });
+
+  it('keeps the windows on the New York clock through the winter', () => {
+    expect(windowGate(new Date('2026-01-14T09:35:00-05:00'))).toBe('missed');
+    expect(windowGate(new Date('2026-01-14T10:15:00-05:00'))).toBe('met');
+  });
+
+  it("can't judge a plan that was never entered", () => {
+    expect(windowGate(null)).toBe('unknown');
+  });
 });
 
 describe('sizeGate', () => {
@@ -31,14 +41,19 @@ describe('sizeGate', () => {
     expect(sizeGate(2)).toBe('met');
   });
 
-  it('misses above two contracts', () => {
+  it('misses outside one or two contracts', () => {
     expect(sizeGate(3)).toBe('missed');
+    expect(sizeGate(0)).toBe('missed');
+  });
+
+  it("can't judge a plan with no size recorded", () => {
+    expect(sizeGate(null)).toBe('unknown');
   });
 });
 
 describe('targetGate', () => {
-  it('is met when the day has fib levels recorded', () => {
-    expect(targetGate({ ltfFib50: 680, ltfFib100: 684 })).toBe('met');
+  it('is met when the day has a plan, which always carries fib levels', () => {
+    expect(targetGate({ tradeDate: '2026-10-28' })).toBe('met');
   });
 
   it('misses when no plan was recorded for the day', () => {
@@ -63,5 +78,12 @@ describe('stateGate', () => {
   it("can't judge a state that was never recorded", () => {
     expect(stateGate(null)).toBe('unknown');
     expect(stateGate({ emotion: null, mistakes: [] })).toBe('unknown');
+  });
+
+  // The gate compares against these stored values, so a rename in the journal
+  // lists has to reach gates.js instead of grading every entry missed.
+  it('reads values the journal still records', () => {
+    expect(EMOTIONS).toContain('calm');
+    expect(MISTAKES).toContain('revenge_trade');
   });
 });
