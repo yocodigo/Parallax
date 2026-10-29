@@ -5,7 +5,10 @@ import { atLeast, atMost } from './compare';
 
 export function isSweep(bars, level, side, k) {
   const bar = bars[k];
-  const beyond = side === 'support' ? bar.l < level : bar.h > level;
+  // "Beyond" is the far side of the tolerance band atLeast/atMost already
+  // allow for a price sitting on the level, so a wick within floating-point
+  // error of it doesn't count as trading past it.
+  const beyond = side === 'support' ? !atLeast(bar.l, level) : !atMost(bar.h, level);
   if (!beyond) return false;
   return side === 'support' ? atLeast(bar.c, level) : atMost(bar.c, level);
 }
