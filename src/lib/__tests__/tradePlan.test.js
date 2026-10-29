@@ -46,6 +46,15 @@ describe('parseTradePlan', () => {
     expect(parseTradePlan({ ...longPlan, strategyId: 'nope' }).success).toBe(false);
   });
 
+  // The stop rule chosen before entry (setups.md section 5: S1 5m band, S2 1m
+  // structure, S3 planned time stop), for the Stop OK gate. Optional: most
+  // plans so far predate this field.
+  it('accepts the stop rule the plan chose, S1, S2, or S3', () => {
+    expect(parseTradePlan({ ...longPlan, stopRule: 'S2' }).data.stopRule).toBe('S2');
+    expect(parseTradePlan(longPlan).data.stopRule).toBeUndefined();
+    expect(parseTradePlan({ ...longPlan, stopRule: 'S4' }).success).toBe(false);
+  });
+
   it('accepts a valid short plan', () => {
     expect(parseTradePlan(shortPlan).success).toBe(true);
   });

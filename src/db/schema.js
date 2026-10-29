@@ -19,6 +19,10 @@ export const tradeMode = pgEnum('trade_mode', ['live', 'paper', 'backtest']);
 export const assetClass = pgEnum('asset_class', ['stock', 'option', 'crypto']);
 export const direction = pgEnum('direction', ['long', 'short']);
 export const optionType = pgEnum('option_type', ['call', 'put']);
+// The stop rule chosen before entry (setups.md section 5): S1 a 5m close
+// back across the 5m middle band, S2 a 1m close beyond the entry candle's
+// far extreme, S3 the planned time stop. Judged by the Stop OK gate.
+export const stopRule = pgEnum('stop_rule', ['S1', 'S2', 'S3']);
 export const exitReason = pgEnum('exit_reason', [
   'invalidation',
   'target',
@@ -92,6 +96,7 @@ export const trades = pgTable(
     plannedEntry: price('planned_entry'),
     entryPrice: price('entry_price'),
     initialStop: price('initial_stop'),
+    stopRule: stopRule('stop_rule'),
     target: price('target'),
     exitPrice: price('exit_price'),
     fees: numeric('fees', { precision: 12, scale: 2, mode: 'number' }).notNull().default(0),

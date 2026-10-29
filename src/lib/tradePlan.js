@@ -47,6 +47,9 @@ const fields = z.object({
   target: price.optional(),
   // The strategy the plan follows; its rules become the entry checklist.
   strategyId: z.uuid().optional(),
+  // The stop rule chosen before entry (setups.md section 5: S1 5m band, S2
+  // 1m structure, S3 planned time stop), judged by the Stop OK gate.
+  stopRule: z.enum(['S1', 'S2', 'S3']).optional(),
   // For options: the contract. The symbol is the underlying.
   optionType: z.enum(['call', 'put']).optional(),
   strike: price.optional(),
