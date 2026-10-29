@@ -106,8 +106,8 @@ export function gradeTradeGates(trade, bars = [], { dailyPlan = null, planEntry 
     entryPrice: underlyingAt(bars, asOf, day),
     bars15,
     directionBarIndex: crossIndex(bars15, day),
-    entryBar: bars5[i5] ?? null,
-    entryPrevBar: bars5[i5 - 1] ?? null,
+    entryBar: bars5.at(-1) ?? null,
+    entryPrevBar: bars5.at(-2) ?? null,
     dealingRange: range,
   });
 }

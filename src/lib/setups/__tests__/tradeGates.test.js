@@ -29,9 +29,19 @@ const minuteBars = (open, specs) => specs.flatMap((spec, k) => fiveMinute(open +
 
 const flat = (price) => ({ o: price, h: price + 0.1, l: price - 0.1, c: price });
 
-// The previous session, flat at 10 all day: 26 15m bars, enough for the
-// Bollinger bands to exist from the fill day's first bar.
-const PREVIOUS_SESSION = minuteBars(PREV_DAY, Array(78).fill(flat(10)));
+// The previous session: 26 15m bars, enough for the Bollinger bands to exist
+// from the fill day's first bar. Flat at 10 apart from a swing high at 5m
+// index 60, a swing low at index 70, and a bar with no range to close on.
+// Every third 5m bar still closes at 10, and the bands read closes only, so
+// the fill day's cross is untouched. Those swings and that last bar are what
+// a gate reaching back across the overnight gap would pick up.
+const PREVIOUS_SESSION_SPECS = Array.from({ length: 78 }, (_, k) => {
+  if (k === 60) return { o: 10, h: 10.5, l: 9.9, c: 10 };
+  if (k === 70) return { o: 10, h: 10.1, l: 9.4, c: 10 };
+  if (k === 77) return { o: 10, h: 10, l: 10, c: 10 };
+  return flat(10);
+});
+const PREVIOUS_SESSION = minuteBars(PREV_DAY, PREVIOUS_SESSION_SPECS);
 
 // The fill day. Its 15m closes are the 5m closes at index 2, 5, 8 and 11
 // (all 10, so no bias yet) and then index 14 at 12, which closes above the
@@ -118,6 +128,16 @@ describe('gradeTradeGates', () => {
     // 10:37: SPY last closed at 10.20, the middle of the 9.5-10.8 range,
     // while the trade itself was filled at 12.
     expect(gradeTradeGates(trade({ openedAt: at('10:37') }), BARS, records).location).toBe('missed');
+  });
+
+  it("can't judge the entry or location on the session's first 5m bar", () => {
+    // 09:37, with only the 09:30 bar closed. The bar before it and the last
+    // swings on the series are the previous afternoon's, seventeen hours
+    // back; reaching across that gap would grade this trade on them.
+    expect(gradeTradeGates(trade({ openedAt: at('09:37') }), BARS, records)).toMatchObject({
+      entry: 'unknown',
+      location: 'unknown',
+    });
   });
 
   it("can't judge the bar gates before the session has a closed 5m bar", () => {
