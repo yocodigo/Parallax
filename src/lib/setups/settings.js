@@ -84,3 +84,16 @@ export const RIP_BARS = 3;
 // [5] The planned time stop S3: out if T1 isn't reached within this many
 // minutes of the entry.
 export const TIME_STOP = 15;
+
+// [8] No entries inside these windows, each from its start up to its end. As
+// New York times, the clock the app keeps; setups.md writes them on the
+// user's Pacific clock (6:30-6:45, 8:00-11:00, 11:45-12:00).
+export const LOCKOUTS = [
+  ['09:30', '09:45'],
+  ['11:00', '14:00'],
+  ['14:45', '15:00'],
+];
+
+// [8] Contracts per trade.
+export const SIZE_MIN = 1;
+export const SIZE_MAX = 2;
