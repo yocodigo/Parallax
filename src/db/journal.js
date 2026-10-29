@@ -1,4 +1,4 @@
-import { desc, eq, gte } from 'drizzle-orm';
+import { and, desc, eq, gte } from 'drizzle-orm';
 import { journalEntries, trades } from './schema';
 
 // Repository functions take the database as their first argument, so tests
@@ -21,6 +21,17 @@ export async function listJournalEntries(db, { limit = 50, since } = {}) {
     .limit(limit);
 
   return rows.map(({ entry, trade }) => ({ ...entry, trade }));
+}
+
+// The plan journal entry that recorded a trade, for the state gate (section
+// 8): that's where the pre-entry emotion and mistakes live. A trade has at
+// most one.
+export async function getPlanEntry(db, tradeId) {
+  const [entry] = await db
+    .select()
+    .from(journalEntries)
+    .where(and(eq(journalEntries.tradeId, tradeId), eq(journalEntries.kind, 'plan')));
+  return entry ?? null;
 }
 
 // A plan is a trade plus the journal entry explaining it. They're saved in one

@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { addJournalEntry, listJournalEntries, savePlan } from '../journal';
+import { addJournalEntry, getPlanEntry, listJournalEntries, savePlan } from '../journal';
 import { trades } from '../schema';
 import { createTestDb, resetDb } from '../testing';
 
@@ -72,6 +72,22 @@ describe('listJournalEntries', () => {
     const entries = await listJournalEntries(db, { since: new Date('2026-10-19') });
 
     expect(entries.map((entry) => entry.notes)).toEqual(['Today', 'Monday']);
+  });
+});
+
+describe('getPlanEntry', () => {
+  it("returns a trade's plan entry", async () => {
+    const [trade] = await db.insert(trades).values(plan).returning();
+    await addJournalEntry(db, { kind: 'plan', tradeId: trade.id, notes: 'Bull flag on the daily.', emotion: 'calm' });
+    await addJournalEntry(db, { kind: 'review', tradeId: trade.id, notes: 'Held too long.' });
+
+    expect(await getPlanEntry(db, trade.id)).toMatchObject({ kind: 'plan', emotion: 'calm' });
+  });
+
+  it('returns null when the trade has no plan entry', async () => {
+    const [trade] = await db.insert(trades).values(plan).returning();
+
+    expect(await getPlanEntry(db, trade.id)).toBeNull();
   });
 });
 
