@@ -1,9 +1,9 @@
-// Fair value gap (setups.md 2.9): the gap a bar leaves behind, between the
-// bars immediately before and after it. Bullish when the bar after opens
-// above the one before (low[m+1] > high[m-1]); bearish mirrors. Only an FVG
-// created by the setup's own displacement bar counts — callers decide that;
-// this only reports the gap's geometry, oldest-first bars. Null without a
-// gap, or without a bar on both sides of `m`.
+// Fair value gap (setups.md 2.9): the gap left by bar `m`, oldest-first
+// bars, between the bars on either side of it. Bullish when the one after
+// opens above the one before (low[m+1] > high[m-1]); bearish mirrors. This
+// reports the geometry only; it's on the caller to use `m` as a setup's own
+// displacement bar when that's what the spec calls for. Null without a gap,
+// or without a bar on both sides of `m`.
 
 import { atMost } from './compare';
 
