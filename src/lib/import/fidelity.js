@@ -59,6 +59,10 @@ function nyOffsetAt(instant) {
 function nyOpen(date) {
   const [month, day, year] = date.split('/').map(Number);
   const wall = Date.UTC(year, month - 1, day, 9, 30, 0);
+  // The offset depends on the date, which is what we're solving for, so
+  // resolve it twice: once from the wall time read as UTC (close enough to
+  // find the right offset unless a DST change falls in the gap), then again
+  // from that result, which converges on the correct instant.
   const first = wall - nyOffsetAt(new Date(wall));
   return new Date(wall - nyOffsetAt(new Date(first)));
 }
