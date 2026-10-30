@@ -45,15 +45,30 @@ describe('reversalSequences', () => {
     expect(reversalSequences(bars, AFTER)).toEqual([]);
   });
 
-  it('finds nothing when the bar after the sweep fails to reclaim the pool', () => {
+  it('finds nothing when a displacement bar closes short of the pool, even with a big body', () => {
     const bars = withBars(reversalBars(), {
-      [DISPLACEMENT]: { o: 97.6, h: 97.8, l: 97.4, c: 97.5 },
+      // Body 3.5 against a lookback average near 0.26, well past DISP_MULT,
+      // but the close (95.5) stays below the pool's high (97.56).
+      [DISPLACEMENT]: { o: 99.0, h: 99.2, l: 95.0, c: 95.5 },
     });
     expect(reversalSequences(bars, AFTER)).toEqual([]);
   });
 
   it('finds nothing without a pool to sweep in the first place', () => {
     const bars = withBars(reversalBars(), { 48: baseline });
+    expect(reversalSequences(bars, AFTER)).toEqual([]);
+  });
+
+  it('ignores a target touch that only became a confirmed swing after the sweep', () => {
+    // Drops the target pool's second touch (28) and adds a near-sweep high
+    // (64) that matches the first touch (20) in price but isn't confirmed
+    // (SWING_K bars past it) until after the sweep bar (65) closes — too
+    // late to have been known structure at the time.
+    const bars = withBars(reversalBars(), {
+      28: baseline,
+      64: { o: 100, h: 103.05, l: 99.5, c: 100 },
+      [DISPLACEMENT]: { o: 97.6, h: 103.0, l: 97.4, c: 103.0 },
+    });
     expect(reversalSequences(bars, AFTER)).toEqual([]);
   });
 });

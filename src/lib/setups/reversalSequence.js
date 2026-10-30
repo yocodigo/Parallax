@@ -39,25 +39,23 @@ const SIDES = [
   },
 ];
 
-// The most recent swing of `kind` confirmed before `before` — setups.md
-// 3.3's "last confirmed lower high", or its higher-low mirror. Null without
-// one.
-function lastSwingBefore(swingList, kind, before) {
+// The most recent swing of `kind` in `swingList` — setups.md 3.3's "last
+// confirmed lower high", or its higher-low mirror. Null without one.
+function lastSwingOf(swingList, kind) {
   let found = null;
   for (const swing of swingList) {
-    if (swing.kind === kind && swing.index < before && (!found || swing.index > found.index)) found = swing;
+    if (swing.kind === kind && (!found || swing.index > found.index)) found = swing;
   }
   return found;
 }
 
-// The nearest pool on `side.targetSide` already formed before `before` and
-// ahead of `entry` in the trade direction — setups.md 3.3's "nearest
-// buyside pool" (or its support-side mirror for a short). Null without one.
-function nearestTarget(allPools, side, before, entry) {
+// The nearest pool on `side.targetSide` in `allPools`, ahead of `entry` in
+// the trade direction — setups.md 3.3's "nearest buyside pool" (or its
+// support-side mirror for a short). Null without one.
+function nearestTarget(allPools, side, entry) {
   let found = null;
   for (const pool of allPools) {
     if (pool.side !== side.targetSide) continue;
-    if (pool.touches.at(-1) >= before) continue;
     const edge = pool[side.targetEdge];
     const ahead = side.direction === 'long' ? edge > entry : edge < entry;
     if (ahead && (!found || side.nearer(edge, found[side.targetEdge]))) found = pool;
@@ -68,11 +66,13 @@ function nearestTarget(allPools, side, before, entry) {
 // The sequence `side` finds sweeping `pool`, as of bar `i`, or null without
 // the full chain. The first sweep that completes the chain wins; a sweep
 // that doesn't is just a sweep, not a failed sequence, so later sweeps of
-// the same pool still get a chance.
-function sequenceFor(bars, i, swingList, allPools, pool, side) {
+// the same pool still get a chance. The pool itself must be confirmed
+// (SWING_K bars past its last touch) by the sweep, same as any other swing
+// point here — fourTouch.js's lineStart guards the same lookahead.
+function sequenceFor(bars, i, pool, side) {
   const level = side.poolSide === 'support' ? pool.low : pool.high;
-  const lastTouch = pool.touches.at(-1);
-  for (let sweepIndex = lastTouch + 1; sweepIndex <= i; sweepIndex++) {
+  const confirmedAt = pool.touches.at(-1) + SWING_K;
+  for (let sweepIndex = confirmedAt; sweepIndex <= i; sweepIndex++) {
     if (!isSweep(bars, level, side.poolSide, sweepIndex)) continue;
 
     let displacementIndex = null;
@@ -84,7 +84,13 @@ function sequenceFor(bars, i, swingList, allPools, pool, side) {
     }
     if (displacementIndex === null) continue;
 
-    const lastSwing = lastSwingBefore(swingList, side.mssKind, sweepIndex);
+    // The MSS line and the target pool can only use structure already
+    // confirmed as of the sweep (the user's choice of anchor: a sequence is
+    // judged by what was knowable when it triggered, not by hindsight from
+    // `i`), so these are recomputed here rather than reusing the swings and
+    // pools found as of `i`.
+    const priorSwings = swings(bars, sweepIndex, SWING_K);
+    const lastSwing = lastSwingOf(priorSwings, side.mssKind);
     if (!lastSwing) continue;
     let mssIndex = null;
     for (let k = displacementIndex; k <= Math.min(displacementIndex + 2, i); k++) {
@@ -105,7 +111,7 @@ function sequenceFor(bars, i, swingList, allPools, pool, side) {
     const stop =
       side.poolSide === 'support' ? bars[sweepIndex].l - STOP_BUFFER * range : bars[sweepIndex].h + STOP_BUFFER * range;
 
-    const target = nearestTarget(allPools, side, sweepIndex, entry);
+    const target = nearestTarget(pools(bars, priorSwings), side, entry);
     if (!target) continue;
     const t1 = target[side.targetEdge];
     const r = side.direction === 'long' ? (t1 - entry) / (entry - stop) : (entry - t1) / (stop - entry);
@@ -122,12 +128,11 @@ function sequenceFor(bars, i, swingList, allPools, pool, side) {
 // r }. `entry` is the fair value gap's CE, a limit order; this doesn't
 // simulate when or whether it filled.
 export function reversalSequences(bars, i) {
-  const swingList = swings(bars, i, SWING_K);
-  const allPools = pools(bars, swingList);
+  const allPools = pools(bars, swings(bars, i, SWING_K));
   const found = [];
   for (const side of SIDES) {
     for (const pool of allPools.filter((p) => p.side === side.poolSide)) {
-      const sequence = sequenceFor(bars, i, swingList, allPools, pool, side);
+      const sequence = sequenceFor(bars, i, pool, side);
       if (sequence) found.push(sequence);
     }
   }
