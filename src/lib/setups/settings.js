@@ -72,6 +72,11 @@ export const STOP_BUFFER = 0.1;
 // rejection candle's high (or low, short) within this many bars of it.
 export const TRIGGER_WINDOW = 3;
 
+// [3.4] The three-gate entry's rejection quality: the sweep bar's close must
+// sit at least this far up its own range (CL, 2.2) for a long, or at most
+// this far up it for a short.
+export const REJECTION_CL_MIN = 0.5;
+
 // [3.2] A four-touch break is valid when its bar's body is at least DISP_4X
 // times the average body of the DISP_4X_LOOKBACK bars before it.
 export const DISP_4X = 4.0;

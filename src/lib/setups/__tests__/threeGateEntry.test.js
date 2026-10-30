@@ -47,13 +47,20 @@ describe('threeGateEntry', () => {
 
   it('is null while the trigger has not arrived yet, not a failure', () => {
     const bars = at(sweep, bar(100.5, 100.55, 100.3, 100.4));
-    expect(threeGateEntry(bars, 100, 'support', W, W)).toBeNull();
+    expect(threeGateEntry(bars, 100, 'support', W, W + 1)).toBeNull();
   });
 
   it('is null once the 3-bar trigger window passes without one', () => {
     const stall = bar(100.3, 100.55, 100.2, 100.4);
     const bars = at(sweep, stall, stall, stall);
     expect(threeGateEntry(bars, 100, 'support', W, W + 3)).toBeNull();
+  });
+
+  it('ignores a trigger that arrives after the 3-bar window closes', () => {
+    const stall = bar(100.3, 100.55, 100.2, 100.4);
+    const late = bar(100.4, 100.9, 100.3, 100.8); // beyond the sweep's high, but one bar too late
+    const bars = at(sweep, stall, stall, stall, late);
+    expect(threeGateEntry(bars, 100, 'support', W, W + 4)).toBeNull();
   });
 
   it('skips a close-back with a weak rejection but still catches a later good one', () => {

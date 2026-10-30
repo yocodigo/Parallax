@@ -15,7 +15,7 @@
 import { closeLocation } from './candles';
 import { atLeast, atMost } from './compare';
 import { atr } from './relative';
-import { STOP_BUFFER, SWING_K, TRIGGER_WINDOW } from './settings';
+import { REJECTION_CL_MIN, STOP_BUFFER, SWING_K, TRIGGER_WINDOW } from './settings';
 import { isSweep } from './sweep';
 import { dealingRange, isMidRange, swings } from './swings';
 
@@ -24,7 +24,9 @@ import { dealingRange, isMidRange, swings } from './swings';
 // { direction, sweepIndex, triggerIndex, entry, stop }.
 export function threeGateEntry(bars, level, side, from, i) {
   const long = side === 'support';
-  const clOk = (cl) => (long ? atLeast(cl, 0.5) : atMost(cl, 0.5));
+  const clOk = (cl) => (long ? atLeast(cl, REJECTION_CL_MIN) : atMost(cl, REJECTION_CL_MIN));
+  // Beyond with float tolerance, negating atMost/atLeast the way sweep.js
+  // does for the same "beyond" idea.
   const tradesBeyond = (bar, edge) => (long ? !atMost(bar.h, edge) : !atLeast(bar.l, edge));
 
   for (let k = from; k <= i; k++) {
