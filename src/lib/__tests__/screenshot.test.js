@@ -38,6 +38,12 @@ describe('imageType', () => {
   });
 });
 
+describe('MAX_SCREENSHOT_BYTES', () => {
+  it('fits the Claude API image limit, 5 MB of base64', () => {
+    expect(Math.ceil(MAX_SCREENSHOT_BYTES / 3) * 4).toBeLessThanOrEqual(5 * 1024 * 1024);
+  });
+});
+
 describe('parseScreenshotForm', () => {
   it('reads the image bytes and takes the type from them, not from the browser', async () => {
     const result = await parseScreenshotForm(form({ file: image(bytes(JPEG), 'image/png'), label: 'entry' }));

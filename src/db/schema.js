@@ -219,7 +219,8 @@ export const tradeContexts = pgTable('trade_contexts', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-// Drizzle has no bytea column; node-postgres reads one as a Buffer.
+// Drizzle has no bytea column; node-postgres reads one as a Buffer. It sends
+// only a Buffer as binary (a plain Uint8Array would go as text), hence the copy.
 const bytea = customType({
   dataType: () => 'bytea',
   toDriver: (bytes) => Buffer.from(bytes),
@@ -230,6 +231,8 @@ export const screenshotLabel = pgEnum('screenshot_label', ['setup', 'entry', 'ex
 // Chart screenshots attached during the review (setups.md 9.5), kept as
 // uploaded. They're private trade data, so they live here behind the app
 // rather than in a public bucket. At most 3 per trade (src/lib/screenshot.js).
+// setups.md 9.5 suggests an object store on deploy; revisit if they crowd the
+// Neon plan's storage.
 export const tradeScreenshots = pgTable(
   'trade_screenshots',
   {

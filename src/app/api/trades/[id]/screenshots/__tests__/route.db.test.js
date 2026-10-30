@@ -77,7 +77,9 @@ describe('POST /api/trades/[id]/screenshots', () => {
     const response = await post(trade.id);
 
     expect(response.status).toBe(409);
-    expect((await response.json()).error).toMatch(/3/);
+    expect((await response.json()).error).toBe(
+      `A trade can have at most ${MAX_SCREENSHOTS_PER_TRADE} screenshots`
+    );
   });
 
   it('answers 404 for a trade that does not exist, or an id that is not a trade id', async () => {

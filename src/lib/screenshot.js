@@ -1,9 +1,10 @@
 import { z } from 'zod';
 
 // Chart screenshots attached to a trade during the review (setups.md 9.5).
-// Vercel caps a function's request body at 4.5 MB, which is under the 5 MB
-// the Claude API takes per image, so whatever is stored can be sent as is.
-export const MAX_SCREENSHOT_BYTES = 4 * 1024 * 1024;
+// The Claude API takes 5 MB per image as base64, which is a third larger than
+// the file: 3.75 MiB encodes to exactly 5 MiB, so whatever is stored can be sent
+// as is. It's also under Vercel's 4.5 MB request body cap.
+export const MAX_SCREENSHOT_BYTES = 3.75 * 1024 * 1024;
 export const MAX_SCREENSHOTS_PER_TRADE = 3;
 export const SCREENSHOT_LABELS = ['setup', 'entry', 'exit'];
 
@@ -24,13 +25,16 @@ export function imageType(bytes) {
 
 const screenshotSchema = z
   .object({
+    // `abort` stops at a failed check, so an empty or oversized file gets one
+    // error rather than also "not an image", and is never read.
     image: z
-      .instanceof(Uint8Array, { message: 'An image is required' })
-      .refine((bytes) => bytes.length > 0, { message: 'The image is empty', abort: true })
-      .refine((bytes) => bytes.length <= MAX_SCREENSHOT_BYTES, {
-        message: 'The image is over 4 MB',
+      .instanceof(Blob, { message: 'An image is required' })
+      .refine((file) => file.size > 0, { message: 'The image is empty', abort: true })
+      .refine((file) => file.size <= MAX_SCREENSHOT_BYTES, {
+        message: 'The image is over 3.75 MB',
         abort: true,
       })
+      .transform(async (file) => new Uint8Array(await file.arrayBuffer()))
       .refine((bytes) => imageType(bytes) !== null, 'Only PNG, JPEG, or WebP images'),
     label: z.enum(SCREENSHOT_LABELS).nullable(),
   })
@@ -39,9 +43,8 @@ const screenshotSchema = z
 // Form fields: `image` (the file) and an optional `label`. Resolves to a
 // safeParse result with { bytes, contentType, label }.
 export async function parseScreenshotForm(formData) {
-  const file = formData.get('image');
-  return screenshotSchema.safeParse({
-    image: file instanceof Blob ? new Uint8Array(await file.arrayBuffer()) : undefined,
+  return screenshotSchema.safeParseAsync({
+    image: formData.get('image') ?? undefined,
     label: formData.get('label') || null,
   });
 }

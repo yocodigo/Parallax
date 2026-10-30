@@ -4,7 +4,8 @@ import { getDb } from '@/db';
 import { deleteTradeScreenshot, getTradeScreenshot } from '@/db/screenshots';
 import { withErrorLogging } from '@/lib/log';
 
-const validIds = ({ id, shotId }) => z.uuid().safeParse(id).success && z.uuid().safeParse(shotId).success;
+// Postgres rejects a malformed uuid with an error; to the client it's just not found.
+const validIds =({ id, shotId }) => z.uuid().safeParse(id).success && z.uuid().safeParse(shotId).success;
 
 const notFound = () => NextResponse.json({ error: 'Screenshot not found' }, { status: 404 });
 

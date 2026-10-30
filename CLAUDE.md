@@ -157,7 +157,7 @@ Vitest, JavaScript (not TypeScript).
   through 2027-12-31 (BLS blocks automated requests); extend them yearly.
 - Chart screenshots (setups.md 9.5): up to 3 per trade in `trade_screenshots` (bytea, optional label
   setup/entry/exit), deleted with the trade. `POST /api/trades/[id]/screenshots` takes a form with
-  `image` and `label`; `src/lib/screenshot.js` caps it at 4 MB (Vercel's body limit) and takes the type
+  `image` and `label`; `src/lib/screenshot.js` caps it at 3.75 MiB (5 MB as base64, Claude's image limit) and takes the type
   from the file's first bytes (PNG, JPEG, WebP), never the browser's. `GET …/screenshots` lists them
   without bytes; `GET`/`DELETE …/screenshots/[shotId]` serve (private cache, `nosniff`) or remove one.
 - thinkorswim import (`/import`, `ThinkorswimImport.jsx`, `POST /api/imports/thinkorswim`): the
