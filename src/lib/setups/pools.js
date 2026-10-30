@@ -1,14 +1,16 @@
 // Pools (setups.md 2.8/3.3): a sellside pool is >= 2 equal swing lows, a
 // buyside pool >= 2 equal swing highs. "Equal" within TOL of each other
 // (2.7's own tolerance), scaled by the ATR as of the later one. Reported as
-// the low and high price of the cluster rather than one level, since the
-// swing points are rarely at the exact same price (setups.md 4's fixture:
-// "pool 112.00/112.10").
+// the low and high price of the cluster rather than one level, since real
+// swing points rarely land on the exact same price.
 
 import { atMost } from './compare';
 import { atr } from './relative';
 import { TOL } from './settings';
 
+// A sellside pool (equal lows) sits on the support side, a buyside pool
+// (equal highs) on the resistance side — matching sweep.js and trendline.js's
+// support/resistance vocabulary rather than setups.md's own.
 const KINDS = [
   { side: 'support', pivot: 'low' },
   { side: 'resistance', pivot: 'high' },
