@@ -1,19 +1,20 @@
 import { z } from 'zod';
 
-// What setups.md 9.6 shows next to the record button, until Joel edits them.
+// A starting checklist for the two recording modes (setups.md 9.6), until
+// Joel edits them to fit how he actually talks through a trade.
 export const DEFAULT_RECORDING_PROMPTS = {
-  preTradePrompt: `Say in a few seconds:
-- Direction + instrument (e.g. "SPY, long, 681 calls")
-- Setup (15m cross, 4xBO, reversal...)
-- Stop (where you're wrong)
-- Target (first fib level)`,
-  endOfDayPrompt: `For each trade or the day:
-- Emotional state before entering (calm, FOMO, impatient)
-- Did I follow my rules? If not, which one broke?
-- What did I do well?
-- What would I change?
-- Emotional-control score 1-10`,
-  micTips: 'Quiet room, say numbers clearly ("six eighty-one"), state ticker + direction first, keep it short.',
+  preTradePrompt: `Cover quickly:
+- Which way, which instrument
+- What you're seeing (the setup)
+- Where you'd be wrong (stop)
+- Where you'd take profit (target)`,
+  endOfDayPrompt: `For the day or each trade:
+- How you felt going in
+- Whether you stuck to your plan, and where you didn't
+- One thing that went right
+- One thing to change next time
+- Rate your composure, 1 to 10`,
+  micTips: 'Find somewhere quiet, lead with the symbol and direction, and spell out numbers plainly.',
 };
 
 const schema = z.object({
