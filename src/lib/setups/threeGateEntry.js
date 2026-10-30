@@ -1,8 +1,8 @@
 // Three-gate entry (setups.md 3.4): a generic trigger at any level, not tied
 // to one setup. Gate 1: a sweep of the level (sweep.js). Gate 2: the same
-// bar's close sits in the far half of its own range (CL >= 0.5 for a long,
-// <= 0.5 for a short) — closing back inside is sweep.js's own bar, this asks
-// for a clean rejection rather than a bare reclaim. Gate 3: within
+// bar's close sits in the far half of its own range, at least REJECTION_CL_MIN
+// for a long and at most it for a short — closing back inside is sweep.js's
+// own bar, this asks for a clean rejection rather than a bare reclaim. Gate 3: within
 // TRIGGER_WINDOW bars, price trades beyond that bar's high (long) or low
 // (short). No entry when the level sits in the mid-range of the dealing
 // range known as of the sweep (setups.md 2.5) — the same "knowable at the
