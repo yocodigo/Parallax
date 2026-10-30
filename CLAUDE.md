@@ -70,7 +70,7 @@ Vitest, JavaScript (not TypeScript).
   prices (761.40 − 761.00 isn't exactly 0.4).
 - `src/server/`: server-only fetchers that call outside services (`marketContext.js`), tested with
   MSW in the node environment.
-- `src/db/journal.js`, `trades.js`, `settings.js`, `strategies.js`, `contexts.js`, and `imports.js`: repository
+- `src/db/journal.js`, `trades.js`, `settings.js`, `strategies.js`, `contexts.js`, `screenshots.js`, and `imports.js`: repository
   functions. They take `db` as the first argument so tests can
   pass the test database.
 - `src/db/index.js`: `getDb()`, created lazily (builds need no database) and cached on `globalThis`.
@@ -155,6 +155,11 @@ Vitest, JavaScript (not TypeScript).
   `TradeContext.jsx` shows it on demand via `GET /api/trades/[id]/context`. Entry route tests mock
   `after` and `captureContext`. Macro dates in `src/lib/context/macroCalendar.js` cover 2026-10-22
   through 2027-12-31 (BLS blocks automated requests); extend them yearly.
+- Chart screenshots (setups.md 9.5): up to 3 per trade in `trade_screenshots` (bytea, optional label
+  setup/entry/exit), deleted with the trade. `POST /api/trades/[id]/screenshots` takes a form with
+  `image` and `label`; `src/lib/screenshot.js` caps it at 4 MB (Vercel's body limit) and takes the type
+  from the file's first bytes (PNG, JPEG, WebP), never the browser's. `GET …/screenshots` lists them
+  without bytes; `GET`/`DELETE …/screenshots/[shotId]` serve (private cache, `nosniff`) or remove one.
 - thinkorswim import (`/import`, `ThinkorswimImport.jsx`, `POST /api/imports/thinkorswim`): the
   account statement CSV is read from its Cash Balance section (`src/lib/import/thinkorswim.js`; it
   lists every fill with fees and a ref and ignores the statement's symbol filter). Times are in the

@@ -11,5 +11,5 @@ export function createTestDb() {
 }
 
 export async function resetDb(db) {
-  await db.execute(sql`TRUNCATE trades, journal_entries, circuit_breaker_settings, recording_prompts, strategies, strategy_rules, trade_rule_checks, trade_contexts, daily_plans`);
+  await db.execute(sql`TRUNCATE trades, journal_entries, circuit_breaker_settings, recording_prompts, strategies, strategy_rules, trade_rule_checks, trade_contexts, trade_screenshots, daily_plans`);
 }

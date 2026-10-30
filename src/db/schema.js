@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import {
   boolean,
   check,
+  customType,
   date,
   index,
   integer,
@@ -217,6 +218,32 @@ export const tradeContexts = pgTable('trade_contexts', {
   context: jsonb('context').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+// Drizzle has no bytea column; node-postgres reads one as a Buffer.
+const bytea = customType({
+  dataType: () => 'bytea',
+  toDriver: (bytes) => Buffer.from(bytes),
+});
+
+export const screenshotLabel = pgEnum('screenshot_label', ['setup', 'entry', 'exit']);
+
+// Chart screenshots attached during the review (setups.md 9.5), kept as
+// uploaded. They're private trade data, so they live here behind the app
+// rather than in a public bucket. At most 3 per trade (src/lib/screenshot.js).
+export const tradeScreenshots = pgTable(
+  'trade_screenshots',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tradeId: uuid('trade_id')
+      .notNull()
+      .references(() => trades.id, { onDelete: 'cascade' }),
+    label: screenshotLabel('label'),
+    contentType: text('content_type').notNull(),
+    bytes: bytea('bytes').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('trade_screenshots_trade_idx').on(t.tradeId)]
+);
 
 // [3.1] The day's fib extensions, anchored by hand around the open. The working
 // lower-timeframe fib gives T1 (its 50%) and T2 (its 100%); the optional

@@ -78,6 +78,13 @@
       "when": 1793388539066,
       "tag": "0010_recording_prompts",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793401254319,
+      "tag": "0011_trade_screenshots",
+      "breakpoints": true
     }
   ]
 }
