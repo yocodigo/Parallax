@@ -61,6 +61,11 @@ export const BOUNCE = 0.25;
 export const N_ACC = 2;
 export const N_RECLAIM = 3;
 
+// [3.3] The reversal sequence's stop sits this many ATRs beyond the sweep
+// bar's extreme — the same scale as TOL's "at the line" cushion, since both
+// are meant to absorb noise rather than give the trade room. The user's choice.
+export const STOP_BUFFER = 0.1;
+
 // [3.2] A four-touch break is valid when its bar's body is at least DISP_4X
 // times the average body of the DISP_4X_LOOKBACK bars before it.
 export const DISP_4X = 4.0;
