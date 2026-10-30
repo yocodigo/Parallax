@@ -1,7 +1,8 @@
 import { eq } from 'drizzle-orm';
 import { circuitBreakers } from '@/lib/circuitBreakers';
 import { DEFAULT_BREAKER_SETTINGS } from '@/lib/circuitBreakerSettings';
-import { circuitBreakerSettings } from './schema';
+import { DEFAULT_RECORDING_PROMPTS } from '@/lib/recordingPrompts';
+import { circuitBreakerSettings, recordingPrompts } from './schema';
 import { listRecentTrades } from './trades';
 
 // The settings row without its bookkeeping columns.
@@ -45,4 +46,29 @@ export async function loadBreakerStatus(db, { now = new Date() } = {}) {
   const settings = await getBreakerSettings(db);
   const trades = await listRecentTrades(db, { modes: settings.modes });
   return { settings, status: circuitBreakers(settings, trades, { now }) };
+}
+
+// The recording prompts without their bookkeeping columns.
+const pickPrompts = ({ preTradePrompt, endOfDayPrompt, micTips }) => ({
+  preTradePrompt,
+  endOfDayPrompt,
+  micTips,
+});
+
+// The recording prompts shown next to the record button, or the defaults
+// from setups.md 9.6 until Joel has saved his own.
+export async function getRecordingPrompts(db) {
+  const [row] = await db.select().from(recordingPrompts).where(eq(recordingPrompts.id, 1));
+  return row ? pickPrompts(row) : { ...DEFAULT_RECORDING_PROMPTS };
+}
+
+// Replaces the prompts; there's only ever the one row.
+export async function saveRecordingPrompts(db, prompts) {
+  const values = pickPrompts(prompts);
+  const [row] = await db
+    .insert(recordingPrompts)
+    .values({ id: 1, ...values })
+    .onConflictDoUpdate({ target: recordingPrompts.id, set: values })
+    .returning();
+  return pickPrompts(row);
 }

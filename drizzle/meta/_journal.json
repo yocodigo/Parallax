@@ -71,6 +71,13 @@
       "when": 1793251892336,
       "tag": "0009_add_options_daily_loss_dollars",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793388539066,
+      "tag": "0010_recording_prompts",
+      "breakpoints": true
     }
   ]
 }

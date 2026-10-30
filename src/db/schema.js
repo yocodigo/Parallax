@@ -173,6 +173,23 @@ export const circuitBreakerSettings = pgTable(
   (t) => [check('circuit_breaker_settings_single_row', sql`${t.id} = 1`)]
 );
 
+// The recording prompts shown next to the voice record button (setups.md
+// 9.6), editable as app content rather than hard-coded. One row (id 1).
+export const recordingPrompts = pgTable(
+  'recording_prompts',
+  {
+    id: integer('id').primaryKey().default(1),
+    preTradePrompt: text('pre_trade_prompt').notNull(),
+    endOfDayPrompt: text('end_of_day_prompt').notNull(),
+    micTips: text('mic_tips').notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [check('recording_prompts_single_row', sql`${t.id} = 1`)]
+);
+
 // The pre-entry checklist as answered for a trade: one row per rule. The
 // rule's text is copied in, so the history survives editing or deleting it.
 export const tradeRuleChecks = pgTable(
