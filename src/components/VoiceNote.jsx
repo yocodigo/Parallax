@@ -155,6 +155,7 @@ export default function VoiceNote() {
         </div>
       )}
 
+      {/* Hidden once transcribing or drafting starts, so it isn't fighting that UI for space. */}
       {(step === 'idle' || step === 'recording') && prompts && (
         <details className="rounded-md border border-gray-200 p-3 text-sm text-gray-600">
           <summary className="cursor-pointer font-medium text-gray-700">Recording prompts</summary>
