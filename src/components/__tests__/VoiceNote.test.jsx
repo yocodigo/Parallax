@@ -60,16 +60,24 @@ const reviewDraft = {
   fieldErrors: { plan: {}, entry: {} },
 };
 
-// Serves the journal, Scribe's transcript, and the draft, recording what the
-// component sends to each.
+const promptsFixture = {
+  preTradePrompt: 'Say the direction, setup, and stop.',
+  endOfDayPrompt: 'Say how each trade went and how you felt.',
+  micTips: 'Find a quiet room.',
+};
+
+// Serves the journal, Scribe's transcript, the draft, and the recording
+// prompts, recording what the component sends to each.
 function serveVoiceApis({
   entries = [],
+  prompts = promptsFixture,
   transcribe = () => HttpResponse.json({ text: 'Moved my stop on NVDA, frustrated.' }),
   draft = () => HttpResponse.json(reviewDraft),
 } = {}) {
   const sent = { transcribe: [], draft: [], journal: [] };
   server.use(
     http.get('*/api/journal', () => HttpResponse.json({ entries })),
+    http.get('*/api/recording-prompts', () => HttpResponse.json(prompts)),
     // A drafted plan opens the plan form, which asks for history warnings.
     http.get('*/api/insights/warnings', () => HttpResponse.json({ warnings: [] })),
     http.get('*/api/strategies', () => HttpResponse.json({ strategies: [] })),
@@ -166,6 +174,20 @@ describe('VoiceNote', () => {
     expect(await screen.findByLabelText('Planned entry')).toHaveValue(210);
     expect(screen.getByText('Say where your stop is')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save plan' })).toBeInTheDocument();
+  });
+
+  it('shows the recording prompts next to the record button, collapsed until opened', async () => {
+    serveVoiceApis();
+    renderVoiceNote();
+
+    const summary = await screen.findByText('Recording prompts');
+    expect(screen.getByText(promptsFixture.preTradePrompt)).not.toBeVisible();
+
+    await userEvent.click(summary);
+
+    expect(screen.getByText(promptsFixture.preTradePrompt)).toBeVisible();
+    expect(screen.getByText(promptsFixture.endOfDayPrompt)).toBeVisible();
+    expect(screen.getByText(promptsFixture.micTips)).toBeVisible();
   });
 
   it('can start over and discard the note', async () => {

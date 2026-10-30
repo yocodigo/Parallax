@@ -39,6 +39,7 @@ const secondaryButtonClass =
 // -> drafting -> draft (confirmed in the plan or review form) -> idle.
 export default function VoiceNote() {
   const { data } = useSWR('/api/journal', fetchJson, { revalidateOnFocus: false });
+  const { data: prompts } = useSWR('/api/recording-prompts', fetchJson, { revalidateOnFocus: false });
   const [step, setStep] = useState('idle');
   const [transcript, setTranscript] = useState('');
   const [draft, setDraft] = useState(null);
@@ -152,6 +153,23 @@ export default function VoiceNote() {
           )}
           {saved && <span className="text-sm text-green-700">Saved to your journal.</span>}
         </div>
+      )}
+
+      {(step === 'idle' || step === 'recording') && prompts && (
+        <details className="rounded-md border border-gray-200 p-3 text-sm text-gray-600">
+          <summary className="cursor-pointer font-medium text-gray-700">Recording prompts</summary>
+          <div className="mt-2 space-y-2">
+            <p>
+              <span className="font-medium text-gray-700">Pre-trade plan: </span>
+              {prompts.preTradePrompt}
+            </p>
+            <p>
+              <span className="font-medium text-gray-700">End-of-day review: </span>
+              {prompts.endOfDayPrompt}
+            </p>
+            <p className="text-xs text-gray-500">{prompts.micTips}</p>
+          </div>
+        </details>
       )}
 
       {step === 'transcribing' && <p className="text-sm text-gray-500">Transcribing…</p>}
