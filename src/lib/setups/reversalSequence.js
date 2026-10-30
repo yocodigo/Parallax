@@ -68,7 +68,8 @@ function nearestTarget(allPools, side, entry) {
 // that doesn't is just a sweep, not a failed sequence, so later sweeps of
 // the same pool still get a chance. The pool itself must be confirmed
 // (SWING_K bars past its last touch) by the sweep, same as any other swing
-// point here — fourTouch.js's lineStart guards the same lookahead.
+// point here — fourTouch.js's second.index + TRENDLINE_K check in
+// breakOnFourthApproach guards the same lookahead.
 function sequenceFor(bars, i, pool, side) {
   const level = side.poolSide === 'support' ? pool.low : pool.high;
   const confirmedAt = pool.touches.at(-1) + SWING_K;
