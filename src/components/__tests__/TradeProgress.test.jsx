@@ -421,3 +421,24 @@ describe('gates', () => {
     expect(screen.queryByRole('button', { name: 'Gates' })).not.toBeInTheDocument();
   });
 });
+
+describe('screenshots', () => {
+  it('loads a planned trade’s screenshots only when asked', async () => {
+    const requested = [];
+    server.use(
+      http.get('*/api/trades/:id/screenshots', ({ params }) => {
+        requested.push(params.id);
+        return HttpResponse.json({ screenshots: [] });
+      })
+    );
+    serveJournal(plannedTrade());
+    renderJournal();
+
+    await screen.findByText('Planned');
+    expect(requested).toEqual([]);
+    await userEvent.click(screen.getByRole('button', { name: 'Screenshots' }));
+
+    expect(await screen.findByText('No screenshots yet.')).toBeInTheDocument();
+    expect(requested).toEqual([TRADE_ID]);
+  });
+});
