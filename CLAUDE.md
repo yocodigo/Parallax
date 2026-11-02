@@ -68,8 +68,9 @@ Vitest, JavaScript (not TypeScript).
   with its setups.md section and named as the doc names it where it does. Threshold checks go
   through `atMost`/`atLeast` (`compare.js`), which allow for floating-point error in decimal
   prices (761.40 − 761.00 isn't exactly 0.4).
-- `src/server/`: server-only fetchers that call outside services (`marketContext.js`), tested with
-  MSW in the node environment.
+- `src/server/`: server-only fetchers that call outside services (`marketContext.js`, and
+  `minuteBars.js`, Alpaca's minute bars for the gates and the reviews), tested with MSW in the node
+  environment.
 - `src/db/journal.js`, `trades.js`, `settings.js`, `strategies.js`, `contexts.js`, `screenshots.js`, and `imports.js`: repository
   functions. They take `db` as the first argument so tests can
   pass the test database.
@@ -160,6 +161,21 @@ Vitest, JavaScript (not TypeScript).
   `image` and `label`; `src/lib/screenshot.js` caps it at 3.75 MiB (5 MB as base64, Claude's image limit) and takes the type
   from the file's first bytes (PNG, JPEG, WebP), never the browser's. `GET …/screenshots` lists them
   without bytes; `GET`/`DELETE …/screenshots/[shotId]` serve (private cache, `nosniff`) or remove one.
+- Entry and exit review (`TradeReview.jsx` and `TradeExitReview.jsx`, the "Entry review" and "Exit
+  review" buttons on `TradeProgress`; both load on demand). `GET /api/trades/[id]/review` returns
+  `{ review }` from `reviewEntry` (`src/lib/setups/entryReview.js`), measured on the underlying's
+  minute bars that closed before the fill: the 3.1 band-cross setup with its ideal entry and S2 stop
+  and the fill's chase in R, the last 5m bar's overlap and volume against the one before, 1m room to
+  the outer band, the latest four-touch line in the trade's direction with its grade, lockout,
+  mid-range, and pressure and Gann seasonal dates (`calendarDates.js`; the Gann list is a default
+  tagged `(confirm)` in `settings.js`). The 3.3 and 3.4 detectors aren't part of "which setup
+  fired" yet. `GET /api/trades/[id]/exit-review` returns `{ review }` from `reviewExit`
+  (`exitReview.js`) for intraday closed trades: T1 is the day's working fib 50% and T2 its 100%
+  (only when T1 is ahead of the fill), the reaction at T1 comes from `reactionAt` and reads bars
+  after the exit, and the verdict is by timing alone (`matched` means not early; an oscillation is
+  `not_judged`, since one exit per trade can't show a partial). The recorded exit reason is shown
+  beside the verdict, never used in it. Both routes: 404, 409 until the entry or exit is recorded,
+  and a null review with a reason for crypto. Stocks and options only.
 - thinkorswim import (`/import`, `ThinkorswimImport.jsx`, `POST /api/imports/thinkorswim`): the
   account statement CSV is read from its Cash Balance section (`src/lib/import/thinkorswim.js`; it
   lists every fill with fees and a ref and ignores the statement's symbol filter). Times are in the
@@ -238,10 +254,9 @@ Vitest, JavaScript (not TypeScript).
      a trade whose plan entry is deleted: that entry holds the trade's entry and exit controls, and a
      trade shows in the journal only through its entries.
    - Done: dark mode, following the system setting, with a picker in the nav to override it.
-   - In progress: setup detectors, gates, and the entry review, following the build order in
-     `docs/private/setups.md`. Steps 1 (primitives, `src/lib/setups/`), 2 (5m and 15m bars, 15m
-     direction), 3 (5m entry candle, 1m room check), 4 (trendlines, four-touch breaks with their
-     grade), and 5 (the reaction at T1) done.
+   - Done: setup detectors, gates, voice flows, and the entry and exit review, following the build
+     order in `docs/private/setups.md` (steps 1 to 10). Section 11's automated coaching pass is next
+     and not started; the reviews' output is what the coach will read.
 5. Last, once the product is polished: deploy to Vercel plus Neon (Postgres 17). Upgrade Next.js
    past 16.4.0 first (security advisories; 16.4.1 is two weeks old on 2026-10-28). Add auth or a
    demo mode before any journal data is public. One Playwright end-to-end test of the main flow.
