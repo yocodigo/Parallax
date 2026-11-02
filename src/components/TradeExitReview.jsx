@@ -65,8 +65,9 @@ export default function TradeExitReview({ tradeId, exitReason }) {
 
   const { review, reason } = data;
   if (!review) return <p className="text-xs text-gray-500">{reason ?? 'No exit review for this trade.'}</p>;
-  // reviewExit leaves the targets, reaction, and exit price null only when it
-  // skipped, so past this line they are all there.
+  // reviewExit leaves t1, t2, and exitUnderlying null only when it skipped, so
+  // past this line they are all there. The reaction is also null when price
+  // never reached T1.
   if (review.skipped) return <p className="text-xs text-gray-500">{SKIPPED_TEXT[review.skipped]}</p>;
 
   return (
