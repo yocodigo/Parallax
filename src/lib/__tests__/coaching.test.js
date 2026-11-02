@@ -105,6 +105,10 @@ describe('COACHING_SYSTEM_PROMPT', () => {
     expect(COACHING_SYSTEM_PROMPT).toMatch(/premiums/);
     expect(COACHING_SYSTEM_PROMPT).toMatch(/not a trade result/);
   });
+
+  it('ties playbook steps 4 and 5 to the end-of-day review this pass follows', () => {
+    expect(COACHING_SYSTEM_PROMPT).toMatch(/follows their end-of-day review, which is steps 4 and 5/);
+  });
 });
 
 describe('formatCoachingInput', () => {
@@ -161,6 +165,12 @@ describe('formatCoachingInput', () => {
       'Flags: mid-range entry, Gann date 09-23'
     );
     expect(variant({ inLockout: false, pressureDate: false, midRange: null })).toContain('Flags: mid-range unknown');
+  });
+
+  it('names a setup missing from the names list by its key', () => {
+    const review = { ...entryReview, setup: { ...entryReview.setup, name: 'new_setup' } };
+    const text = formatCoachingInput(facts({ trades: [{ ...facts().trades[0], entryReview: review }] }));
+    expect(text).toContain('Setup: new_setup, ideal entry 12.50');
   });
 
   it('says so when a trade has no entry or exit review at all', () => {
