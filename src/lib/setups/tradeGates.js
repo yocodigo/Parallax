@@ -26,7 +26,7 @@ const MINUTE = 60_000;
 // overnight gap, the way findEntry stops a bias there. Comparing the
 // session's first 5m bar against the previous afternoon's last one would
 // measure a seventeen-hour gap as a clean break.
-function sessionOf(bars, day) {
+export function sessionOf(bars, day) {
   const start = bars.findIndex((bar) => tradingDay(bar) === day);
   return start < 0 ? [] : bars.slice(start);
 }
@@ -38,7 +38,7 @@ function sessionOf(bars, day) {
 // no bias at all. That leaves a trade taken on something other than a cross
 // (a 4x break, say) unknown here, where section 8's wording alone would judge
 // it from the last closed 15m bar. **(confirm)**
-function crossIndex(bars15, day) {
+export function crossIndex(bars15, day) {
   for (let i = bars15.length - 1; i >= 0; i--) {
     if (tradingDay(bars15[i]) !== day) return null;
     if (bandCross(bars15, i)?.crossed) return i;
