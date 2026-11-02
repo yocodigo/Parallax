@@ -55,7 +55,7 @@ export function crossIndex(bars15, day) {
 // different clocks: this one wants the closest price to the fill, and that
 // minute usually falls inside a 5m period still forming. An overlap needs a
 // finished bar, so the entry gate waits for one.
-function underlyingAt(bars, asOf, day) {
+export function underlyingAt(bars, asOf, day) {
   const time = asOf.getTime();
   for (let i = bars.length - 1; i >= 0; i--) {
     if (Date.parse(bars[i].t) + MINUTE <= time) {
