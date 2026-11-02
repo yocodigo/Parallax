@@ -99,6 +99,12 @@ describe('COACHING_SYSTEM_PROMPT', () => {
     expect(COACHING_SYSTEM_PROMPT).toMatch(/never combine/i);
     expect(COACHING_SYSTEM_PROMPT).toMatch(/<coaching_input>/);
   });
+
+  it("says the review prices are the underlying's and chase is not a trade result", () => {
+    expect(COACHING_SYSTEM_PROMPT).toMatch(/are the underlying's/);
+    expect(COACHING_SYSTEM_PROMPT).toMatch(/premiums/);
+    expect(COACHING_SYSTEM_PROMPT).toMatch(/not a trade result/);
+  });
 });
 
 describe('formatCoachingInput', () => {
@@ -119,19 +125,48 @@ describe('formatCoachingInput', () => {
 
   it('gives the entry review', () => {
     expect(text).toContain(
-      'Setup: 3.1 15m band cross with fib extension targets, ideal entry 12.50, ideal stop 12.05; the fill chased +0.7R past it'
+      "Setup: 3.1 15m band cross with fib extension targets, ideal entry 12.50 and ideal stop 12.05 on the underlying; the fill chased 0.7x the setup's entry-to-stop distance past it"
     );
-    expect(text).toContain('5m entry bar: overlap 8% of the bar before, volume 1.6x it');
-    expect(text).toContain('1m room to the outer band: 0.46, needed 0.12 (enough)');
+    expect(text).toContain("5m entry bar: overlap 8% of the bar before, volume 1.6x the bar before's");
+    expect(text).toContain('1m room to the outer band on the underlying: 0.46, needed 0.12 (enough)');
     expect(text).toContain('Four-touch line: 4xBO on the 5m, valid, grade A');
     expect(text).toContain('Flags: in a lockout window, pressure date');
   });
 
   it('gives the exit review and stop adherence', () => {
     expect(text).toContain(
-      'Exit: T1 100.00, T2 102.00; reaction at T1 rejected; verdict early against 3.1 step 5; underlying at exit 99.30; recorded reason Felt heavy'
+      'Exit: T1 100.00 and T2 102.00 on the underlying; reaction at T1 rejected; verdict early against 3.1 step 5; underlying at exit 99.30; recorded reason Felt heavy'
     );
     expect(text).toContain('Stop rule S2: miss (a discomfort exit before the rule fired)');
+  });
+
+  it('never writes R for an option without a stop', () => {
+    const tradeLines = text.slice(text.indexOf('<trade'), text.indexOf('</trade>'));
+    expect(tradeLines).not.toMatch(/\dR\b/);
+  });
+
+  it('words a fill that beat the ideal entry, one at it, short room, and missing volume', () => {
+    const variant = (review) => formatCoachingInput(facts({ trades: [{ ...facts().trades[0], entryReview: { ...entryReview, ...review } }] }));
+    expect(variant({ chaseR: -0.34 })).toContain("the fill beat it by 0.3x the setup's entry-to-stop distance");
+    expect(variant({ chaseR: 0.02 })).toContain('on the underlying; the fill was at it');
+    expect(variant({ room: { distance: -0.1, needed: 0.12, ok: false } })).toContain('needed 0.12 (short)');
+    expect(variant({ entryCandle: { overlap: 0, volumeVsPrevious: null, risingVolume: false } })).toContain(
+      'volume not comparable (the bar before had none)'
+    );
+  });
+
+  it('flags mid-range, an unknown mid-range, and a Gann date', () => {
+    const variant = (review) => formatCoachingInput(facts({ trades: [{ ...facts().trades[0], entryReview: { ...entryReview, ...review } }] }));
+    expect(variant({ inLockout: false, pressureDate: false, midRange: true, seasonalDate: '09-23' })).toContain(
+      'Flags: mid-range entry, Gann date 09-23'
+    );
+    expect(variant({ inLockout: false, pressureDate: false, midRange: null })).toContain('Flags: mid-range unknown');
+  });
+
+  it('says so when a trade has no entry or exit review at all', () => {
+    const bare = formatCoachingInput(facts({ trades: [{ ...facts().trades[0], entryReview: null, exitReview: null }] }));
+    expect(bare).toContain('Entry review: none (no bars for this trade)');
+    expect(bare).toContain('Exit: no review');
   });
 
   it('says why a part of the review is missing', () => {
@@ -154,8 +189,9 @@ describe('formatCoachingInput', () => {
   });
 
   it('gives giveback for a stock trade', () => {
+    const stockTrade = { ...optionTrade, assetClass: 'stock', optionType: null, strike: null, expiration: null, multiplier: 1, initialStop: 98, entryPrice: 100, exitPrice: 99, quantity: 100 };
     const stock = formatCoachingInput(
-      facts({ trades: [{ ...facts().trades[0], giveback: { mfeR: 1.5, r: -0.5, givenBackR: 2, flagged: true } }] })
+      facts({ trades: [{ ...facts().trades[0], trade: stockTrade, giveback: { mfeR: 1.5, r: -0.5, givenBackR: 2, flagged: true } }] })
     );
     expect(stock).toContain('Giveback: best open +1.5R, closed -0.5R, gave back 2.0R (flagged)');
   });
@@ -164,7 +200,7 @@ describe('formatCoachingInput', () => {
     expect(text).toContain('<history>');
     expect(text).toContain('Stop adherence: 60% of the last 5 judged trades (3 adherent, 2 misses)');
     expect(text).toContain('All recent trades: 2 in R averaging +0.5R; 3 in dollars averaging +$12.50');
-    expect(text).toContain('Gate Location met: 2 in dollars averaging +$40.00');
+    expect(text).toContain('Gate "Location OK" met: 2 in dollars averaging +$40.00');
     expect(text).toContain('Rule "Wait for the 5m close" followed: 1 in R averaging +2.0R');
     expect(text).toContain('Setup 3.1 15m band cross with fib extension targets fired: 3 in dollars averaging +$12.50');
     expect(text).toContain('Mistake Moved stop: 2 trades, -2.5R in total, averaging -1.3R');
@@ -175,6 +211,10 @@ describe('formatCoachingInput', () => {
     expect(formatCoachingInput(facts({ stopAdherence: null }))).toContain(
       'Stop adherence: not enough judged trades yet (needs 5)'
     );
+  });
+
+  it('says when no strategies are recorded', () => {
+    expect(formatCoachingInput(facts({ strategies: [] }))).toContain('<strategies>\nNo strategies recorded.\n</strategies>');
   });
 
   it("lists the trader's strategies with their rules by kind", () => {

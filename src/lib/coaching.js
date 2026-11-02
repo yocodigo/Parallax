@@ -19,12 +19,15 @@ Write to the trader as "you", in two to four short paragraphs separated by blank
 - Start with something that went right, today or in the history, and name it.
 - Then the pattern that cost the most today, tied to the facts that show it.
 - End with one thing to practice tomorrow.
+This pass follows their end-of-day review, which is steps 4 and 5 of the playbook below, so those two steps fit when the day calls for an emotional point.
 
 Every suggestion must be grounded in one of three things, and must name it:
 - one of the trader's own strategy rules, quoted by its text;
 - a setup by its name: 3.1 "15m band cross with fib extension targets", 3.2 "4xBO/4xBD", 3.3 "reversal sequence", or 3.4 "three-gate entry";
 - a step of their emotional playbook, by number: step 1, naming what sets you off; step 2, checking your state before you enter; step 3, keeping your head during an open position; step 4, looking back at what you felt, not just at the chart; step 5, a few minutes of winding down after the close; step 6, repeating your own affirmations.
 Give no generic trading advice that isn't tied to one of these, and no market commentary or trade ideas.
+
+Prices in the entry and exit reviews (the setup's ideal entry and stop, T1, T2, room to the band) are the underlying's. For an option, the fill and exit prices on its Trade line are premiums, so never compare the two. Chase is measured in multiples of the setup's own entry-to-stop distance on the underlying; it is not a trade result.
 
 Quote the figures you're given and don't work out any other figures yourself. Some results are in R and some in dollars (trades without a stop have no R); keep them apart and never combine or convert them. Where a fact says there aren't enough trades yet, don't draw conclusions from it. If the day is thin, keep the coaching short rather than padding it.
 
@@ -64,10 +67,14 @@ function reviewLine(entry) {
   return details.length ? `${label}: ${details.join('; ')}. ${entry.notes}` : `${label}: ${entry.notes}`;
 }
 
+// Chase is in multiples of the setup's entry-to-stop distance on the
+// underlying, never written as R: a trade without a stop has no R, and this is
+// not the trade's result either way.
 function chaseText(chaseR) {
-  const size = `${Math.abs(chaseR).toFixed(1)}R`;
-  if (size === '0.0R') return 'the fill was at it';
-  return chaseR > 0 ? `the fill chased ${formatR(chaseR)} past it` : `the fill beat it by ${size}`;
+  const size = Math.abs(chaseR).toFixed(1);
+  if (size === '0.0') return 'the fill was at it';
+  const distance = "the setup's entry-to-stop distance";
+  return chaseR > 0 ? `the fill chased ${size}x ${distance} past it` : `the fill beat it by ${size}x ${distance}`;
 }
 
 function entryReviewLines(review) {
@@ -76,20 +83,25 @@ function entryReviewLines(review) {
   const flags = [
     review.inLockout && 'in a lockout window',
     review.midRange && 'mid-range entry',
+    review.midRange === null && 'mid-range unknown',
     review.pressureDate && 'pressure date',
     review.seasonalDate && `Gann date ${review.seasonalDate}`,
   ].filter(Boolean);
   return [
     setup
-      ? `Setup: ${SETUP_NAMES[setup.name]}, ideal entry ${price(setup.idealEntry)}, ideal stop ${price(setup.idealStop)}${
+      ? `Setup: ${SETUP_NAMES[setup.name] ?? setup.name}, ideal entry ${price(setup.idealEntry)} and ideal stop ${price(
+          setup.idealStop
+        )} on the underlying${
           chaseR === null ? '' : `; ${chaseText(chaseR)}`
         }`
       : 'Setup: none had fired by the fill',
     entryCandle &&
       `5m entry bar: overlap ${Math.round(entryCandle.overlap * 100)}% of the bar before, volume ${
-        entryCandle.volumeVsPrevious === null ? 'unknown' : `${entryCandle.volumeVsPrevious.toFixed(1)}x`
-      } it`,
-    room && `1m room to the outer band: ${price(room.distance)}, needed ${price(room.needed)} (${room.ok ? 'enough' : 'short'})`,
+        entryCandle.volumeVsPrevious === null
+          ? 'not comparable (the bar before had none)'
+          : `${entryCandle.volumeVsPrevious.toFixed(1)}x the bar before's`
+      }`,
+    room && `1m room to the outer band on the underlying: ${price(room.distance)}, needed ${price(room.needed)} (${room.ok ? 'enough' : 'short'})`,
     fourTouch
       ? `Four-touch line: ${fourTouch.kind} on the ${fourTouch.timeframe}, ${fourTouch.status}, grade ${fourTouch.grade.grade}`
       : "Four-touch line: none in the trade's direction",
@@ -124,7 +136,7 @@ function exitLine(review, trade) {
     ? `${REACTION_TEXT[reaction.kind] ?? 'undecided'}${reaction.drifting ? ', drifting the trade’s way' : ''}`
     : 'never reached';
   return [
-    `Exit: T1 ${price(review.t1)}, T2 ${price(review.t2)}`,
+    `Exit: T1 ${price(review.t1)} and T2 ${price(review.t2)} on the underlying`,
     `reaction at T1 ${reactionText}`,
     `verdict ${VERDICT_TEXT[review.verdict]}`,
     `underlying at exit ${price(review.exitUnderlying)}`,
@@ -169,7 +181,8 @@ function historyBlock({ stopAdherence, whatsWorking, mistakeLedger }) {
         } adherent, ${stopAdherence.misses} misses)`
       : 'Stop adherence: not enough judged trades yet (needs 5)',
     `All recent trades: ${summaryText(whatsWorking.all)}`,
-    ...whatsWorking.gates.map(({ gate, met }) => `Gate ${capitalize(gate)} met: ${summaryText(met)}`),
+    // Section 8 names each gate "<Name> OK".
+    ...whatsWorking.gates.map(({ gate, met }) => `Gate "${capitalize(gate)} OK" met: ${summaryText(met)}`),
     ...whatsWorking.rules.map(({ ruleText, followed }) => `Rule "${ruleText}" followed: ${summaryText(followed)}`),
     ...whatsWorking.setups.map(({ setup, fired }) => `Setup ${SETUP_NAMES[setup] ?? setup} fired: ${summaryText(fired)}`),
     // The ledger counts trades with an R only, so options without a stop are not in it.
