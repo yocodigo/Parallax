@@ -50,7 +50,7 @@ export function whatsWorking(trades) {
   const byGate = new Map();
   const byRule = new Map();
   const bySetup = new Map();
-  const ruleText = new Map();
+  const latestWording = new Map();
 
   const counted = trades
     .map((trade) => ({ trade, result: resultOf(trade) }))
@@ -65,7 +65,7 @@ export function whatsWorking(trades) {
     }
     for (const { ruleId, ruleText: text, met } of trade.ruleChecks ?? []) {
       const key = ruleId ?? `text:${text}`;
-      ruleText.set(key, { ruleId, ruleText: text });
+      latestWording.set(key, { ruleId, ruleText: text });
       if (met) push(byRule, key, result);
     }
     for (const setup of trade.setups ?? []) push(bySetup, setup, result);
@@ -75,7 +75,7 @@ export function whatsWorking(trades) {
     all: summarize(all),
     gates: GATE_ORDER.filter((gate) => byGate.has(gate)).map((gate) => ({ gate, met: summarize(byGate.get(gate)) })),
     rules: [...byRule.entries()]
-      .map(([key, results]) => ({ ...ruleText.get(key), followed: summarize(results) }))
+      .map(([key, results]) => ({ ...latestWording.get(key), followed: summarize(results) }))
       .sort((a, b) => b.followed.trades - a.followed.trades),
     setups: [...bySetup.entries()]
       .map(([setup, results]) => ({ setup, fired: summarize(results) }))
