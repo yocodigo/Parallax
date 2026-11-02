@@ -102,6 +102,33 @@ describe('stopRuleTrigger', () => {
     });
   });
 
+  it('ignores T1 for S2, so a T1 reached first does not hide the stop', () => {
+    // Every quiet bar's high is 100.3, so a T1 of 100.25 is reached at once.
+    expect(stopRuleTrigger(trade(), bars, 100.25)).toEqual({ triggeredAt: new Date('2026-10-27T13:56:00Z') });
+  });
+
+  it('times S3 from the fill when T1 is never reached', () => {
+    // The fill bar opened at 9:50; the bar opening at 10:05 closes at 10:06.
+    expect(stopRuleTrigger(trade({ stopRule: 'S3' }), bars, 101)).toEqual({
+      triggeredAt: new Date('2026-10-27T14:06:00Z'),
+    });
+  });
+
+  it('times S1 at the close of the 5m bar, even when the 1m feed has a gap', () => {
+    // Flat at 100 from 9:30, filled at 11:20. The 5m bar from 11:25 has only
+    // two minutes of trades, the second closing at 99.9, below the middle
+    // band; the next trade is at 11:30. The 5m bar closed at 11:30, so the
+    // rule fired then, not when its last 1m bar ended at 11:27.
+    const flat = (k) => ({ t: new Date(OPEN + k * MINUTE).toISOString(), o: 100, h: 100.1, l: 99.9, c: 100, v: 100 });
+    const gapped = [];
+    for (let k = 0; k < 130; k++) {
+      if (k === 117 || k === 118 || k === 119) continue;
+      gapped.push(k === 116 ? { ...flat(k), c: 99.9 } : flat(k));
+    }
+    const s1 = trade({ stopRule: 'S1', openedAt: new Date('2026-10-27T15:20:30Z'), closedAt: new Date('2026-10-27T15:40:00Z') });
+    expect(stopRuleTrigger(s1, gapped, null)).toEqual({ triggeredAt: new Date('2026-10-27T15:30:00Z') });
+  });
+
   it('cannot replay S3 without a T1, a trade held past the session, or a fill with no bar', () => {
     expect(stopRuleTrigger(trade({ stopRule: 'S3' }), bars, null)).toBeNull();
     expect(stopRuleTrigger(trade({ closedAt: new Date('2026-10-28T14:00:00Z') }), bars, null)).toBeNull();
@@ -130,6 +157,6 @@ describe('adherenceRate', () => {
     // Five old misses, then twenty recent adherent trades.
     const old = [1, 2, 3, 4, 5].map((day) => judged('miss', day));
     const recent = Array.from({ length: 20 }, (_, k) => judged('adherent', k + 6));
-    expect(adherenceRate([...recent, ...old])).toEqual({ rate: 1, adherent: 20, misses: 0, trades: 20 });
+    expect(adherenceRate([...old, ...recent])).toEqual({ rate: 1, adherent: 20, misses: 0, trades: 20 });
   });
 });

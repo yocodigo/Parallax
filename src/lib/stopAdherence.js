@@ -9,6 +9,7 @@ import { tradeStatus } from './tradeMetrics';
 // trader's recent trades.
 
 const MINUTE = 60_000;
+const FIVE = 5 * MINUTE;
 const MIN_TRADES = 5;
 const RECENT_TRADES = 20;
 
@@ -38,7 +39,12 @@ export function stopRuleTrigger(trade, bars, t1) {
     rules: [stopRule],
   });
   if (result.reason !== stopRule) return { triggeredAt: null };
-  return { triggeredAt: new Date(Date.parse(bars[result.exitIndex].t) + MINUTE) };
+  const start = Date.parse(bars[result.exitIndex].t);
+  // S1 fires on a 5m close. The replay points its exit at a 1m bar inside that
+  // 5m period (the last one before a gap in the feed, if the period ended in
+  // one), so the rule fired at the period's clock-aligned end, not that bar's.
+  if (stopRule === 'S1') return { triggeredAt: new Date(Math.floor(start / FIVE) * FIVE + FIVE) };
+  return { triggeredAt: new Date(start + MINUTE) };
 }
 
 // One closed trade, judged: { result: 'adherent' | 'miss' | 'unknown', reason },
