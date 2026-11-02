@@ -33,7 +33,7 @@ describe('giveback', () => {
     });
   });
 
-  it('does not flag a trade that never reached 1R in its favour', () => {
+  it('does not flag a trade that never reached 1R in its favor', () => {
     expect(giveback(closedTrade(-1), { mfeR: 0.9 })).toMatchObject({ flagged: false });
   });
 
@@ -50,6 +50,15 @@ describe('giveback', () => {
   it('allows for floating-point error at the 1R threshold', () => {
     // 0.1 + 0.2 + 0.7 is 0.9999999999999999, not 1.
     expect(giveback(closedTrade(0), { mfeR: 0.1 + 0.2 + 0.7 })).toMatchObject({ flagged: true });
+  });
+
+  it('allows for floating-point error at the 0R threshold', () => {
+    // Exiting at 0.1 + 0.2 against an entry of 0.3 is a scratch, though the
+    // sum is 0.30000000000000004 and R comes out a hair above 0.
+    const scratch = closedTrade(0, { entryPrice: 0.3, initialStop: 0.2, exitPrice: 0.1 + 0.2 });
+    const result = giveback(scratch, { mfeR: 1 });
+    expect(result.r).toBeGreaterThan(0);
+    expect(result.flagged).toBe(true);
   });
 
   it('is null for an option, whose excursions are not computed yet', () => {

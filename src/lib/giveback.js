@@ -1,8 +1,9 @@
 import { atLeast, atMost } from './setups/compare';
 import { rMultiple, tradeStatus } from './tradeMetrics';
 
-// [11] Giveback: price went far enough the trade's way to have been a winner,
-// and the trade still closed flat or red. Both limits are in R.
+// [11] Giveback limits, in R: a closed trade is flagged when its best open
+// profit (MFE) reached GIVEBACK_MFE_MIN and its result was GIVEBACK_RESULT_MAX
+// or worse.
 export const GIVEBACK_MFE_MIN = 1;
 export const GIVEBACK_RESULT_MAX = 0;
 
@@ -11,7 +12,8 @@ export const GIVEBACK_RESULT_MAX = 0;
 // is nothing to measure: excursions exist for stocks only so far, and both
 // figures need an initial stop to be in R. `givenBackR` is how much of the best
 // open profit didn't make it to the close; it's reported for winners too, but
-// only a flat or losing close is flagged.
+// only a flat or losing close is flagged. MFE comes from bar prices, gross of
+// fees, while the result is net of them, so fees count as given back.
 export function giveback(trade, excursion) {
   if (trade.assetClass !== 'stock' || tradeStatus(trade) !== 'closed') return null;
   const mfeR = excursion?.mfeR ?? null;
