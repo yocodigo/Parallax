@@ -20,6 +20,9 @@ export const EXIT_REASONS = [
   'felt_heavy',
 ];
 
+// Tier 3-4 of the exit ladder: exits taken out of discomfort, not by plan.
+export const DISCOMFORT_EXIT_REASONS = ['sweep_scare', 'adverse_candle', 'pnl_moved', 'time_in_trade', 'felt_heavy'];
+
 export const EXIT_REASON_LABELS = {
   invalidation: 'Invalidation (stop rule hit)',
   target: 'Target hit',
