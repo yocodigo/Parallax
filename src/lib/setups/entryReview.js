@@ -13,7 +13,7 @@
 import { overlap } from './candles';
 import { isPressureDate, seasonalDate } from './calendarDates';
 import { bandCross } from './direction';
-import { findEntry } from './entry';
+import { findEntry, risingVolume } from './entry';
 import { fourTouchBreaks } from './fourTouch';
 import { MISSED, windowGate } from './gates';
 import { tradeBias } from './replayTrades';
@@ -62,17 +62,20 @@ function entryCandleOf(bars5) {
   return {
     overlap: overlap(bars5[i], prev),
     volumeVsPrevious: prev.v > 0 ? bars5[i].v / prev.v : null,
-    risingVolume: bars5[i].v > prev.v,
+    risingVolume: risingVolume(bars5, i),
   };
 }
 
+// The side a four-touch break offers a trade on: an unbroken 4xBO is long and
+// a 4xBD short, but a trap offers the trade the other way (`trade.side`).
+const sideOf = (found) => found.trade?.side ?? (found.kind === '4xBO' ? 'long' : 'short');
+
 // A four-touch break on `candles` that the trade would have been taken in the
-// direction of: the break itself, or for a trap the trade the other way. The
-// latest one, as of the last bar.
+// direction of. The latest one, as of the last bar.
 function latestFourTouch(candles, timeframe, bias) {
   if (candles.length === 0) return null;
   const found = fourTouchBreaks(candles, candles.length - 1)
-    .filter((b) => (b.trade ? b.trade.side : b.kind === '4xBO' ? 'long' : 'short') === bias)
+    .filter((b) => sideOf(b) === bias)
     .at(-1);
   if (!found) return null;
   return {
