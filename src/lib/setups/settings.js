@@ -122,8 +122,8 @@ export const PRESSURE_DATES = [
 ];
 
 // [10] Gann seasonal dates (month-day) and how many days either side still
-// count. setups.md names "Gann seasonal date (+-1 day)" without listing the
-// dates; these are the equinoxes, solstices, and cross-quarter days.
+// count. setups.md asks for the check with a one-day window but doesn't list
+// the dates; these are the equinoxes, solstices, and cross-quarter days.
 // **(confirm)**
 export const GANN_SEASONAL_DATES = ['02-04', '03-21', '05-05', '06-21', '08-07', '09-23', '11-07', '12-22'];
 export const SEASONAL_WINDOW = 1;

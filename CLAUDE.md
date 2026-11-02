@@ -71,7 +71,7 @@ Vitest, JavaScript (not TypeScript).
 - `src/server/`: server-only fetchers that call outside services (`marketContext.js`, and
   `minuteBars.js`, Alpaca's minute bars for the gates and the reviews), tested with MSW in the node
   environment.
-- `src/db/journal.js`, `trades.js`, `settings.js`, `strategies.js`, `contexts.js`, `screenshots.js`, and `imports.js`: repository
+- `src/db/journal.js`, `trades.js`, `settings.js`, `strategies.js`, `contexts.js`, `screenshots.js`, `dailyPlans.js` (the day's fib extensions, which give the exit review its T1 and T2), and `imports.js`: repository
   functions. They take `db` as the first argument so tests can
   pass the test database.
 - `src/db/index.js`: `getDb()`, created lazily (builds need no database) and cached on `globalThis`.
@@ -161,21 +161,23 @@ Vitest, JavaScript (not TypeScript).
   `image` and `label`; `src/lib/screenshot.js` caps it at 3.75 MiB (5 MB as base64, Claude's image limit) and takes the type
   from the file's first bytes (PNG, JPEG, WebP), never the browser's. `GET …/screenshots` lists them
   without bytes; `GET`/`DELETE …/screenshots/[shotId]` serve (private cache, `nosniff`) or remove one.
-- Entry and exit review (`TradeReview.jsx` and `TradeExitReview.jsx`, the "Entry review" and "Exit
-  review" buttons on `TradeProgress`; both load on demand). `GET /api/trades/[id]/review` returns
-  `{ review }` from `reviewEntry` (`src/lib/setups/entryReview.js`), measured on the underlying's
-  minute bars that closed before the fill: the 3.1 band-cross setup with its ideal entry and S2 stop
-  and the fill's chase in R, the last 5m bar's overlap and volume against the one before, 1m room to
-  the outer band, the latest four-touch line in the trade's direction with its grade, lockout,
-  mid-range, and pressure and Gann seasonal dates (`calendarDates.js`; the Gann list is a default
-  tagged `(confirm)` in `settings.js`). The 3.3 and 3.4 detectors aren't part of "which setup
-  fired" yet. `GET /api/trades/[id]/exit-review` returns `{ review }` from `reviewExit`
-  (`exitReview.js`) for intraday closed trades: T1 is the day's working fib 50% and T2 its 100%
-  (only when T1 is ahead of the fill), the reaction at T1 comes from `reactionAt` and reads bars
-  after the exit, and the verdict is by timing alone (`matched` means not early; an oscillation is
-  `not_judged`, since one exit per trade can't show a partial). The recorded exit reason is shown
-  beside the verdict, never used in it. Both routes: 404, 409 until the entry or exit is recorded,
-  and a null review with a reason for crypto. Stocks and options only.
+- Entry review (`TradeReview.jsx`, the "Entry review" button on `TradeProgress`; loads on demand).
+  `GET /api/trades/[id]/review` returns `{ review }` from `reviewEntry`
+  (`src/lib/setups/entryReview.js`), measured on the underlying's minute bars that closed before the
+  fill: the 3.1 band-cross setup with its ideal entry and S2 stop and the fill's chase in R, the last
+  5m bar's overlap and volume against the one before, 1m room to the outer band, the latest
+  four-touch line in the trade's direction with its grade, lockout, mid-range, and pressure and Gann
+  seasonal dates (`calendarDates.js`). The Gann date list in `settings.js` is a default tagged
+  `(confirm)`: confirm it before trusting `seasonalDate`. The 3.3 and 3.4 detectors aren't part of
+  "which setup fired" yet.
+- Exit review (`TradeExitReview.jsx`, the "Exit review" button on closed trades; loads on demand).
+  `GET /api/trades/[id]/exit-review` returns `{ review }` from `reviewExit` (`exitReview.js`) for
+  intraday closed trades: T1 is the day's working fib 50% and T2 its 100% (only when T1 is ahead of
+  the fill), the reaction at T1 comes from `reactionAt` and reads bars after the exit, and the
+  verdict is by timing alone (`matched` means not early; an oscillation is `not_judged`, since one
+  exit per trade can't show a partial). The recorded exit reason is shown beside the verdict, never
+  used in it. Both review routes: 404, 409 until the entry or exit is recorded, and a null review
+  with a reason for crypto. Stocks and options only.
 - thinkorswim import (`/import`, `ThinkorswimImport.jsx`, `POST /api/imports/thinkorswim`): the
   account statement CSV is read from its Cash Balance section (`src/lib/import/thinkorswim.js`; it
   lists every fill with fees and a ref and ignores the statement's symbol filter). Times are in the
