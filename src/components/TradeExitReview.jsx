@@ -8,6 +8,8 @@ const nyTime = new Intl.DateTimeFormat('en-US', {
   timeZone: 'America/New_York',
   hour: 'numeric',
   minute: '2-digit',
+  // The zone is shown because the trader reads the clock in Pacific.
+  timeZoneName: 'short',
 });
 
 const price = (value) => value.toFixed(2);
@@ -27,8 +29,10 @@ const REACTION_TEXT = {
 };
 
 // Setups.md 3.1 step 5 against the exit, by timing (exitReview.js's judge).
+// 'matched' only means the exit wasn't early: an exit hours after a rejection
+// still matches, since timing can't show the trader acted on the signal.
 const VERDICT_TEXT = {
-  matched: 'Exit matched step 5',
+  matched: 'Exit was not early against step 5',
   early: 'Exit was early against step 5',
   before_t1: 'Exited before T1 was touched',
   not_reached: 'Price never reached T1',
@@ -42,6 +46,7 @@ const VERDICT_STYLES = {
   early: 'bg-amber-100 text-amber-900',
 };
 
+// `touchAt` is the start of the minute bar that first reached T1.
 function reactionText(reaction) {
   const text = REACTION_TEXT[reaction.kind]?.(reaction) ?? 'Not decided at T1';
   return `${text}, touched ${nyTime.format(new Date(reaction.touchAt))}`;
@@ -60,6 +65,8 @@ export default function TradeExitReview({ tradeId, exitReason }) {
 
   const { review, reason } = data;
   if (!review) return <p className="text-xs text-gray-500">{reason ?? 'No exit review for this trade.'}</p>;
+  // reviewExit leaves the targets, reaction, and exit price null only when it
+  // skipped, so past this line they are all there.
   if (review.skipped) return <p className="text-xs text-gray-500">{SKIPPED_TEXT[review.skipped]}</p>;
 
   return (

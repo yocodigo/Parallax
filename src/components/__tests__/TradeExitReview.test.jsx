@@ -40,8 +40,8 @@ describe('TradeExitReview', () => {
     renderReview();
 
     expect(await screen.findByText('T1 100.00, T2 102.00')).toBeInTheDocument();
-    expect(screen.getByText('Rejected at T1, touched 9:50 AM')).toBeInTheDocument();
-    expect(screen.getByText('Exit matched step 5')).toBeInTheDocument();
+    expect(screen.getByText('Rejected at T1, touched 9:50 AM EDT')).toBeInTheDocument();
+    expect(screen.getByText('Exit was not early against step 5')).toBeInTheDocument();
   });
 
   it('shows the underlying at the exit beside the reason the trader recorded', async () => {
@@ -59,7 +59,7 @@ describe('TradeExitReview', () => {
       }),
     });
     const { unmount } = renderReview();
-    expect(await screen.findByText('Ripped through T1, touched 9:50 AM')).toBeInTheDocument();
+    expect(await screen.findByText('Ripped through T1, touched 9:50 AM EDT')).toBeInTheDocument();
     expect(screen.getByText('Exit was early against step 5')).toBeInTheDocument();
     unmount();
 
@@ -75,8 +75,33 @@ describe('TradeExitReview', () => {
       }),
     });
     renderReview();
-    expect(await screen.findByText('Oscillated at T1, drifting the trade’s way, touched 9:50 AM')).toBeInTheDocument();
+    expect(await screen.findByText('Oscillated at T1, drifting the trade’s way, touched 9:50 AM EDT')).toBeInTheDocument();
     expect(screen.getByText('Not judged: one exit per trade can’t show a partial')).toBeInTheDocument();
+  });
+
+  it('words a reaction that decided nothing, and a bars-ended-first one', async () => {
+    const touchAt = '2026-10-27T13:50:00.000Z';
+    serveReview({ review: review({ reaction: { kind: 'none', touchAt, decidedAt: touchAt }, verdict: 'no_rule' }) });
+    const { unmount } = renderReview();
+    expect(await screen.findByText('Nothing was decided at T1, touched 9:50 AM EDT')).toBeInTheDocument();
+    expect(screen.getByText('Step 5 gave no instruction')).toBeInTheDocument();
+    unmount();
+
+    serveReview({ review: review({ reaction: { kind: null, touchAt, decidedAt: null }, verdict: 'not_decided' }) });
+    renderReview();
+    expect(await screen.findByText('Not decided at T1, touched 9:50 AM EDT')).toBeInTheDocument();
+    expect(screen.getByText('The reaction hadn’t been decided when the bars ended')).toBeInTheDocument();
+  });
+
+  it('shows the error when the review fails to load', async () => {
+    server.use(
+      http.get(`*/api/trades/${TRADE_ID}/exit-review`, () =>
+        HttpResponse.json({ error: 'Alpaca is down' }, { status: 500 })
+      )
+    );
+    renderReview();
+
+    expect(await screen.findByText(/Alpaca is down/)).toBeInTheDocument();
   });
 
   it('says so when price never reached T1, or the exit came before it did', async () => {
