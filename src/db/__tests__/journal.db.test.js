@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { addJournalEntry, getPlanEntry, listJournalEntries, savePlan } from '../journal';
+import { addJournalEntry, getPlanEntry, listJournalEntries, saveCoaching, savePlan } from '../journal';
 import { trades } from '../schema';
 import { createTestDb, resetDb } from '../testing';
 
@@ -106,5 +106,25 @@ describe('savePlan', () => {
     await expect(savePlan(db, { plan, entry: { notes: null } })).rejects.toThrow();
 
     expect(await db.select().from(trades)).toHaveLength(0);
+  });
+});
+describe('saveCoaching', () => {
+  it('stores the coaching text on a review entry and replaces it on a re-run', async () => {
+    const review = await addJournalEntry(db, { kind: 'review', notes: 'Day done.' });
+    expect(review.coaching).toBeNull();
+
+    const first = await saveCoaching(db, review.id, 'First pass.');
+    expect(first.coaching).toBe('First pass.');
+    expect(first.coachedAt).toBeInstanceOf(Date);
+
+    const second = await saveCoaching(db, review.id, 'Second pass.');
+    expect(second.coaching).toBe('Second pass.');
+  });
+
+  it('returns null for an unknown entry and leaves non-review entries alone', async () => {
+    expect(await saveCoaching(db, '00000000-0000-0000-0000-000000000000', 'x')).toBeNull();
+
+    const plan = await addJournalEntry(db, { kind: 'plan', notes: 'A plan.' });
+    expect(await saveCoaching(db, plan.id, 'x')).toBeNull();
   });
 });

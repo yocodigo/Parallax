@@ -85,6 +85,13 @@
       "when": 1793401254319,
       "tag": "0011_trade_screenshots",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793661253775,
+      "tag": "0012_journal_entry_coaching",
+      "breakpoints": true
     }
   ]
 }

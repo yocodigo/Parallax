@@ -138,6 +138,9 @@ export const journalEntries = pgTable(
     emotion: text('emotion'),
     mistakes: text('mistakes').array().notNull().default(sql`'{}'::text[]`),
     emotionalControl: integer('emotional_control'),
+    // The coaching pass's text for a review entry, and when it was written.
+    coaching: text('coaching'),
+    coachedAt: timestamp('coached_at', { withTimezone: true }),
     ...timestamps,
   },
   (t) => [

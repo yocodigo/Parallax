@@ -34,6 +34,17 @@ export async function getPlanEntry(db, tradeId) {
   return entry ?? null;
 }
 
+// Stores the coaching text on a review entry, replacing any earlier pass (the
+// re-run button). Null when the entry doesn't exist or isn't a review.
+export async function saveCoaching(db, entryId, coaching) {
+  const [saved] = await db
+    .update(journalEntries)
+    .set({ coaching, coachedAt: new Date() })
+    .where(and(eq(journalEntries.id, entryId), eq(journalEntries.kind, 'review')))
+    .returning();
+  return saved ?? null;
+}
+
 // A plan is a trade plus the journal entry explaining it. They're saved in one
 // transaction, so you never end up with one without the other.
 export async function savePlan(db, { plan, entry }) {
