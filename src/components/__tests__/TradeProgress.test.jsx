@@ -452,6 +452,38 @@ describe('entry review', () => {
   });
 });
 
+describe('exit review', () => {
+  const closed = { ...opened, exitPrice: 220, closedAt: '2026-10-21T15:00:00.000Z', exitReason: 'target' };
+
+  it('loads the exit review only when asked', async () => {
+    const requested = [];
+    server.use(
+      http.get('*/api/trades/:id/exit-review', ({ params }) => {
+        requested.push(params.id);
+        return HttpResponse.json({ review: null, reason: 'Nothing to grade.' });
+      })
+    );
+    serveJournal(plannedTrade(closed));
+    renderJournal();
+
+    await screen.findByRole('button', { name: 'Exit review' });
+    expect(requested).toEqual([]);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Exit review' }));
+
+    expect(await screen.findByText('Nothing to grade.')).toBeInTheDocument();
+    expect(requested).toEqual([TRADE_ID]);
+  });
+
+  it('is not offered until the trade is closed', async () => {
+    serveJournal(plannedTrade(opened));
+    renderJournal();
+
+    await screen.findByText('Open');
+    expect(screen.queryByRole('button', { name: 'Exit review' })).not.toBeInTheDocument();
+  });
+});
+
 describe('screenshots', () => {
   it('loads a planned trade’s screenshots only when asked', async () => {
     const requested = [];
