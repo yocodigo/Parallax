@@ -110,6 +110,24 @@ export const LOCKOUTS = [
   ['14:45', '15:00'],
 ];
 
+// [10] Pressure dates: days of the month, each range from its first day to
+// its last.
+export const PRESSURE_DATES = [
+  [6, 7],
+  [9, 10],
+  [14, 15],
+  [19, 20],
+  [23, 24],
+  [29, 31],
+];
+
+// [10] Gann seasonal dates (month-day) and how many days either side still
+// count. setups.md names "Gann seasonal date (+-1 day)" without listing the
+// dates; these are the equinoxes, solstices, and cross-quarter days.
+// **(confirm)**
+export const GANN_SEASONAL_DATES = ['02-04', '03-21', '05-05', '06-21', '08-07', '09-23', '11-07', '12-22'];
+export const SEASONAL_WINDOW = 1;
+
 // [8] Contracts per trade.
 export const SIZE_MIN = 1;
 export const SIZE_MAX = 2;
