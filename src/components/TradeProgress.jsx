@@ -10,6 +10,7 @@ import { EXIT_REASONS, EXIT_REASON_LABELS } from '@/lib/tradeFill';
 import Field, { inputClass } from './Field';
 import TradeContext from './TradeContext';
 import TradeGates from './TradeGates';
+import TradeReview from './TradeReview';
 import TradeScreenshots from './TradeScreenshots';
 
 const buttonClass =
@@ -344,6 +345,7 @@ export default function TradeProgress({ trade, canRecord }) {
   const [recording, setRecording] = useState(false);
   const [showContext, setShowContext] = useState(false);
   const [showGates, setShowGates] = useState(false);
+  const [showReview, setShowReview] = useState(false);
   const [showScreenshots, setShowScreenshots] = useState(false);
   const status = tradeStatus(trade);
   const nextStep = { planned: 'entry', open: 'exit' }[status];
@@ -381,6 +383,16 @@ export default function TradeProgress({ trade, canRecord }) {
             Gates
           </button>
         )}
+        {status !== 'planned' && (
+          <button
+            type="button"
+            onClick={() => setShowReview((shown) => !shown)}
+            aria-expanded={showReview}
+            className={secondaryButtonClass}
+          >
+            Entry review
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setShowScreenshots((shown) => !shown)}
@@ -403,6 +415,11 @@ export default function TradeProgress({ trade, canRecord }) {
       {showGates && (
         <div className="mt-2">
           <TradeGates tradeId={trade.id} />
+        </div>
+      )}
+      {showReview && (
+        <div className="mt-2">
+          <TradeReview tradeId={trade.id} />
         </div>
       )}
       {showScreenshots && (

@@ -422,6 +422,36 @@ describe('gates', () => {
   });
 });
 
+describe('entry review', () => {
+  it('loads the entry review only when asked', async () => {
+    const requested = [];
+    server.use(
+      http.get('*/api/trades/:id/review', ({ params }) => {
+        requested.push(params.id);
+        return HttpResponse.json({ review: null, reason: 'Nothing to review.' });
+      })
+    );
+    serveJournal(plannedTrade(opened));
+    renderJournal();
+
+    await screen.findByRole('button', { name: 'Entry review' });
+    expect(requested).toEqual([]);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Entry review' }));
+
+    expect(await screen.findByText('Nothing to review.')).toBeInTheDocument();
+    expect(requested).toEqual([TRADE_ID]);
+  });
+
+  it('is not offered before the trade is entered', async () => {
+    serveJournal(plannedTrade());
+    renderJournal();
+
+    await screen.findByText('Planned');
+    expect(screen.queryByRole('button', { name: 'Entry review' })).not.toBeInTheDocument();
+  });
+});
+
 describe('screenshots', () => {
   it('loads a planned trade’s screenshots only when asked', async () => {
     const requested = [];
