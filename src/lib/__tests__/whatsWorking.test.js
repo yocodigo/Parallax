@@ -54,6 +54,12 @@ describe('whatsWorking', () => {
     });
   });
 
+  it('counts an option with a stop in R: a stop, not the asset class, decides the unit', () => {
+    // One contract bought at 2 with a stop at 1.5, so 1R is $50; out at 3 for +2R.
+    const stopped = option(100, { initialStop: 1.5 });
+    expect(whatsWorking([stopped]).all).toEqual({ trades: 1, r: { trades: 1, average: 2 }, pnl: null });
+  });
+
   it('leaves out a trade with neither R nor P/L', () => {
     const open = { ...stock(1), closedAt: null, exitPrice: null };
     expect(whatsWorking([open, stock(1)]).all.trades).toBe(1);
@@ -108,10 +114,10 @@ describe('whatsWorking', () => {
     expect(result.rules.map((rule) => rule.ruleText)).toEqual(['Trend up on 15m', 'Old rule']);
   });
 
-  it('averages the trades each setup fired on', () => {
+  it('averages the trades each setup fired on, setups in name order', () => {
     const result = whatsWorking([
+      option(-25, { setups: ['four_touch', 'band_cross'] }),
       option(50, { setups: ['band_cross'] }),
-      option(-25, { setups: ['band_cross', 'four_touch'] }),
       stock(1),
     ]);
     expect(result.setups).toEqual([
