@@ -62,6 +62,12 @@ describe('reviewExit', () => {
     });
   });
 
+  it('gives the underlying at the exit: the close of the last minute that had ended', () => {
+    // The 9:51 bar closes at 9:52:00 at 99.3; the 9:50 bar closed at 99.8.
+    expect(reviewExit(trade({ closedAt: time('09:52:00') }), at(...rejects), plan).exitUnderlying).toBe(99.3);
+    expect(reviewExit(trade({ closedAt: time('09:51:30') }), at(...rejects), plan).exitUnderlying).toBe(99.8);
+  });
+
   describe('a rejection at T1 says close', () => {
     it('matches an exit once the rejection is decided', () => {
       // The deciding bar (9:51) closes at 9:52:00.
@@ -92,6 +98,12 @@ describe('reviewExit', () => {
     expect(review.verdict).toBe('not_judged');
   });
 
+  it('marks an oscillation that drifts the trade\'s way', () => {
+    // Above (100.1), below, above again at 100.4.
+    const bars = at(bar(99, 100.3, 98.9, 100.1), bar(100.1, 100.2, 99.7, 99.8), bar(99.8, 100.5, 99.7, 100.4));
+    expect(reviewExit(trade(), bars, plan).reaction).toMatchObject({ kind: 'oscillating', drifting: true });
+  });
+
   it('says step 5 gave no instruction when nothing was decided at T1', () => {
     // The touch, then nine more bars hovering just under the level.
     const hover = Array.from({ length: 9 }, () => bar(99.7, 100, 99.2, 99.7));
@@ -102,7 +114,7 @@ describe('reviewExit', () => {
 
   it('says it was not decided when the bars end first', () => {
     const review = reviewExit(trade({ closedAt: time('09:52:00') }), at(touch), plan);
-    expect(review.reaction).toMatchObject({ kind: null });
+    expect(review.reaction).toMatchObject({ kind: null, touchAt: '2026-10-27T13:50:00.000Z', decidedAt: null });
     expect(review.verdict).toBe('not_decided');
   });
 
@@ -134,6 +146,12 @@ describe('reviewExit', () => {
   });
 
   describe('when there is no T1 to react at', () => {
+    it('is skipped without bars on the fill day', () => {
+      const yesterday = at(...rejects).map((b) => ({ ...b, t: new Date(Date.parse(b.t) - 24 * 60 * MINUTE).toISOString() }));
+      expect(reviewExit(trade(), [], plan)).toMatchObject({ skipped: 'no_bars', verdict: null });
+      expect(reviewExit(trade(), yesterday, plan)).toMatchObject({ skipped: 'no_bars', verdict: null });
+    });
+
     it('is skipped without a daily plan', () => {
       expect(reviewExit(trade(), at(...rejects), null)).toMatchObject({
         skipped: 'no_daily_plan',

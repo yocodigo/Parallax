@@ -6,7 +6,9 @@
 //
 // Unlike the entry review this deliberately reads bars after the exit: what
 // price did at T1 is graded separately from when the trade was taken
-// (section 1). The verdict only uses what the exit could have known.
+// (section 1). The verdict has hindsight on purpose: it compares the exit's
+// time with when step 5's call was decided, whether or not the exit could
+// have known it then.
 
 import { reactionAt } from './reaction';
 import { tradeBias } from './replayTrades';
@@ -36,6 +38,8 @@ const skipped = (bias, reason) => ({
 // - 'matched' / 'early': a rejection says close, so an exit once it was
 //   decided matches and one before it is early; a rip says hold toward T2, so
 //   an exit once a bar had reached T2 matches and one before is early.
+//   'matched' means not early: an exit hours after a rejection still matches,
+//   since timing alone can't show the trader acted on the signal.
 // - 'not_judged': oscillating. 'no_rule': nothing was decided within the
 //   window. 'not_decided': the bars ended before the reaction was.
 function judge(bars, reaction, t2, bias, exitIndex, exitTime) {
@@ -83,9 +87,13 @@ export function reviewExit(trade, bars = [], dailyPlan = null) {
   const entryPrice = underlyingAt(bars, trade.openedAt, day);
   if (from < 0 || entryPrice === null) return skipped(bias, 'no_bars');
 
+  // The side-of-fill check stands in for the plan's `ltfDirection`: a fib is a
+  // target only when its 50% is ahead of the fill.
   const { ltfFib50: t1, ltfFib100: t2 } = dailyPlan;
   if (bias === 'long' ? t1 <= entryPrice : t1 >= entryPrice) return skipped(bias, 'fib_not_on_trade_side');
 
+  // A trade closes at or after its fill, so the bar that gave `entryPrice` had
+  // closed by the exit and `exitIndex` is at least that bar's.
   const exitTime = trade.closedAt.getTime();
   const exitIndex = lastClosedBy(session, exitTime);
   const found = reactionAt(session, t1, bias, from, session.length - 1);
@@ -102,7 +110,7 @@ export function reviewExit(trade, bars = [], dailyPlan = null) {
     t2,
     skipped: null,
     reaction,
-    exitUnderlying: exitIndex < 0 ? null : session[exitIndex].c,
+    exitUnderlying: session[exitIndex].c,
     verdict: found ? judge(session, found, t2, bias, exitIndex, exitTime) : 'not_reached',
   };
 }
