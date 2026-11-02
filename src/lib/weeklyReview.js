@@ -18,7 +18,7 @@ const dayFormat = new Intl.DateTimeFormat('en-US', {
   day: 'numeric',
 });
 
-function describeTrade(trade) {
+export function describeTrade(trade) {
   const levels = [
     ['Planned entry', trade.plannedEntry],
     ['stop', trade.initialStop],
@@ -36,7 +36,7 @@ function describeTrade(trade) {
 }
 
 // Computed here so Claude quotes the numbers instead of doing the arithmetic.
-function describeResult(trade) {
+export function describeResult(trade) {
   const pnl = profitLoss(trade);
   if (pnl === null) return null;
   const r = rMultiple(trade);
