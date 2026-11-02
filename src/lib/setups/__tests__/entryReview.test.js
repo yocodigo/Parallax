@@ -112,7 +112,26 @@ describe('reviewEntry', () => {
     const review = reviewEntry(trade({ openedAt: at('10:47') }), BARS);
     expect(review.setup).toBeNull();
     expect(review.chaseR).toBeNull();
-    expect(review.entryCandle.overlap).not.toBe(0);
+    // Index 14 against index 13: 0.05 of its 1.05 range was shared.
+    expect(review.entryCandle.overlap).toBeCloseTo(0.05 / 1.05);
+  });
+
+  it('mirrors the setup for a short: the stop is the entry candle\'s high, and a lower fill chased', () => {
+    // Every price p becomes 20 - p, so the cross is down and the entry
+    // candle (10:45-10:50) closes at 7.5 under its 7.95 high.
+    const mirrored = BARS.map(({ t, o, h, l, c, v }) => ({ t, o: 20 - o, h: 20 - l, l: 20 - h, c: 20 - c, v }));
+    const review = reviewEntry(trade({ direction: 'short' }), mirrored);
+    expect(review.bias).toBe('short');
+    expect(review.setup).toMatchObject({
+      name: 'band_cross',
+      crossAt: '2026-10-27T14:30:00.000Z',
+      entryAt: '2026-10-27T14:45:00.000Z',
+      risingVolume: true,
+    });
+    expect(review.setup.idealEntry).toBeCloseTo(7.5);
+    expect(review.setup.idealStop).toBeCloseTo(7.95);
+    // The last minute before 10:53 closed at 7.2: 0.3 below the ideal entry.
+    expect(review.chaseR).toBeCloseTo(0.3 / 0.45);
   });
 
   it('has no setup for a trade against the cross', () => {
