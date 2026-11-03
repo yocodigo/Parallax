@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
+import { isDemo } from '@/lib/demo';
 import { SESSION_COOKIE, verifySessionToken } from '@/lib/session';
 
 // Open without signing in: the page to sign in on and the route it posts to.
 const OPEN_PATHS = new Set(['/login', '/api/session']);
+const READ_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 // Every page and API route needs the session cookie. A signed-out page visit
 // goes to /login with the path it wanted in `next`; an API call gets 401, since
@@ -11,6 +13,7 @@ const OPEN_PATHS = new Set(['/login', '/api/session']);
 // instrumentation.js logs it) rather than letting requests through.
 export async function proxy(request) {
   const { pathname, search } = request.nextUrl;
+  if (isDemo()) return demo(request, pathname);
   if (OPEN_PATHS.has(pathname)) return NextResponse.next();
 
   const token = request.cookies.get(SESSION_COOKIE)?.value;
@@ -22,6 +25,16 @@ export async function proxy(request) {
   const login = new URL('/login', request.url);
   login.searchParams.set('next', `${pathname}${search}`);
   return NextResponse.redirect(login);
+}
+
+// The demo has no sign-in and saves nothing: every write to the API answers
+// 403, so no visitor can change the seeded data, upload a file, or start a
+// paid Claude or ElevenLabs call (those routes are all POSTs).
+function demo(request, pathname) {
+  if (pathname.startsWith('/api/') && !READ_METHODS.has(request.method)) {
+    return NextResponse.json({ error: 'The demo is read-only.' }, { status: 403 });
+  }
+  return NextResponse.next();
 }
 
 // Everything but Next's build output, the favicon, and the svg files at the

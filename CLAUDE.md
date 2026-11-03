@@ -84,6 +84,10 @@ Vitest, JavaScript (not TypeScript).
   httpOnly cookie signed with `SESSION_SECRET` (`src/lib/session.js`), good for 30 days; `DELETE`
   clears it. Five wrong passwords per IP (`x-real-ip`) in 15 minutes answer 429. A missing secret
   fails closed. Both env vars are needed in `.env.local` for `npm run dev`.
+- Demo mode (`isDemo()` in `src/lib/demo.js`, on when `NEXT_PUBLIC_DEMO_MODE` is `true` at build time):
+  the proxy skips sign-in and answers every API write (anything but GET, HEAD, OPTIONS) with 403
+  `{ error: 'The demo is read-only.' }`. That also stops the paid Claude and ElevenLabs routes, which
+  are all POSTs; keep any new paid route a POST.
 - Errors and logging (`src/lib/log.js`): log server errors with `logError(message, { route, requestId,
   error, ... })`, never bare `console.error`. It writes one JSON line, with the error's stack and
   `cause`. Every logged error response includes `requestId(request)` (Vercel's `x-vercel-id`, or a
@@ -289,7 +293,7 @@ Vitest, JavaScript (not TypeScript).
      cookie (Web Crypto HMAC, no auth library) checked in `src/proxy.js` for every page and API
      route. The password is long and random, and failed sign-ins are counted in Postgres (5 per IP
      per 15 minutes), since the in-memory `rateLimit.js` doesn't hold across Vercel instances.
-   - A public demo (`DEMO_MODE`), with its own Neon database seeded with fake trades: no sign-in,
+   - A public demo (`NEXT_PUBLIC_DEMO_MODE`), with its own Neon database seeded with fake trades: no sign-in,
      read-only (mutating requests answer 403, so no uploads), and no live Claude or ElevenLabs
      calls (seeded reviews carry stored coaching; voice and the weekly review are hidden). Reviews
      and MAE/MFE still read Alpaca bars, so the demo needs Alpaca keys and the fake trades use

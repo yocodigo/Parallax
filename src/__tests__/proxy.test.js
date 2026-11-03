@@ -68,6 +68,41 @@ describe('proxy', () => {
   });
 });
 
+describe('proxy in the demo', () => {
+  beforeEach(() => vi.stubEnv('NEXT_PUBLIC_DEMO_MODE', 'true'));
+
+  it('needs no sign-in to read', async () => {
+    expect(passedThrough(await proxy(request('/journal')))).toBe(true);
+    expect(passedThrough(await proxy(request('/api/journal')))).toBe(true);
+  });
+
+  it.each(['POST', 'PUT', 'PATCH', 'DELETE'])('answers 403 to an API %s, signed in or not', async (method) => {
+    const token = await createSessionToken(SECRET);
+    for (const cookie of [undefined, token]) {
+      const response = await proxy(
+        new NextRequest('http://localhost/api/journal', {
+          method,
+          headers: cookie ? { cookie: `${SESSION_COOKIE}=${cookie}` } : {},
+        })
+      );
+      expect(response.status).toBe(403);
+      expect(await response.json()).toEqual({ error: 'The demo is read-only.' });
+    }
+  });
+
+  it('needs no SESSION_SECRET', async () => {
+    vi.stubEnv('SESSION_SECRET', '');
+
+    expect(passedThrough(await proxy(request('/journal')))).toBe(true);
+  });
+
+  it('is off for any value but "true"', async () => {
+    vi.stubEnv('NEXT_PUBLIC_DEMO_MODE', '1');
+
+    expect((await proxy(request('/api/journal'))).status).toBe(401);
+  });
+});
+
 describe('proxy matcher', () => {
   // Only the svg files at the site root are static; deeper paths ending in .svg are routes.
   it.each([
