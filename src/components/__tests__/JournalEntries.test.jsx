@@ -142,4 +142,21 @@ describe('JournalEntries', () => {
     expect(await screen.findByText('Hold to the first target.')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /coach/i })).toHaveLength(1);
   });
+
+  it('offers delete on every entry except a plan whose trade was filled', async () => {
+    serveJournal(
+      HttpResponse.json({
+        entries: [
+          entry({ kind: 'review', notes: 'A review' }),
+          entry({ kind: 'plan', notes: 'Unfilled', trade: { ...trade, openedAt: null } }),
+          entry({ kind: 'plan', notes: 'Filled', trade: { ...trade, openedAt: '2026-10-20T14:35:00.000Z' } }),
+        ],
+      })
+    );
+
+    renderEntries();
+
+    expect(await screen.findByText('Filled')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^delete$/i })).toHaveLength(2);
+  });
 });

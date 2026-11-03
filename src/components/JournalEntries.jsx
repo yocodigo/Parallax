@@ -5,6 +5,7 @@ import { fetchJson } from '@/lib/fetchJson';
 import { formatContract } from '@/lib/format';
 import { EMOTION_LABELS, MISTAKE_LABELS } from '@/lib/journalEntry';
 import EntryCoaching from './EntryCoaching';
+import EntryDelete from './EntryDelete';
 import TradeProgress from './TradeProgress';
 
 export const capitalize = (word) => word.charAt(0).toUpperCase() + word.slice(1);
@@ -81,6 +82,8 @@ export default function JournalEntries() {
           )}
 
           {entry.kind === 'review' && <EntryCoaching entry={entry} />}
+
+          <EntryDelete entry={entry} />
         </li>
       ))}
     </ul>
