@@ -195,6 +195,12 @@ Vitest, JavaScript (not TypeScript).
   plain text, or a null review without calling Claude when the week is empty. Closed trades come
   with a computed Result line (P/L and R) that Claude quotes; it's told not to compute figures
   itself. Text only, no text-to-speech.
+- Deleting entries: `EntryDelete.jsx` on each entry in the journal list calls `DELETE /api/journal/[id]`
+  (`deleteJournalEntry`). A plan whose trade has a fill is refused (409, and the button is hidden):
+  the entry holds the trade's entry and exit controls. A plan never filled is deleted with its trade
+  (its checklist answers, screenshots, and context cascade; other entries on the trade keep existing
+  with the link set to null). The trade row is locked while checking, so a fill recorded at the same
+  moment is seen, not deleted. Reviews and theses are deleted alone.
 - Coaching pass (setups.md section 11): `EntryCoaching.jsx` on each review in the journal list shows the
   coaching stored on the review entry (`coaching`, `coached_at`) and a button to write or redo it, on
   request only (a paid Claude call). `POST /api/journal/[id]/coaching` coaches the New York day the
@@ -266,9 +272,8 @@ Vitest, JavaScript (not TypeScript).
      VIX and the earnings and economic calendars need a data source beyond Alpaca. Plan: Alpaca for
      market data, Cboe's free daily VIX history (prior close), and the published Fed/BLS schedules for
      FOMC, CPI, and jobs dates. TradingView has no data API.
-   - To do: delete a journal entry from `/journal`, with a confirmation. Decide first what happens to
-     a trade whose plan entry is deleted: that entry holds the trade's entry and exit controls, and a
-     trade shows in the journal only through its entries.
+   - Done: delete a journal entry from `/journal`, with a confirmation. A plan whose trade has a fill
+     can't be deleted (editing one isn't built yet); a plan never filled goes with its trade.
    - Done: dark mode, following the system setting, with a picker in the nav to override it.
    - Done: setup detectors, gates, voice flows, and the entry and exit review, following the build
      order in `docs/private/setups.md` (steps 1 to 11, the coaching pass included).
