@@ -202,8 +202,10 @@ export default function MonthlyPnl({ months }) {
                   tick={{ fontSize: 11, fill: theme('gray-500'), style: { fontVariantNumeric: 'tabular-nums' } }}
                 />
                 <ReferenceLine y={0} stroke={theme('gray-400')} />
-                {/* The whole month's slot answers the pointer, not just the column. */}
-                <Tooltip content={<MonthTooltip />} cursor={false} isAnimationActive={false} />
+                {/* The whole month's slot answers the pointer, not just the column.
+                    filterNull off: Recharts otherwise drops a month with no trades
+                    (netPnl null), and its "No trades" readout would never show. */}
+                <Tooltip content={<MonthTooltip />} cursor={false} filterNull={false} isAnimationActive={false} />
                 <Bar
                   dataKey="netPnl"
                   maxBarSize={24}
