@@ -15,8 +15,9 @@ function closedInCents(trades) {
   return trades
     .filter((trade) => tradeStatus(trade) === 'closed' && profitLoss(trade) !== null)
     .map((trade) => {
-      const fees = toCents(trade.fees ?? 0);
-      return { trade, gross: toCents(profitLoss(trade)) + fees, fees };
+      // profitLoss is net of fees; adding them back gives the gross P/L.
+      const fees = trade.fees ?? 0;
+      return { trade, gross: toCents(profitLoss(trade) + fees), fees: toCents(fees) };
     });
 }
 
@@ -27,6 +28,7 @@ export function summarize(trades) {
   const losses = rows.filter((r) => r.gross < 0);
   const sum = (list, key) => list.reduce((total, r) => total + r[key], 0);
 
+  // Losses stay negative, so -lossTotal and -avgLoss are their absolute values.
   const winTotal = sum(wins, 'gross');
   const lossTotal = sum(losses, 'gross');
   const gross = sum(rows, 'gross');
@@ -46,7 +48,7 @@ export function summarize(trades) {
     netPnl: (gross - fees) / 100,
     avgWin: avgWin === null ? null : avgWin / 100,
     avgLoss: avgLoss === null ? null : avgLoss / 100,
-    // The spreadsheet calls this "R Multiple"; true R needs a planned stop.
+    // Dollars won per dollar lost on average. Not an R-multiple, which is measured from a stop.
     payoffRatio: avgWin === null || avgLoss === null ? null : avgWin / -avgLoss,
     breakevenWinRate: avgWin === null || avgLoss === null ? null : -avgLoss / (avgWin - avgLoss),
     profitFactor: ratio(winTotal, -lossTotal),
