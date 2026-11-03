@@ -195,6 +195,20 @@ Vitest, JavaScript (not TypeScript).
   plain text, or a null review without calling Claude when the week is empty. Closed trades come
   with a computed Result line (P/L and R) that Claude quotes; it's told not to compute figures
   itself. Text only, no text-to-speech.
+- Coaching pass (setups.md section 11): `EntryCoaching.jsx` on each review in the journal list shows the
+  coaching stored on the review entry (`coaching`, `coached_at`) and a button to write or redo it, on
+  request only (a paid Claude call). `POST /api/journal/[id]/coaching` coaches the New York day the
+  review was written on (its creation date, not its linked trade's): `gatherCoachingFacts`
+  (`src/server/coachingFacts.js`) collects that day's trades in the order opened, each with its entries,
+  entry and exit review, giveback, and stop adherence, plus history over the 20 most recent closed
+  trades of the day's first trade's mode (what's working, stop adherence, the mistake ledger). It
+  recomputes everything per call from Alpaca bars (one fetch per symbol and day) and stores no
+  snapshot; a failed fetch fails the whole call. `formatCoachingInput` and `COACHING_SYSTEM_PROMPT`
+  (`src/lib/coaching.js`) turn the facts into the prompt; Claude never sees raw bars or works out
+  figures. Pure pieces: `giveback.js` (best open profit of 1R or more, closed at 0R or worse, stocks
+  with a stop only), `stopAdherence.js` (S1-S3 replayed against the exit), `whatsWorking.js` (R where a
+  trade has a stop, dollar P/L where it has none, never mixed). A day with no trades returns a null
+  coaching without calling Claude; a failed call keeps the earlier text.
 - Trading setups and detector rules: `docs/private/setups.md` (git-ignored). Read it before building any detector, gate, or review feature.
 - After each commit, run the reviewer subagent on it and address every FIX before starting the next commit.
 
@@ -257,8 +271,7 @@ Vitest, JavaScript (not TypeScript).
      trade shows in the journal only through its entries.
    - Done: dark mode, following the system setting, with a picker in the nav to override it.
    - Done: setup detectors, gates, voice flows, and the entry and exit review, following the build
-     order in `docs/private/setups.md` (steps 1 to 10). Section 11's automated coaching pass is next
-     and not started; the reviews' output is what the coach will read.
+     order in `docs/private/setups.md` (steps 1 to 11, the coaching pass included).
 5. Last, once the product is polished: deploy to Vercel plus Neon (Postgres 17). Upgrade Next.js
    past 16.4.0 first (security advisories; 16.4.1 is two weeks old on 2026-10-28). Add auth or a
    demo mode before any journal data is public. One Playwright end-to-end test of the main flow.
