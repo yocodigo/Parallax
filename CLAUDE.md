@@ -277,9 +277,15 @@ Vitest, JavaScript (not TypeScript).
    - Done: dark mode, following the system setting, with a picker in the nav to override it.
    - Done: setup detectors, gates, voice flows, and the entry and exit review, following the build
      order in `docs/private/setups.md` (steps 1 to 11, the coaching pass included).
-5. Last, once the product is polished: deploy to Vercel plus Neon (Postgres 17). Upgrade Next.js
-   past 16.4.0 first (security advisories; 16.4.1 is two weeks old on 2026-10-28). Add auth or a
-   demo mode before any journal data is public. One Playwright end-to-end test of the main flow.
+5. Last, once the product is polished: deploy to Vercel plus Neon (Postgres 17). Done: Next.js
+   upgraded to 16.4.1 for the security advisories. Two deployments of the same code:
+   - Mine, behind auth: one password from an env var, a login page, and a signed httpOnly session
+     cookie (Web Crypto HMAC, no auth library) checked in `src/proxy.js` for every page and API
+     route. Wrong passwords are rate limited.
+   - A public demo (`DEMO_MODE`), with its own Neon database seeded with fake trades: no sign-in,
+     read-only (mutating requests answer 403, so no uploads), and no live Claude or ElevenLabs
+     calls (seeded reviews carry stored coaching; voice and the weekly review are hidden).
+   Then one Playwright end-to-end test of the main flow.
 6. Performance dashboard: docs/private/dashboard.md (git-ignored).
 
 ## Gotchas
