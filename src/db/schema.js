@@ -279,3 +279,15 @@ export const dailyPlans = pgTable(
     ),
   ]
 );
+
+// Wrong passwords at sign-in, one row each, so the limit holds across serverless
+// instances (an in-memory count is per instance). Pruned as new ones come in.
+export const signInFailures = pgTable(
+  'sign_in_failures',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ip: text('ip').notNull(),
+    failedAt: timestamp('failed_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('sign_in_failures_ip_failed_at_idx').on(t.ip, t.failedAt)]
+);
