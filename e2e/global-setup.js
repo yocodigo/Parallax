@@ -7,6 +7,8 @@ import { E2E_DATABASE_URL } from '../playwright.config';
 // Creates the e2e database the first time, brings it to the latest migration,
 // and empties it, so every run starts from a blank journal.
 export default async function setup() {
+  // CREATE DATABASE has to run while connected to another database, so this
+  // connects to the dev one (parallax) only to create the e2e one.
   const admin = new pg.Client({ connectionString: E2E_DATABASE_URL.replace(/\/parallax_e2e$/, '/parallax') });
   await admin.connect();
   const { rowCount } = await admin.query("SELECT 1 FROM pg_database WHERE datname = 'parallax_e2e'");

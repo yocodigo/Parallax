@@ -32,7 +32,7 @@ test('a trade from plan to result', async ({ page }) => {
   await entry.getByRole('button', { name: 'Record exit' }).click();
   await entry.getByLabel('Exit price').fill('504');
   await entry.getByLabel('Reason').selectOption('target');
-  await entry.getByLabel('Yes').check();
+  await entry.getByRole('group', { name: 'Did you follow your plan?' }).getByLabel('Yes').check();
   await entry.getByRole('button', { name: 'Save exit' }).click();
 
   // 10 shares from 500 to 504 with 2 of risk a share: +$40.00, +2.0R.

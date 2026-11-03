@@ -19,7 +19,9 @@ Vitest, JavaScript (not TypeScript).
 - `npm run test:run`: all tests
 - `npm run test:e2e`: the Playwright test of the main flow (`e2e/journal.e2e.js`: sign in, plan, entry,
   exit, result, sign out). It builds the app and serves it on port 3100 against its own `parallax_e2e`
-  database (created and emptied by `e2e/global-setup.js`), with Alpaca keys blanked. Not part of
+  database (created and emptied by `e2e/global-setup.js`), with Alpaca keys blanked. Recording the entry
+  still captures context: Alpaca answers 401 without keys and Cboe's VIX file is really fetched; both are
+  logged and left null, and neither affects the test. Not part of
   `test:run`; run it before a deploy. First time: `npx playwright install chromium`.
 - `npm run lint`, `npm run build`
 
@@ -313,7 +315,8 @@ Vitest, JavaScript (not TypeScript).
      and MAE/MFE still read Alpaca bars, so the demo needs Alpaca keys and the fake trades use
      real symbols at real trading times.
 
-   Steps for both deployments: `docs/deploy.md`. Then one Playwright end-to-end test of the main flow.
+   Done in code: both deployments, steps in `docs/deploy.md` (setting up Neon and Vercel is still to
+   do), and the Playwright test of the main flow (`npm run test:e2e`).
 6. Performance dashboard: docs/private/dashboard.md (git-ignored).
 
 ## Gotchas

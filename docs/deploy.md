@@ -50,11 +50,12 @@ would read it without a rebuild.
 
 ## 4. Vercel: the demo project
 
-Import the same repo again as `parallax-demo`, with:
+Import the same repo again as `parallax-demo`, with these for **Production only**, so a preview built
+without demo mode never points at the demo database:
 
 | Variable | Value |
 |---|---|
-| `NEXT_PUBLIC_DEMO_MODE` | `true`, for Production **and** the build (Next inlines it then) |
+| `NEXT_PUBLIC_DEMO_MODE` | `true` (Vercel's Production variables are also there at build time, when Next inlines it) |
 | `DATABASE_URL` | the `parallax-demo` **pooled** string |
 | `ALPACA_KEY_ID`, `ALPACA_SECRET_KEY` | the separate empty paper account's keys |
 | `ALPACA_TRADING_HOST` | `https://paper-api.alpaca.markets` |
@@ -67,7 +68,7 @@ needs none of them, and leaving them out means a mistake can't spend them.
 Yours (`https://<your domain>`):
 
 ```sh
-curl -sI https://<your domain>/journal | grep -i '^location'   # -> /login?next=%2Fjournal
+curl -sI https://<your domain>/journal | grep -i '^location'   # -> https://<your domain>/login?next=%2Fjournal
 curl -s https://<your domain>/api/journal                       # -> {"error":"Sign in first."}
 ```
 
