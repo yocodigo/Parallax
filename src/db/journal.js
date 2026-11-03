@@ -1,4 +1,4 @@
-import { and, desc, eq, gte } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray } from 'drizzle-orm';
 import { journalEntries, trades } from './schema';
 
 // Repository functions take the database as their first argument, so tests
@@ -21,6 +21,16 @@ export async function listJournalEntries(db, { limit = 50, since } = {}) {
     .limit(limit);
 
   return rows.map(({ entry, trade }) => ({ ...entry, trade }));
+}
+
+// Every journal entry linked to one of the trades, oldest first.
+export async function listEntriesForTrades(db, tradeIds) {
+  if (tradeIds.length === 0) return [];
+  return db
+    .select()
+    .from(journalEntries)
+    .where(inArray(journalEntries.tradeId, tradeIds))
+    .orderBy(asc(journalEntries.createdAt));
 }
 
 // The plan journal entry that recorded a trade, for the state gate (section

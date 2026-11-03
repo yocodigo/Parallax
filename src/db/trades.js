@@ -1,5 +1,7 @@
-import { and, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, sql } from 'drizzle-orm';
 import { journalEntries, tradeRuleChecks, trades } from './schema';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export async function getTrade(db, id) {
   const [trade] = await db.select().from(trades).where(eq(trades.id, id));
@@ -88,6 +90,26 @@ export async function listClosedTradesWithRuleChecks(db, { mode } = {}) {
     byId.get(trade.id).ruleChecks.push(check);
   }
   return [...byId.values()];
+}
+
+const nyDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' });
+
+// The trades entered on a New York day ('YYYY-MM-DD'), in the order opened.
+export async function listTradesOpenedOn(db, day) {
+  // A New York day sits inside this UTC range whatever the offset; the exact
+  // day is then picked out in New York time.
+  const start = new Date(`${day}T00:00:00Z`);
+  const rows = await db
+    .select()
+    .from(trades)
+    .where(
+      and(
+        gte(trades.openedAt, new Date(start.getTime() - DAY_MS)),
+        lt(trades.openedAt, new Date(start.getTime() + 2 * DAY_MS))
+      )
+    )
+    .orderBy(trades.openedAt);
+  return rows.filter((trade) => nyDate.format(trade.openedAt) === day);
 }
 
 // Trades that have been entered, in the given modes, most recent activity
