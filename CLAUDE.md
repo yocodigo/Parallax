@@ -35,7 +35,7 @@ Vitest, JavaScript (not TypeScript).
 
 - `src/lib/`: pure logic with unit tests (bars, correlation, risk, timeframes, `tradePlan`,
   `journalEntry`, `tradeFill`, `tradeMetrics`, `mistakeLedger`, `excursions`, `historyWarnings`,
-  `circuitBreakers`, `circuitBreakerSettings`, `strategy`, `checklistReport`, `format`, shared `symbol` validation). Validation uses Zod 4 and returns `safeParse` results.
+  `circuitBreakers`, `circuitBreakerSettings`, `strategy`, `checklistReport`, `format`, `session` (signed sign-in tokens), shared `symbol` validation). Validation uses Zod 4 and returns `safeParse` results.
 - `src/db/schema.js`: Drizzle schema. Migrations live in `drizzle/` (generated and committed,
   including `meta/`). Never hand-edit a migration that has been applied.
 - `src/lib/context/`: pure pieces of the entry context snapshot (indicators, macro calendar, VIX,
