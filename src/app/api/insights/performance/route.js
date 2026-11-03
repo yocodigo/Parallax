@@ -4,7 +4,7 @@ import { getDb } from '@/db';
 import { listClosedTradesBetween } from '@/db/trades';
 import { adherence } from '@/lib/adherence';
 import { withErrorLogging } from '@/lib/log';
-import { monthlySummary, summarize } from '@/lib/performance';
+import { equityCurve, monthlySummary, summarize } from '@/lib/performance';
 
 // Read fresh from the database on every request, never prerendered.
 export const dynamic = 'force-dynamic';
@@ -20,8 +20,8 @@ const querySchema = z.object({
 
 // Query: ?mode=live|paper|backtest (live by default), ?year=YYYY (the current
 // New York year by default), ?asset=stock|option|crypto (all by default).
-// Returns { months, yearToDate, adherence } for trades closed in that New York
-// calendar year (docs/private/dashboard.md sections 1 and 3).
+// Returns { months, yearToDate, adherence, equity } for trades closed in that
+// New York calendar year (docs/private/dashboard.md sections 1 to 3).
 export const GET = withErrorLogging('/api/insights/performance', async (request) => {
   const { searchParams } = new URL(request.url);
   const parsed = querySchema.safeParse({
@@ -49,5 +49,6 @@ export const GET = withErrorLogging('/api/insights/performance', async (request)
     months: monthlySummary(closed),
     yearToDate: summarize(closed),
     adherence: adherence(closed),
+    equity: equityCurve(closed),
   });
 });

@@ -62,6 +62,18 @@ describe('GET /api/insights/performance', () => {
     expect(body.adherence).toMatchObject({ trades: 2, size: { ok: 2, missed: 0, cost: 0 } });
   });
 
+  it('returns the equity curve of the year, net of fees, in closing order', async () => {
+    await closedOption(-10, '2026-04-13T20:00:00Z', { fees: 1.3 });
+    await closedOption(30, '2026-03-10T20:00:00Z');
+
+    const body = await (await get('?year=2026')).json();
+
+    expect(body.equity).toEqual([
+      { closedAt: '2026-03-10T20:00:00.000Z', cumulative: 30, drawdown: 0 },
+      { closedAt: '2026-04-13T20:00:00.000Z', cumulative: 18.7, drawdown: 11.3 },
+    ]);
+  });
+
   it('counts a trade by the New York year it closed in', async () => {
     // 03:00Z on January 1 is still December 31 in New York.
     await closedOption(40, '2026-01-01T03:00:00Z');
