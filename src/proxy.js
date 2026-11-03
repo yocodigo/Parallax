@@ -24,7 +24,9 @@ export async function proxy(request) {
   return NextResponse.redirect(login);
 }
 
-// Everything but Next's build output and the static files in public/.
+// Everything but Next's build output, the favicon, and the svg files at the
+// site root (public/ has no folders). An .svg deeper down is a route like any
+// other: /api/journal/x.svg must still need a session.
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon\\.ico$|.*\\.svg$).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon\\.ico$|[^/]+\\.svg$).*)'],
 };

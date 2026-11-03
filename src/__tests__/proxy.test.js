@@ -69,7 +69,18 @@ describe('proxy', () => {
 });
 
 describe('proxy matcher', () => {
-  it.each(['/', '/journal', '/insights', '/api/journal', '/api/trades/1/entry', '/login'])('runs on %s', (url) => {
+  // Only the svg files at the site root are static; deeper paths ending in .svg are routes.
+  it.each([
+    '/',
+    '/journal',
+    '/insights',
+    '/api/journal',
+    '/api/trades/1/entry',
+    '/login',
+    '/api/journal/x.svg',
+    '/api/strategies/a.svg',
+    '/journal/next.svg',
+  ])('runs on %s', (url) => {
     expect(unstable_doesMiddlewareMatch({ config, url })).toBe(true);
   });
 
