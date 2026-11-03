@@ -90,6 +90,20 @@ describe('proxy in the demo', () => {
     }
   });
 
+  it("never shows the trading account's positions", async () => {
+    const response = await proxy(request('/api/positions'));
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: "The demo doesn't show account data." });
+  });
+
+  it('lets HEAD and OPTIONS through, and a POST to a page (there are no server actions)', async () => {
+    for (const method of ['HEAD', 'OPTIONS']) {
+      expect(passedThrough(await proxy(new NextRequest('http://localhost/api/journal', { method })))).toBe(true);
+    }
+    expect(passedThrough(await proxy(new NextRequest('http://localhost/journal', { method: 'POST' })))).toBe(true);
+  });
+
   it('needs no SESSION_SECRET', async () => {
     vi.stubEnv('SESSION_SECRET', '');
 

@@ -5,6 +5,8 @@ import { SESSION_COOKIE, verifySessionToken } from '@/lib/session';
 // Open without signing in: the page to sign in on and the route it posts to.
 const OPEN_PATHS = new Set(['/login', '/api/session']);
 const READ_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+// Routes that read the Alpaca trading account itself rather than market data.
+const ACCOUNT_PATHS = new Set(['/api/positions']);
 
 // Every page and API route needs the session cookie. A signed-out page visit
 // goes to /login with the path it wanted in `next`; an API call gets 401, since
@@ -30,7 +32,11 @@ export async function proxy(request) {
 // The demo has no sign-in and saves nothing: every write to the API answers
 // 403, so no visitor can change the seeded data, upload a file, or start a
 // paid Claude or ElevenLabs call (those routes are all POSTs).
+// Nor does it show the account behind its Alpaca keys.
 function demo(request, pathname) {
+  if (ACCOUNT_PATHS.has(pathname)) {
+    return NextResponse.json({ error: "The demo doesn't show account data." }, { status: 403 });
+  }
   if (pathname.startsWith('/api/') && !READ_METHODS.has(request.method)) {
     return NextResponse.json({ error: 'The demo is read-only.' }, { status: 403 });
   }

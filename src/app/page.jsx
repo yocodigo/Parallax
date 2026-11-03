@@ -1,5 +1,6 @@
 import PriceChart from '@/components/PriceChart';
 import PortfolioRisk from '@/components/PortfolioRisk';
+import { isDemo } from '@/lib/demo';
 
 export default function Home() {
   return (
@@ -14,9 +15,12 @@ export default function Home() {
       </header>
 
       <PriceChart />
-      <div className="mt-8">
-        <PortfolioRisk />
-      </div>
+      {/* The trading account's live positions; never shown in the public demo. */}
+      {!isDemo() && (
+        <div className="mt-8">
+          <PortfolioRisk />
+        </div>
+      )}
     </main>
   );
 }
