@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { equityCurve, summarize } from '../performance';
+import { equityCurve, monthlySummary, summarize } from '../performance';
 
 // A closed long option, 1 contract: gross P/L is (exit - entry) * 100.
 function option(gross, fees = 0, closedAt = '2026-04-13T20:00:00Z') {
@@ -96,5 +96,29 @@ describe('equityCurve', () => {
 
   it('counts a loss from the start as drawdown, since the peak begins at zero', () => {
     expect(equityCurve([option(-10)])[0].drawdown).toBe(10);
+  });
+});
+
+describe('monthlySummary', () => {
+  it('summarizes each New York month of closing, oldest first', () => {
+    const months = monthlySummary([
+      option(20, 1, '2026-02-10T20:00:00Z'),
+      option(-10, 1, '2026-01-15T20:00:00Z'),
+      option(30, 1, '2026-01-20T20:00:00Z'),
+    ]);
+    expect(months.map((m) => m.month)).toEqual(['2026-01', '2026-02']);
+    expect([months[0].trades, months[0].grossPnl, months[0].netPnl]).toEqual([2, 20, 18]);
+    expect([months[1].trades, months[1].netPnl]).toEqual([1, 19]);
+  });
+
+  it('files a close on the evening of the last day in New York under that month', () => {
+    // 01:30 UTC on Feb 1 is 20:30 on Jan 31 in New York.
+    const [month] = monthlySummary([option(10, 0, '2026-02-01T01:30:00Z')]);
+    expect(month.month).toBe('2026-01');
+  });
+
+  it('leaves out trades that are not closed', () => {
+    expect(monthlySummary([{ ...option(10), closedAt: null }])).toEqual([]);
+    expect(monthlySummary([{ ...option(10), exitPrice: null }])).toEqual([]);
   });
 });

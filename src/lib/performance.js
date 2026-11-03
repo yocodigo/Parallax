@@ -11,9 +11,12 @@ import { profitLoss, tradeStatus } from './tradeMetrics';
 const toCents = (dollars) => Math.round(dollars * 100);
 const ratio = (a, b) => (b ? a / b : null);
 
+// Closed with both prices, so it has a P/L to count.
+const isCounted = (trade) => tradeStatus(trade) === 'closed' && profitLoss(trade) !== null;
+
 function closedInCents(trades) {
   return trades
-    .filter((trade) => tradeStatus(trade) === 'closed' && profitLoss(trade) !== null)
+    .filter(isCounted)
     .map((trade) => {
       // profitLoss is net of fees; adding them back gives the gross P/L.
       const fees = trade.fees ?? 0;
@@ -71,4 +74,22 @@ export function equityCurve(trades) {
     peak = Math.max(peak, cumulative);
     return { closedAt: trade.closedAt, cumulative: cumulative / 100, drawdown: (peak - cumulative) / 100 };
   });
+}
+
+// 'YYYY-MM' of a moment in New York, where the trading day is.
+const nyMonth = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/New_York',
+  year: 'numeric',
+  month: '2-digit',
+});
+
+// summarize() per New York month of closing, oldest month first.
+export function monthlySummary(trades) {
+  const byMonth = new Map();
+  for (const trade of trades) {
+    if (!isCounted(trade)) continue;
+    const month = nyMonth.format(new Date(trade.closedAt));
+    byMonth.set(month, [...(byMonth.get(month) ?? []), trade]);
+  }
+  return [...byMonth.keys()].sort().map((month) => ({ month, ...summarize(byMonth.get(month)) }));
 }
