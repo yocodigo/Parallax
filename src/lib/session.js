@@ -59,3 +59,15 @@ export async function passwordMatches(given, expected) {
   for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
   return diff === 0;
 }
+
+// Where to go after signing in: a path on this site, never another site
+// ("//host" and "/\host" are both read by browsers as one, and browsers drop
+// tabs and newlines, so "/\t/host" is too) and never back to the login page.
+export function safeNextPath(next) {
+  if (typeof next !== 'string' || !next.startsWith('/')) return '/';
+  // eslint-disable-next-line no-control-regex
+  if (/[\x00-\x1f\x7f]/.test(next)) return '/';
+  if (next.startsWith('//') || next.startsWith('/\\')) return '/';
+  if (next === '/login' || next.startsWith('/login?')) return '/';
+  return next;
+}

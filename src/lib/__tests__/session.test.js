@@ -5,6 +5,7 @@ import {
   SESSION_MAX_AGE_SECONDS,
   createSessionToken,
   passwordMatches,
+  safeNextPath,
   verifySessionToken,
 } from '../session';
 
@@ -73,5 +74,25 @@ describe('passwordMatches', () => {
   it('refuses an empty or unset expected password', async () => {
     await expect(passwordMatches('', '')).rejects.toThrow(/APP_PASSWORD/);
     await expect(passwordMatches('anything', undefined)).rejects.toThrow(/APP_PASSWORD/);
+  });
+});
+
+describe('safeNextPath', () => {
+  it.each([
+    ['/journal', '/journal'],
+    ['/journal?mode=live#top', '/journal?mode=live#top'],
+    [undefined, '/'],
+    ['', '/'],
+    ['journal', '/'],
+    ['https://evil.example/', '/'],
+    ['//evil.example/', '/'],
+    ['/\\evil.example/', '/'],
+    ['/\t/evil.example/', '/'],
+    ['/\n/evil.example/', '/'],
+    ['/login', '/'],
+    ['/login?next=/journal', '/'],
+    [['/journal', '/insights'], '/'],
+  ])('turns %j into %j', (next, expected) => {
+    expect(safeNextPath(next)).toBe(expected);
   });
 });
