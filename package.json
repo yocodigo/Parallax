@@ -13,6 +13,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed-demo": "tsx --tsconfig jsconfig.json scripts/seed-demo.js",
+    "perf:months": "tsx --tsconfig jsconfig.json scripts/perf-months.js",
     "test:unit": "vitest run --project unit",
     "test:db": "vitest run --project db"
   },

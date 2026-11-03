@@ -14,6 +14,9 @@ Vitest, JavaScript (not TypeScript).
 - `npm run db:seed-demo`: fill the demo's database (`DEMO_DATABASE_URL`, never `DATABASE_URL`) with the
   made-up week in `src/lib/demoSeed.js`. Migrate it first with `DATABASE_URL=<demo url> npm run db:migrate`.
   Refuses a database with any trade, entry, strategy, or daily plan; to reseed, start a fresh one.
+- `npm run perf:months -- --mode=live --year=2026 --asset=option`: print the monthly performance table
+  and year-to-date totals from `DATABASE_URL` (New York closing months; flags optional, live and the
+  current year by default), to reconcile imports against the spreadsheet. Read-only.
 - `npm run test:unit`: unit and component tests (no database needed)
 - `npm run test:db`: database integration tests (needs Postgres running)
 - `npm run test:run`: all tests
