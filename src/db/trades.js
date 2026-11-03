@@ -51,6 +51,24 @@ export async function listClosedTrades(db, { symbol, mode } = {}) {
     .orderBy(trades.openedAt);
 }
 
+// Closed trades that closed in [from, to), oldest exit first. `mode` and
+// `assetClass` limit it to one mode or asset class when given.
+export async function listClosedTradesBetween(db, { from, to, mode, assetClass }) {
+  return db
+    .select()
+    .from(trades)
+    .where(
+      and(
+        isNotNull(trades.closedAt),
+        gte(trades.closedAt, from),
+        lt(trades.closedAt, to),
+        mode ? eq(trades.mode, mode) : undefined,
+        assetClass ? eq(trades.assetClass, assetClass) : undefined
+      )
+    )
+    .orderBy(trades.closedAt);
+}
+
 // Closed trades, each once, with `mistakes`: every tag from the journal
 // entries about it (repeats included; the ledger counts each mistake once per
 // trade). `mode` limits it to live, paper, or backtest trades.
