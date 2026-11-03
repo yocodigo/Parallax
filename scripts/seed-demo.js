@@ -1,7 +1,9 @@
 // Seeds the public demo's database with the made-up week (src/lib/demoSeed.js).
 // Run with `npm run db:seed-demo` after migrating that database. It reads
 // DEMO_DATABASE_URL, never DATABASE_URL, and seedDemo refuses any database
-// that already has trades or journal entries.
+// that already has a trade, journal entry, strategy, or daily plan. It runs
+// under tsx with jsconfig.json's paths, which resolve the repository modules'
+// @/ alias and extensionless imports that plain Node can't.
 import { loadEnvConfig } from '@next/env';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { seedDemo } from '../src/db/demoSeed';
@@ -24,7 +26,7 @@ async function main() {
   try {
     const result = await seedDemo(db, demo);
     if (!result.seeded) {
-      console.error('That database already has trades or journal entries; nothing was changed.');
+      console.error('That database already has a trade, journal entry, strategy, or daily plan; nothing was changed.');
       return 1;
     }
     console.log(`Seeded ${result.trades} trades and ${result.entries} journal entries.`);
