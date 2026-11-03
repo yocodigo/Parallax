@@ -71,7 +71,7 @@ Vitest, JavaScript (not TypeScript).
 - `src/server/`: server-only fetchers that call outside services (`marketContext.js`, and
   `minuteBars.js`, Alpaca's minute bars for the gates and the reviews), tested with MSW in the node
   environment.
-- `src/db/journal.js`, `trades.js`, `settings.js`, `strategies.js`, `contexts.js`, `screenshots.js`, `dailyPlans.js` (the day's fib extensions, which give the exit review its T1 and T2), and `imports.js`: repository
+- `src/db/journal.js`, `trades.js`, `settings.js`, `strategies.js`, `contexts.js`, `screenshots.js`, `dailyPlans.js` (the day's fib extensions, which give the exit review its T1 and T2), `imports.js`, and `signIn.js` (wrong passwords in `sign_in_failures`, counted per IP for the sign-in limit): repository
   functions. They take `db` as the first argument so tests can
   pass the test database.
 - `src/db/index.js`: `getDb()`, created lazily (builds need no database) and cached on `globalThis`.
