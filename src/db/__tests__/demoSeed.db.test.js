@@ -1,11 +1,11 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { count } from 'drizzle-orm';
+import { count, eq } from 'drizzle-orm';
 import * as demo from '@/lib/demoSeed';
-import { getDailyPlan } from '../dailyPlans';
+import { getDailyPlan, saveDailyPlan } from '../dailyPlans';
 import { seedDemo } from '../demoSeed';
-import { addJournalEntry, listJournalEntries } from '../journal';
-import { journalEntries, tradeRuleChecks, trades } from '../schema';
-import { listStrategies } from '../strategies';
+import { addJournalEntry, listJournalEntries, savePlan } from '../journal';
+import { journalEntries, strategies, tradeRuleChecks, trades } from '../schema';
+import { createStrategy, listStrategies } from '../strategies';
 import { listClosedTradesWithRuleChecks } from '../trades';
 import { createTestDb, resetDb } from '../testing';
 
@@ -63,6 +63,32 @@ describe('seedDemo', () => {
     expect(await seedDemo(db, demo)).toEqual({ seeded: false, reason: 'not_empty' });
     expect(await rows(trades)).toBe(0);
     expect(await rows(journalEntries)).toBe(1);
+  });
+
+  it('refuses a database with only a trade', async () => {
+    const { entry } = await savePlan(db, {
+      plan: { mode: 'paper', symbol: 'SPY', assetClass: 'stock', direction: 'long', quantity: 1, plannedEntry: 100, initialStop: 99 },
+      entry: { notes: 'Plan.' },
+    });
+    await db.delete(journalEntries).where(eq(journalEntries.id, entry.id));
+
+    expect(await seedDemo(db, demo)).toEqual({ seeded: false, reason: 'not_empty' });
+    expect(await rows(trades)).toBe(1);
+  });
+
+  it('refuses a database with a daily plan, and leaves the plan as it was', async () => {
+    const real = { tradeDate: '2026-10-26', ltfDirection: 'bearish', ltfFib50: 760, ltfFib100: 755 };
+    await saveDailyPlan(db, real);
+
+    expect(await seedDemo(db, demo)).toEqual({ seeded: false, reason: 'not_empty' });
+    expect(await getDailyPlan(db, '2026-10-26')).toMatchObject(real);
+  });
+
+  it('refuses a database with a strategy, rather than adding a second', async () => {
+    await createStrategy(db, { name: 'Mine', description: null, rules: [{ kind: 'edge', text: 'A rule' }] });
+
+    expect(await seedDemo(db, demo)).toEqual({ seeded: false, reason: 'not_empty' });
+    expect(await rows(strategies)).toBe(1);
   });
 
   it('refuses to seed twice', async () => {
