@@ -78,6 +78,12 @@ Vitest, JavaScript (not TypeScript).
 - `src/app/api/*/route.js`: route handlers. Invalid input returns 400 with `{ error, fieldErrors }`.
   Every handler is wrapped in `withErrorLogging(route, handler)`, so an uncaught error is logged and
   answered with 500 `{ error, requestId }`, never Next's default error page.
+- Sign-in (`src/proxy.js`): every page and API route needs the session cookie except `/login` and
+  `/api/session`. Signed out, a page visit redirects to `/login?next=<path>` (checked by
+  `safeNextPath`) and an API call gets 401. `POST /api/session` checks `APP_PASSWORD` and sets an
+  httpOnly cookie signed with `SESSION_SECRET` (`src/lib/session.js`), good for 30 days; `DELETE`
+  clears it. Five wrong passwords per IP (`x-real-ip`) in 15 minutes answer 429. A missing secret
+  fails closed. Both env vars are needed in `.env.local` for `npm run dev`.
 - Errors and logging (`src/lib/log.js`): log server errors with `logError(message, { route, requestId,
   error, ... })`, never bare `console.error`. It writes one JSON line, with the error's stack and
   `cause`. Every logged error response includes `requestId(request)` (Vercel's `x-vercel-id`, or a
