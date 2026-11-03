@@ -12,13 +12,14 @@ export const DEMO_STRATEGY = {
   rules: [
     { kind: 'edge', text: '15m closed across the middle band in my direction' },
     { kind: 'edge', text: '5m entry candle breaks the prior high or low with little overlap' },
-    { kind: 'edge', text: 'At least 1 ATR of room to the outer band on the 1m' },
-    { kind: 'discipline', text: 'Risk is 1R or less, stop placed before entry' },
+    { kind: 'edge', text: 'At least 0.5 ATR of room to the outer band on the 1m' },
+    { kind: 'discipline', text: 'No more than $50 at risk, stop placed before entry' },
   ],
 };
 
 // Each trade: the plan as the plan form would send it, the plan's journal
-// entry, then the entry fill (with any checklist rules not met) and the exit.
+// entry, then the entry fill and the exit. `unmetRules` lists the checklist
+// rules not met, by their index in DEMO_STRATEGY.rules ([0] is the first).
 export const DEMO_TRADES = [
   {
     plan: {
@@ -255,8 +256,8 @@ export const DEMO_REVIEWS = [
     emotionalControl: 8,
     createdAt: at('2026-10-26T20:30:00Z'),
     coaching:
-      'One trade, and it was the setup: the 15m had crossed, the 5m entry broke cleanly, and you sold at the rejection for +1.29R.\n\n' +
-      'Next time, note where T1 was before the entry, so the exit is a plan rather than a read.',
+      'One trade, and it was the setup: the 15m had crossed, the 5m entry broke cleanly, and you sold at the rejection under T1 for +1.3R.\n\n' +
+      'Writing the fib down before the open is what made that exit a plan rather than a read.',
   },
   {
     tradeIndex: 1,
@@ -266,7 +267,7 @@ export const DEMO_REVIEWS = [
     emotionalControl: 9,
     createdAt: at('2026-10-27T20:15:00Z'),
     coaching:
-      'Your best day this week: the QQQ long made +2.20R on a structural trail and the SPY calls made $187.40 after fees.\n\n' +
+      'A clean day: the QQQ long made +2.2R on a structural trail and the SPY calls made +$187.40 after fees.\n\n' +
       'Both exits followed the plan. Keep sizing the calls small while they run without a stop.',
   },
   {
@@ -277,8 +278,8 @@ export const DEMO_REVIEWS = [
     emotionalControl: 4,
     createdAt: at('2026-10-28T20:40:00Z'),
     coaching:
-      'The NVDA long skipped the first checklist rule, and the stop did its job at -1.06R. That part is fine.\n\n' +
-      'The SPY puts 15 minutes later were the costly one: no plan, a skipped gate, and -$92.60. ' +
+      'The NVDA long skipped the first checklist rule, and the stop did its job at -1.1R. That part is fine.\n\n' +
+      'The SPY puts 15 minutes later were the costly one: no setup, no stop, a skipped gate, and -$92.60. ' +
       'After a stop, the next entry should wait for the next 15m close.',
   },
   {
@@ -289,8 +290,21 @@ export const DEMO_REVIEWS = [
     emotionalControl: 6,
     createdAt: at('2026-10-29T20:20:00Z'),
     coaching:
-      'The AAPL short was entered by the book and covered at +1.13R because the P/L moved, with the target still 0.70 away.\n\n' +
-      'The QQQ puts show the alternative: trailed to a 5m close and $68.70 after fees. Let the trail decide on stocks too.',
+      'The AAPL short was entered by the book and covered at +1.1R because the P/L moved, with the target still 0.70 away.\n\n' +
+      'The QQQ puts show the alternative: trailed to a 5m close for +$68.70 after fees. Let the trail decide on stocks too.',
+  },
+];
+
+// The day's working fib, which gives the exit review its T1 (50%) and T2
+// (100%). A daily plan names no symbol, so only 10-26, the one day that
+// traded a single underlying (SPY), has one.
+export const DEMO_DAILY_PLANS = [
+  {
+    tradeDate: '2026-10-26',
+    ltfDirection: 'bullish',
+    ltfFib50: 767.7,
+    ltfFib100: 769.4,
+    notes: 'SPY working fib from the opening low.',
   },
 ];
 
