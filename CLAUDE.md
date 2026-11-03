@@ -17,6 +17,10 @@ Vitest, JavaScript (not TypeScript).
 - `npm run test:unit`: unit and component tests (no database needed)
 - `npm run test:db`: database integration tests (needs Postgres running)
 - `npm run test:run`: all tests
+- `npm run test:e2e`: the Playwright test of the main flow (`e2e/journal.e2e.js`: sign in, plan, entry,
+  exit, result, sign out). It builds the app and serves it on port 3100 against its own `parallax_e2e`
+  database (created and emptied by `e2e/global-setup.js`), with Alpaca keys blanked. Not part of
+  `test:run`; run it before a deploy. First time: `npx playwright install chromium`.
 - `npm run lint`, `npm run build`
 
 ## How we work

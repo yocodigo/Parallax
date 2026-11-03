@@ -43,3 +43,6 @@ next-env.d.ts
 .idea/
 
 docs/private/
+# Playwright
+/test-results/
+/playwright-report/
