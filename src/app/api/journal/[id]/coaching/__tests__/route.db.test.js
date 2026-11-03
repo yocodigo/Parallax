@@ -1,8 +1,9 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { getDb } from '@/db';
-import { addJournalEntry, getJournalEntry } from '@/db/journal';
-import { trades } from '@/db/schema';
+import { eq } from 'drizzle-orm';
+import { addJournalEntry, getJournalEntry, saveCoaching } from '@/db/journal';
+import { journalEntries, trades } from '@/db/schema';
 import { resetDb } from '@/db/testing';
 import { captureErrorLogs } from '@/mocks/logs';
 import { server } from '@/mocks/server';
@@ -14,6 +15,8 @@ vi.mock('@/db', async () => {
   const db = createTestDb();
   return { getDb: () => db };
 });
+const limiter = vi.hoisted(() => ({ limited: false }));
+vi.mock('@/lib/rateLimit', () => ({ clientKey: () => 'test', rateLimit: () => ({ ok: !limiter.limited }) }));
 // No Alpaca in these tests: the day's trades have no bars.
 vi.mock('@/server/minuteBars', () => ({ fetchMinuteBars: async () => [] }));
 
@@ -75,6 +78,7 @@ const addTrade = () =>
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(async () => {
   await resetDb(getDb());
+  limiter.limited = false;
   vi.stubEnv('ANTHROPIC_API_KEY', 'test-key');
   vi.stubEnv('ALPACA_KEY_ID', 'key');
   vi.stubEnv('ALPACA_SECRET_KEY', 'secret');
@@ -132,7 +136,6 @@ describe('POST /api/journal/[id]/coaching', () => {
   it('keeps the earlier coaching when Claude fails', async () => {
     const review = await reviewEntry();
     await addTrade();
-    const { saveCoaching } = await import('@/db/journal');
     await saveCoaching(getDb(), review.id, 'Earlier pass.');
     captureMessages(() => HttpResponse.json({ type: 'error', error: { type: 'invalid_request_error', message: 'boom' } }, { status: 400 }));
     const logs = captureErrorLogs();
@@ -145,5 +148,81 @@ describe('POST /api/journal/[id]/coaching', () => {
       expect.objectContaining({ message: 'Coaching failed', requestId: body.requestId })
     );
     expect((await getJournalEntry(getDb(), review.id)).coaching).toBe('Earlier pass.');
+  });
+
+  it('replaces an earlier pass with the new text', async () => {
+    const review = await reviewEntry();
+    await addTrade();
+    const earlier = await saveCoaching(getDb(), review.id, 'Earlier pass.');
+    captureMessages(() => HttpResponse.json(message()));
+
+    const body = await (await post(review.id)).json();
+
+    expect(body.coaching).toBe(COACHING);
+    expect(new Date(body.coachedAt) > earlier.coachedAt).toBe(true);
+    expect((await getJournalEntry(getDb(), review.id)).coaching).toBe(COACHING);
+  });
+
+  it('answers 502 and stores nothing when Claude refuses or returns no text', async () => {
+    const review = await reviewEntry();
+    await addTrade();
+    captureErrorLogs();
+
+    captureMessages(() => HttpResponse.json(message({ stop_reason: 'refusal', content: [] })));
+    expect((await post(review.id)).status).toBe(502);
+
+    server.resetHandlers();
+    captureMessages(() => HttpResponse.json(message({ content: [{ type: 'text', text: '  ' }] })));
+    expect((await post(review.id)).status).toBe(502);
+
+    expect((await getJournalEntry(getDb(), review.id)).coaching).toBeNull();
+  });
+
+  it('answers 429 when Claude is rate limited', async () => {
+    const review = await reviewEntry();
+    await addTrade();
+    captureMessages(() =>
+      HttpResponse.json(
+        { type: 'error', error: { type: 'rate_limit_error', message: 'slow down' } },
+        { status: 429, headers: { 'x-should-retry': 'false' } }
+      )
+    );
+
+    expect((await post(review.id)).status).toBe(429);
+  });
+
+  it('answers 429 when the caller is over the request budget', async () => {
+    const review = await reviewEntry();
+    limiter.limited = true;
+    const requests = captureMessages(() => HttpResponse.json(message()));
+
+    expect((await post(review.id)).status).toBe(429);
+    expect(requests).toHaveLength(0);
+  });
+
+  it('answers 500 when a key is missing', async () => {
+    const review = await reviewEntry();
+    await addTrade();
+
+    vi.stubEnv('ANTHROPIC_API_KEY', '');
+    expect((await post(review.id)).status).toBe(500);
+
+    vi.stubEnv('ANTHROPIC_API_KEY', 'test-key');
+    vi.stubEnv('ALPACA_SECRET_KEY', '');
+    expect((await post(review.id)).status).toBe(500);
+  });
+
+  it('answers 404 when the review is deleted while Claude is writing', async () => {
+    const review = await reviewEntry();
+    await addTrade();
+    captureMessages(() => {
+      // The handler runs inside the Claude call, between the lookup and the save.
+      return getDb()
+        .delete(journalEntries)
+        .where(eq(journalEntries.id, review.id))
+        .then(() => HttpResponse.json(message()));
+    });
+
+    expect((await post(review.id)).status).toBe(404);
   });
 });
