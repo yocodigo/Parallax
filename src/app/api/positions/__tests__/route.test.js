@@ -19,6 +19,23 @@ afterEach(() => {
 });
 
 describe('GET /api/positions', () => {
+  it('refuses in the demo without calling Alpaca, even if the proxy let it through', async () => {
+    vi.stubEnv('NEXT_PUBLIC_DEMO_MODE', 'true');
+    const calls = [];
+    server.use(
+      http.get(POSITIONS_URL, () => {
+        calls.push(1);
+        return HttpResponse.json([]);
+      })
+    );
+
+    const response = await get();
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: "The demo doesn't show account data." });
+    expect(calls).toHaveLength(0);
+  });
+
   it('logs a failed request instead of dropping the error', async () => {
     server.use(http.get(POSITIONS_URL, () => HttpResponse.error()));
     const logs = captureErrorLogs();

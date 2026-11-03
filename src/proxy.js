@@ -32,8 +32,10 @@ export async function proxy(request) {
 // The demo has no sign-in and saves nothing: every write to the API answers
 // 403, so no visitor can change the seeded data, upload a file, or start a
 // paid Claude or ElevenLabs call (those routes are all POSTs).
-// Nor does it show the account behind its Alpaca keys.
+// Nor does it show the account behind its Alpaca keys, or a sign-in form that
+// could only fail.
 function demo(request, pathname) {
+  if (pathname === '/login') return NextResponse.redirect(new URL('/', request.url));
   if (ACCOUNT_PATHS.has(pathname)) {
     return NextResponse.json({ error: "The demo doesn't show account data." }, { status: 403 });
   }

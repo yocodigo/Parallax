@@ -104,6 +104,13 @@ describe('proxy in the demo', () => {
     expect(passedThrough(await proxy(new NextRequest('http://localhost/journal', { method: 'POST' })))).toBe(true);
   });
 
+  it('sends the login page to the dashboard, since there is nothing to sign in to', async () => {
+    const response = await proxy(request('/login?next=/journal'));
+
+    expect(response.status).toBe(307);
+    expect(new URL(response.headers.get('location')).pathname).toBe('/');
+  });
+
   it('needs no SESSION_SECRET', async () => {
     vi.stubEnv('SESSION_SECRET', '');
 
