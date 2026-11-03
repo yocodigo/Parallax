@@ -11,9 +11,9 @@ import { giveback } from '@/lib/giveback';
 import { mistakeLedger } from '@/lib/mistakeLedger';
 import { reviewEntry } from '@/lib/setups/entryReview';
 import { reviewExit } from '@/lib/setups/exitReview';
-import { sessionBars, tradingDay } from '@/lib/setups/session';
+import { nyDay, sessionBars, tradingDay } from '@/lib/setups/session';
 import { gradeTradeGates } from '@/lib/setups/tradeGates';
-import { adherenceRate, judgeStopAdherence, stopRuleTrigger } from '@/lib/stopAdherence';
+import { RECENT_TRADES, adherenceRate, judgeStopAdherence, stopRuleTrigger } from '@/lib/stopAdherence';
 import { whatsWorking } from '@/lib/whatsWorking';
 import { fetchMinuteBars } from './minuteBars';
 
@@ -24,11 +24,6 @@ import { fetchMinuteBars } from './minuteBars';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MINUTE_MS = 60 * 1000;
-// The history looks at this many of the most recent closed trades.
-const RECENT_TRADES = 20;
-
-const nyDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' });
-
 const newestFirst = (a, b) => b.closedAt - a.closedAt;
 
 // `day` is a New York date ('YYYY-MM-DD'). Returns null when no trade was
@@ -37,7 +32,8 @@ const newestFirst = (a, b) => b.closedAt - a.closedAt;
 // stop adherence) is of closed trades in the mode of the day's first trade, so
 // a paper day isn't coached against live results. `fetchBars(symbol, end)`
 // returns the underlying's minute bars, oldest first; it runs once per symbol
-// and day.
+// and day. A failed fetch rejects the whole call, history included: a coaching
+// pass built on part of the history would read as if it were the whole.
 export async function gatherCoachingFacts(db, { day, fetchBars = fetchMinuteBars, now = new Date() }) {
   const dayTrades = await listTradesOpenedOn(db, day);
   if (dayTrades.length === 0) return null;
@@ -52,8 +48,9 @@ export async function gatherCoachingFacts(db, { day, fetchBars = fetchMinuteBars
   const checksById = new Map(withChecks.map((trade) => [trade.id, trade.ruleChecks]));
 
   // Bars are fetched for a trade's fill day and the day after it, which reaches
-  // the session's close (the exit review reads bars after the exit). Crypto
-  // bars come from another Alpaca endpoint, not wired up yet.
+  // the session's close (the exit review reads bars after the exit), so the
+  // later bars of a swing trade aren't covered. Crypto bars come from another
+  // Alpaca endpoint, not wired up yet.
   const barsByKey = new Map();
   const barsFor = (trade) => {
     if (trade.assetClass === 'crypto' || !trade.openedAt) return Promise.resolve([]);
@@ -68,12 +65,13 @@ export async function gatherCoachingFacts(db, { day, fetchBars = fetchMinuteBars
 
   const plansByDay = new Map();
   const planFor = (trade) => {
-    const date = nyDate.format(trade.openedAt);
+    const date = nyDay(trade.openedAt);
     if (!plansByDay.has(date)) plansByDay.set(date, getDailyPlan(db, date));
     return plansByDay.get(date);
   };
 
-  // A closed trade's gates, setup, and stop adherence, replayed from its bars.
+  // A trade's reviews, gates, setup, and stop adherence, replayed from its
+  // bars. The bars come back too, for the giveback.
   async function analyze(trade) {
     const bars = await barsFor(trade);
     const [dailyPlan, planEntry] = await Promise.all([planFor(trade), getPlanEntry(db, trade.id)]);
@@ -90,10 +88,14 @@ export async function gatherCoachingFacts(db, { day, fetchBars = fetchMinuteBars
     };
   }
 
+  // What's working reads the most recent closed trades; stop adherence reads
+  // the most recent ones that had a stop rule, which can reach further back.
+  // The two sets overlap, and each trade is analyzed once.
   const closed = [...withMistakes].sort(newestFirst);
   const recent = closed.slice(0, RECENT_TRADES);
   const judgedPool = closed.filter((trade) => trade.stopRule).slice(0, RECENT_TRADES);
   const analyses = new Map();
+  // One at a time, so the fetches don't hit Alpaca's rate limit together.
   for (const trade of new Set([...recent, ...judgedPool])) analyses.set(trade.id, await analyze(trade));
 
   const tradeFacts = [];
@@ -133,7 +135,9 @@ export async function gatherCoachingFacts(db, { day, fetchBars = fetchMinuteBars
 // was open for (from the minute holding the fill to the exit). Null when it
 // closed past them, as a swing trade does: they reach a day from the fill.
 function givebackOf(trade, bars) {
-  if (!trade.closedAt || trade.closedAt.getTime() > trade.openedAt.getTime() + DAY_MS) return null;
+  // Stocks only: an option's prices are premiums, which the underlying's bars
+  // can't be measured against.
+  if (trade.assetClass !== 'stock' || !trade.closedAt || trade.closedAt.getTime() > trade.openedAt.getTime() + DAY_MS) return null;
   const from = Math.floor(trade.openedAt.getTime() / MINUTE_MS) * MINUTE_MS;
   const open = bars.filter((bar) => {
     const start = Date.parse(bar.t);

@@ -11,7 +11,7 @@ import { tradeStatus } from './tradeMetrics';
 const MINUTE = 60_000;
 const FIVE = 5 * MINUTE;
 const MIN_TRADES = 5;
-const RECENT_TRADES = 20;
+export const RECENT_TRADES = 20;
 
 const STOP_MISTAKES = ['moved_stop', 'held_past_stop'];
 

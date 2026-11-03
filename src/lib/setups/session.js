@@ -8,6 +8,8 @@ import { EXTENDED_HOURS } from './settings';
 // YYYY-MM-DD, so two days compare as plain strings.
 const nyDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' });
 export const tradingDay = (bar) => nyDate.format(new Date(bar.t));
+// The same for a Date.
+export const nyDay = (date) => nyDate.format(date);
 
 // The bars in the regular session, or all of them with extended hours on.
 // Filter minute bars before resampling them, so the day's last 15m bar holds

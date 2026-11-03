@@ -1,4 +1,5 @@
 import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, sql } from 'drizzle-orm';
+import { nyDay } from '@/lib/setups/session';
 import { journalEntries, tradeRuleChecks, trades } from './schema';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -92,8 +93,6 @@ export async function listClosedTradesWithRuleChecks(db, { mode } = {}) {
   return [...byId.values()];
 }
 
-const nyDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' });
-
 // The trades entered on a New York day ('YYYY-MM-DD'), in the order opened.
 export async function listTradesOpenedOn(db, day) {
   // A New York day sits inside this UTC range whatever the offset; the exact
@@ -109,7 +108,7 @@ export async function listTradesOpenedOn(db, day) {
       )
     )
     .orderBy(trades.openedAt);
-  return rows.filter((trade) => nyDate.format(trade.openedAt) === day);
+  return rows.filter((trade) => nyDay(trade.openedAt) === day);
 }
 
 // Trades that have been entered, in the given modes, most recent activity
