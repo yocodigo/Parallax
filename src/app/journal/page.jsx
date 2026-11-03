@@ -4,6 +4,7 @@ import PlanForm from '@/components/PlanForm';
 import ReviewForm from '@/components/ReviewForm';
 import VoiceNote from '@/components/VoiceNote';
 import WeeklyReview from '@/components/WeeklyReview';
+import { isDemo } from '@/lib/demo';
 
 export const metadata = {
   title: 'Journal',
@@ -19,13 +20,19 @@ export default function JournalPage() {
         </p>
       </header>
 
-      <div className="mb-8 space-y-6">
-        <WeeklyReview />
-        <VoiceNote />
-        <DailyPlanForm />
-        <PlanForm />
-        <ReviewForm />
-      </div>
+      {isDemo() ? (
+        <p className="mb-8 text-sm text-gray-500">
+          Logging plans and reviews, voice notes, and the weekly review are turned off in the demo.
+        </p>
+      ) : (
+        <div className="mb-8 space-y-6">
+          <WeeklyReview />
+          <VoiceNote />
+          <DailyPlanForm />
+          <PlanForm />
+          <ReviewForm />
+        </div>
+      )}
 
       <JournalEntries />
     </main>

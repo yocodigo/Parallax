@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useSWRConfig } from 'swr';
 import { apiErrorMessage } from '@/lib/fetchJson';
+import { isDemo } from '@/lib/demo';
 
 const buttonClass =
   'rounded-md bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50';
@@ -42,13 +43,18 @@ export default function EntryCoaching({ entry }) {
     }
   };
 
+  // The demo shows seeded coaching but never pays for a new one.
+  if (isDemo() && !coaching) return null;
+
   return (
     <div className="mt-3 space-y-2 border-t border-gray-200 pt-3">
       <div className="flex items-center justify-between gap-4">
         <h3 className="text-sm font-semibold text-gray-700">Coaching</h3>
-        <button type="button" onClick={requestCoaching} disabled={loading} className={buttonClass}>
-          {loading ? 'Writing…' : coaching ? 'Coach again' : 'Coach this day'}
-        </button>
+        {!isDemo() && (
+          <button type="button" onClick={requestCoaching} disabled={loading} className={buttonClass}>
+            {loading ? 'Writing…' : coaching ? 'Coach again' : 'Coach this day'}
+          </button>
+        )}
       </div>
 
       {coaching && (

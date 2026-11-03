@@ -7,6 +7,7 @@ import { EMOTION_LABELS, MISTAKE_LABELS } from '@/lib/journalEntry';
 import EntryCoaching from './EntryCoaching';
 import EntryDelete from './EntryDelete';
 import TradeProgress from './TradeProgress';
+import { isDemo } from '@/lib/demo';
 
 export const capitalize = (word) => word.charAt(0).toUpperCase() + word.slice(1);
 
@@ -60,7 +61,7 @@ export default function JournalEntries() {
                 <span className="rounded bg-gray-100 px-1.5">{capitalize(entry.trade.mode)}</span>
               </div>
               {/* Fills are recorded on the plan; reviews of the trade just show where it stands. */}
-              <TradeProgress trade={entry.trade} canRecord={entry.kind === 'plan'} />
+              <TradeProgress trade={entry.trade} canRecord={entry.kind === 'plan' && !isDemo()} />
             </div>
           )}
 
@@ -83,7 +84,7 @@ export default function JournalEntries() {
 
           {entry.kind === 'review' && <EntryCoaching entry={entry} />}
 
-          <EntryDelete entry={entry} />
+          {!isDemo() && <EntryDelete entry={entry} />}
         </li>
       ))}
     </ul>

@@ -5,6 +5,7 @@ import useSWR from 'swr';
 import { apiErrorMessage, fetchJson } from '@/lib/fetchJson';
 import { MAX_SCREENSHOTS_PER_TRADE } from '@/lib/screenshot';
 import Field, { inputClass } from './Field';
+import { isDemo } from '@/lib/demo';
 
 const buttonClass =
   'rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50';
@@ -95,14 +96,16 @@ export default function TradeScreenshots({ tradeId }) {
                 </a>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-gray-600">{shot.label ? LABELS[shot.label] : 'No label'}</span>
-                  <button
-                    type="button"
-                    onClick={() => remove(shot)}
-                    aria-label={`Remove ${name.toLowerCase()}`}
-                    className="text-red-700 hover:underline"
-                  >
-                    Remove
-                  </button>
+                  {!isDemo() && (
+                    <button
+                      type="button"
+                      onClick={() => remove(shot)}
+                      aria-label={`Remove ${name.toLowerCase()}`}
+                      className="text-red-700 hover:underline"
+                    >
+                      Remove
+                    </button>
+                  )}
                 </div>
               </li>
             );
@@ -110,7 +113,7 @@ export default function TradeScreenshots({ tradeId }) {
         </ul>
       )}
 
-      {full ? (
+      {isDemo() ? null : full ? (
         <p className="text-gray-500">{`A trade can have at most ${MAX_SCREENSHOTS_PER_TRADE} screenshots.`}</p>
       ) : (
         <form onSubmit={upload} className="flex flex-wrap items-end gap-2">

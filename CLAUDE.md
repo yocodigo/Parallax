@@ -87,7 +87,10 @@ Vitest, JavaScript (not TypeScript).
 - Demo mode (`isDemo()` in `src/lib/demo.js`, on when `NEXT_PUBLIC_DEMO_MODE` is `true` at build time):
   the proxy skips sign-in and answers every API write (anything but GET, HEAD, OPTIONS) with 403
   `{ error: 'The demo is read-only.' }`. That also stops the paid Claude and ElevenLabs routes, which
-  are all POSTs; keep any new paid route a POST.
+  are all POSTs; keep any new paid route a POST. The UI hides the journal forms (voice and weekly
+  review included), the imports, delete and record buttons, screenshot upload and remove, the coaching
+  button (stored coaching still shows), and sign-out, and the nav says it's a demo. The strategy and
+  circuit-breaker editors stay, and saving shows the 403's message.
 - Errors and logging (`src/lib/log.js`): log server errors with `logError(message, { route, requestId,
   error, ... })`, never bare `console.error`. It writes one JSON line, with the error's stack and
   `cause`. Every logged error response includes `requestId(request)` (Vercel's `x-vercel-id`, or a

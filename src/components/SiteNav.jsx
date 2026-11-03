@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import ThemePicker from './ThemePicker';
+import { isDemo } from '@/lib/demo';
 
 const LINKS = [
   { href: '/', label: 'Dashboard' },
@@ -72,7 +73,11 @@ export default function SiteNav() {
         })}
         <div className="ml-auto flex items-center gap-4">
           <ThemePicker />
-          {signedIn && <SignOut />}
+          {isDemo() ? (
+            <span className="rounded bg-amber-100 px-1.5 text-xs text-amber-900">Demo: made-up trades, read-only</span>
+          ) : (
+            signedIn && <SignOut />
+          )}
         </div>
       </div>
     </nav>

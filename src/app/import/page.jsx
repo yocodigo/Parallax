@@ -1,11 +1,23 @@
 import FidelityImport from '@/components/FidelityImport';
 import ThinkorswimImport from '@/components/ThinkorswimImport';
+import { isDemo } from '@/lib/demo';
 
 export const metadata = {
   title: 'Import',
 };
 
 export default function ImportPage() {
+  if (isDemo()) {
+    return (
+      <main className="mx-auto max-w-4xl px-6 py-10">
+        <h1 className="text-2xl font-semibold text-gray-900">Import</h1>
+        <p className="mt-1 text-sm text-gray-500">
+          Importing thinkorswim and Fidelity statements is turned off in the demo.
+        </p>
+      </main>
+    );
+  }
+
   return (
     <main className="mx-auto max-w-4xl space-y-12 px-6 py-10">
       <section>
