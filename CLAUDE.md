@@ -281,10 +281,14 @@ Vitest, JavaScript (not TypeScript).
    upgraded to 16.4.1 for the security advisories. Two deployments of the same code:
    - Mine, behind auth: one password from an env var, a login page, and a signed httpOnly session
      cookie (Web Crypto HMAC, no auth library) checked in `src/proxy.js` for every page and API
-     route. Wrong passwords are rate limited.
+     route. The password is long and random, and failed sign-ins are counted in Postgres (5 per IP
+     per 15 minutes), since the in-memory `rateLimit.js` doesn't hold across Vercel instances.
    - A public demo (`DEMO_MODE`), with its own Neon database seeded with fake trades: no sign-in,
      read-only (mutating requests answer 403, so no uploads), and no live Claude or ElevenLabs
-     calls (seeded reviews carry stored coaching; voice and the weekly review are hidden).
+     calls (seeded reviews carry stored coaching; voice and the weekly review are hidden). Reviews
+     and MAE/MFE still read Alpaca bars, so the demo needs Alpaca keys and the fake trades use
+     real symbols at real trading times.
+
    Then one Playwright end-to-end test of the main flow.
 6. Performance dashboard: docs/private/dashboard.md (git-ignored).
 
