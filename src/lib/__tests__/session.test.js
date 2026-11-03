@@ -49,6 +49,11 @@ describe('session tokens', () => {
     await expect(createSessionToken(short, NOW)).rejects.toThrow(/SESSION_SECRET/);
     await expect(verifySessionToken('1.abc', short, NOW)).rejects.toThrow(/SESSION_SECRET/);
   });
+
+  it('refuses an unset secret', async () => {
+    await expect(createSessionToken(undefined, NOW)).rejects.toThrow(/SESSION_SECRET/);
+    await expect(verifySessionToken('1.abc', undefined, NOW)).rejects.toThrow(/SESSION_SECRET/);
+  });
 });
 
 describe('passwordMatches', () => {
@@ -65,7 +70,8 @@ describe('passwordMatches', () => {
     },
   );
 
-  it('refuses an empty expected password', async () => {
+  it('refuses an empty or unset expected password', async () => {
     await expect(passwordMatches('', '')).rejects.toThrow(/APP_PASSWORD/);
+    await expect(passwordMatches('anything', undefined)).rejects.toThrow(/APP_PASSWORD/);
   });
 });

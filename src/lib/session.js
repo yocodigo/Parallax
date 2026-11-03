@@ -1,7 +1,9 @@
 // Sign-in for the single user. The session cookie holds `<expiresAt>.<signature>`: the
 // expiry in milliseconds and an HMAC-SHA256 of it under SESSION_SECRET. There is nothing
 // else to store, since there is only one user; without the secret a token can't be made or
-// stretched. Web Crypto, so it runs wherever the proxy does.
+// stretched. Signing out clears the cookie but can't revoke a copy of it; changing
+// SESSION_SECRET signs out everywhere. Web Crypto plus Node's Buffer, so it needs the Node.js
+// runtime, which Next 16's proxy always uses.
 
 export const SESSION_COOKIE = 'parallax_session';
 export const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60; // 30 days
@@ -41,16 +43,18 @@ export async function verifySessionToken(token, secret, now = Date.now()) {
   return valid && now < Number(expiresAt);
 }
 
+const sha256 = async (text) => new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(text)));
+
 // Hashing both sides first gives two 32-byte digests, so the comparison takes the same time
-// whatever the lengths or the first differing character.
+// whatever the lengths. The loop ORs together every byte's difference and never stops early,
+// unlike === or Buffer.equals, so the time doesn't show where the first mismatch is.
 export async function passwordMatches(given, expected) {
   if (typeof expected !== 'string' || expected.length === 0) {
     throw new Error('APP_PASSWORD is not set');
   }
   if (typeof given !== 'string') return false;
-  const [a, b] = await Promise.all(
-    [given, expected].map(async (text) => new Uint8Array(await crypto.subtle.digest('SHA-256', encoder.encode(text)))),
-  );
+  const a = await sha256(given);
+  const b = await sha256(expected);
   let diff = 0;
   for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i];
   return diff === 0;
