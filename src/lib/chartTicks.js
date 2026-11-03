@@ -68,3 +68,39 @@ export function valueTicks(min, max) {
     }
   }
 }
+
+// One column per calendar month from the first month to the last ('YYYY-MM',
+// oldest first, as monthlySummary gives them), so a month with no closed trade
+// shows as an empty slot (netPnl null) rather than vanishing. Up to a year,
+// every column is labelled; up to three years, only quarter starts (Jan, Apr,
+// Jul, Oct); past that, only Januaries. Choosing them here, rather than letting
+// the chart thin crowded labels, keeps the year boundary from being dropped.
+// When the months cross a year, the first label and each January also carry a
+// year, kept apart from the month so the axis can set it on a second line.
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+export function monthColumns(months) {
+  if (months.length === 0) return [];
+  const byMonth = new Map(months.map((m) => [m.month, m]));
+  const [firstYear, firstMonth] = months[0].month.split('-').map(Number);
+  const [lastYear, lastMonth] = months.at(-1).month.split('-').map(Number);
+  const multiYear = firstYear !== lastYear;
+  const count = lastYear * 12 + lastMonth - (firstYear * 12 + firstMonth) + 1;
+  const every = count <= 12 ? 1 : count <= 36 ? 3 : 12;
+
+  const columns = [];
+  let labelled = 0;
+  for (let i = 0, year = firstYear, month = firstMonth; i < count; i += 1) {
+    const key = `${year}-${String(month).padStart(2, '0')}`;
+    let label = '';
+    let labelYear = null;
+    if ((month - 1) % every === 0) {
+      label = MONTHS[month - 1];
+      if (multiYear && (labelled === 0 || month === 1)) labelYear = year;
+      labelled += 1;
+    }
+    columns.push({ month: key, label, year: labelYear, ...(byMonth.get(key) ?? { netPnl: null }) });
+    [year, month] = month === 12 ? [year + 1, 1] : [year, month + 1];
+  }
+  return columns;
+}

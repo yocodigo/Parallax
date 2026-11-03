@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { timeTicks, valueTicks } from '../chartTicks';
+import { monthColumns, timeTicks, valueTicks } from '../chartTicks';
 
 describe('timeTicks', () => {
   it('marks the first point of each New York day over a short span', () => {
@@ -63,5 +63,67 @@ describe('valueTicks', () => {
   it('never steps by less than a dollar', () => {
     expect(valueTicks(0, 0)).toEqual([0, 1]);
     expect(valueTicks(-0.4, 0.2)).toEqual([-1, 0, 1]);
+  });
+});
+
+describe('monthColumns', () => {
+  it('gives every calendar month from the first to the last a column, empty where nothing closed', () => {
+    const columns = monthColumns([
+      { month: '2026-03', netPnl: 30 },
+      { month: '2026-05', netPnl: -10 },
+    ]);
+
+    expect(columns).toEqual([
+      { month: '2026-03', label: 'Mar', year: null, netPnl: 30 },
+      { month: '2026-04', label: 'Apr', year: null, netPnl: null },
+      { month: '2026-05', label: 'May', year: null, netPnl: -10 },
+    ]);
+  });
+
+  it('gives the year, set apart from the month, to the first label and each January when the months cross a year', () => {
+    const columns = monthColumns([
+      { month: '2025-11', netPnl: 1 },
+      { month: '2026-02', netPnl: 2 },
+    ]);
+
+    expect(columns.map((c) => [c.label, c.year])).toEqual([
+      ['Nov', 2025],
+      ['Dec', null],
+      ['Jan', 2026],
+      ['Feb', null],
+    ]);
+  });
+
+  it('labels only the quarter starts past twelve months, so the year boundary is never dropped', () => {
+    const columns = monthColumns([
+      { month: '2025-06', netPnl: 1 },
+      { month: '2026-10', netPnl: 2 },
+    ]);
+
+    expect(columns.filter((c) => c.label).map((c) => [c.label, c.year])).toEqual([
+      ['Jul', 2025],
+      ['Oct', null],
+      ['Jan', 2026],
+      ['Apr', null],
+      ['Jul', null],
+      ['Oct', null],
+    ]);
+  });
+
+  it('labels only the Januaries past three years', () => {
+    const columns = monthColumns([
+      { month: '2023-03', netPnl: 1 },
+      { month: '2026-04', netPnl: 2 },
+    ]);
+
+    expect(columns.filter((c) => c.label).map((c) => [c.label, c.year])).toEqual([
+      ['Jan', 2024],
+      ['Jan', 2025],
+      ['Jan', 2026],
+    ]);
+  });
+
+  it('returns no columns for no months', () => {
+    expect(monthColumns([])).toEqual([]);
   });
 });
