@@ -309,7 +309,7 @@ Vitest, JavaScript (not TypeScript).
      and MAE/MFE still read Alpaca bars, so the demo needs Alpaca keys and the fake trades use
      real symbols at real trading times.
 
-   Then one Playwright end-to-end test of the main flow.
+   Steps for both deployments: `docs/deploy.md`. Then one Playwright end-to-end test of the main flow.
 6. Performance dashboard: docs/private/dashboard.md (git-ignored).
 
 ## Gotchas
