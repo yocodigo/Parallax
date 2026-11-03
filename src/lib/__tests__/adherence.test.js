@@ -4,6 +4,7 @@ import { adherence } from '../adherence';
 // A closed long option with the given contracts, net P/L, and entry time.
 function option(net, { quantity = 1, openedAt = '2026-04-13T14:00:00Z' } = {}) {
   return {
+    assetClass: 'option',
     direction: 'long',
     quantity,
     multiplier: 100,
@@ -37,6 +38,29 @@ describe('adherence', () => {
   it('leaves out trades that were never closed', () => {
     const open = { ...option(10), closedAt: null, exitPrice: null };
     expect(adherence([open]).trades).toBe(0);
+  });
+
+  it('leaves out stock trades, whose share counts are not contracts', () => {
+    const stock = { ...option(10), assetClass: 'stock', quantity: 100, multiplier: 1 };
+    expect(adherence([stock]).trades).toBe(0);
+  });
+
+  it('leaves out a closed trade with no exit price', () => {
+    expect(adherence([{ ...option(10), exitPrice: null }]).trades).toBe(0);
+  });
+
+  it('counts a closed trade with no entry time toward neither side of the window rule', () => {
+    const result = adherence([{ ...option(-10), openedAt: null }]);
+    expect(result.trades).toBe(1);
+    expect(result.window).toEqual({ ok: 0, missed: 0, cost: 0 });
+  });
+
+  it('sums costs in cents', () => {
+    const result = adherence([
+      option(-0.1, { quantity: 3, openedAt: FREE }),
+      option(-0.2, { quantity: 3, openedAt: FREE }),
+    ]);
+    expect(result.size.cost).toBe(-0.3);
   });
 
   it('returns zeros for no trades', () => {

@@ -1,4 +1,4 @@
-import { profitLoss, tradeStatus } from './tradeMetrics';
+import { profitLoss } from './tradeMetrics';
 import { MET, MISSED, sizeGate, windowGate } from './setups/gates';
 
 // Rule adherence over closed trades (docs/private/dashboard.md section 3): how
@@ -6,8 +6,11 @@ import { MET, MISSED, sizeGate, windowGate } from './setups/gates';
 // broke them cost. The gates are the review-time ones in setups/gates.js; a
 // trade a gate can't judge (no entry time) counts toward neither side.
 // `cost` is the net P/L of the trades that missed, so a costly rule is negative.
+// Option trades only: the gates count contracts, and a stock's share count
+// would read as an oversized entry.
 // Plan OK, Stop OK, Exit OK, and a discipline score aren't defined yet.
 
+// Money is summed in whole cents so totals don't drift with floating-point error.
 const toCents = (dollars) => Math.round(dollars * 100);
 
 function tally(rows, grade) {
@@ -25,9 +28,12 @@ function tally(rows, grade) {
 }
 
 export function adherence(trades) {
+  // profitLoss is null until the trade is closed with both prices.
   const rows = trades
-    .filter((trade) => tradeStatus(trade) === 'closed' && profitLoss(trade) !== null)
-    .map((trade) => ({ trade, net: toCents(profitLoss(trade)) }));
+    .filter((trade) => trade.assetClass === 'option')
+    .map((trade) => ({ trade, pnl: profitLoss(trade) }))
+    .filter(({ pnl }) => pnl !== null)
+    .map(({ trade, pnl }) => ({ trade, net: toCents(pnl) }));
 
   return {
     trades: rows.length,
