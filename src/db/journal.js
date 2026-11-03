@@ -23,6 +23,11 @@ export async function listJournalEntries(db, { limit = 50, since } = {}) {
   return rows.map(({ entry, trade }) => ({ ...entry, trade }));
 }
 
+export async function getJournalEntry(db, id) {
+  const [entry] = await db.select().from(journalEntries).where(eq(journalEntries.id, id));
+  return entry ?? null;
+}
+
 // Every journal entry linked to one of the trades, oldest first.
 export async function listEntriesForTrades(db, tradeIds) {
   if (tradeIds.length === 0) return [];
