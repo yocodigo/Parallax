@@ -15,8 +15,11 @@ import { timeTicks, valueTicks } from '@/lib/chartTicks';
 import { formatProfitLoss } from '@/lib/format';
 
 // Theme colors as CSS variables, so the chart follows dark mode. Blue-500 is
-// the middle shade, which the dark theme leaves as is: it passes the dataviz
-// lightness and contrast checks on both the white and the gray-900 card.
+// the middle shade, which the dark theme leaves as is, so the line is the same
+// blue on both cards: 3.7:1 against white and 4.8:1 against gray-900, above
+// the 3:1 that graphics need (WCAG 1.4.11). Blue-600 would turn into blue-400
+// in dark mode, too light for a line on a dark card (OKLCH lightness 0.71,
+// past the 0.48-0.67 we kept dark-mode marks within).
 const theme = (name) => `rgb(var(--color-${name}))`;
 const LINE = theme('blue-500');
 
@@ -95,6 +98,7 @@ export default function EquityCurve({ points }) {
                   dataKey="index"
                   ticks={ticks.map((t) => t.index)}
                   tickFormatter={(index) => tickLabels.get(index) ?? ''}
+                  // Where day ticks crowd, Recharts drops some, keeping the first and last.
                   interval="preserveStartEnd"
                   minTickGap={24}
                   axisLine={false}
@@ -122,6 +126,7 @@ export default function EquityCurve({ points }) {
                 <Area
                   type="linear"
                   dataKey="cumulative"
+                  // The wash fills to the zero line, not the axis floor, so losses read as below it.
                   baseValue={0}
                   stroke={LINE}
                   strokeWidth={2}

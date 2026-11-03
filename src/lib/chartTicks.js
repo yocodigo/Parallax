@@ -41,8 +41,8 @@ export function timeTicks(times) {
 }
 
 // Y-axis ticks for a dollar scale: round steps (1, 2, 2.5, or 5 times a power
-// of ten, never under a dollar) from the step below the lowest value to the one
-// above the highest, always taking in zero. The smallest step that keeps to
+// of ten, never under a dollar) from the step at or below the lowest value to
+// the one at or above the highest, always taking in zero. The smallest step that keeps to
 // MAX_INTERVALS wins, so the plot wastes little room past the data.
 const MAX_INTERVALS = 7;
 const ROUND_STEPS = [1, 2, 2.5, 5];
@@ -51,6 +51,11 @@ export function valueTicks(min, max) {
   const lo = Math.min(0, min);
   // lo + 1: a curve flat at zero still gets a scale.
   const hi = Math.max(0, max, lo + 1);
+  // Start at the power of ten where a step could first fit the range in
+  // MAX_INTERVALS, and grow it: the loop always ends, because a step as large as
+  // the range covers it in at most two intervals. The values must be numbers:
+  // an empty chart's Infinity and -Infinity become 0 and 1 above, but NaN
+  // would never fit.
   for (let power = Math.floor(Math.log10((hi - lo) / MAX_INTERVALS)); ; power += 1) {
     for (const multiple of ROUND_STEPS) {
       const step = multiple * 10 ** power;
