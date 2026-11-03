@@ -1,5 +1,14 @@
+import { eq } from 'drizzle-orm';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { addJournalEntry, getPlanEntry, listJournalEntries, saveCoaching, savePlan } from '../journal';
+import {
+  addJournalEntry,
+  deleteJournalEntry,
+  getJournalEntry,
+  getPlanEntry,
+  listJournalEntries,
+  saveCoaching,
+  savePlan,
+} from '../journal';
 import { trades } from '../schema';
 import { createTestDb, resetDb } from '../testing';
 
@@ -126,5 +135,40 @@ describe('saveCoaching', () => {
 
     const plan = await addJournalEntry(db, { kind: 'plan', notes: 'A plan.' });
     expect(await saveCoaching(db, plan.id, 'x')).toBeNull();
+  });
+});
+
+describe('deleteJournalEntry', () => {
+  it('deletes a review or thesis and leaves its linked trade alone', async () => {
+    const { trade } = await savePlan(db, { plan, entry: { notes: 'Plan.' } });
+    const review = await addJournalEntry(db, { kind: 'review', notes: 'Review.', tradeId: trade.id });
+
+    expect(await deleteJournalEntry(db, review.id)).toEqual({ deleted: true });
+    expect(await getJournalEntry(db, review.id)).toBeNull();
+    expect(await db.select().from(trades)).toHaveLength(1);
+  });
+
+  it('deletes a plan that was never filled, along with its trade', async () => {
+    const { trade, entry } = await savePlan(db, { plan, entry: { notes: 'Plan.' } });
+
+    expect(await deleteJournalEntry(db, entry.id)).toEqual({ deleted: true });
+    expect(await getJournalEntry(db, entry.id)).toBeNull();
+    expect(await db.select().from(trades).where(eq(trades.id, trade.id))).toHaveLength(0);
+  });
+
+  it('refuses a plan whose trade has been filled', async () => {
+    const { trade, entry } = await savePlan(db, { plan, entry: { notes: 'Plan.' } });
+    await db.update(trades).set({ openedAt: new Date(), entryPrice: 100 }).where(eq(trades.id, trade.id));
+
+    expect(await deleteJournalEntry(db, entry.id)).toEqual({ deleted: false, reason: 'filled' });
+    expect(await getJournalEntry(db, entry.id)).not.toBeNull();
+    expect(await db.select().from(trades)).toHaveLength(1);
+  });
+
+  it('reports an unknown entry', async () => {
+    expect(await deleteJournalEntry(db, '00000000-0000-0000-0000-000000000000')).toEqual({
+      deleted: false,
+      reason: 'not_found',
+    });
   });
 });

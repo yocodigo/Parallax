@@ -73,3 +73,26 @@ export async function savePlan(db, { plan, entry }) {
     return { trade, entry: savedEntry };
   });
 }
+
+// Deletes an entry. A plan entry holds its trade's entry and exit controls, so
+// once the trade has a fill it stays (reason 'filled'); a plan that was never
+// filled goes together with its trade, which would otherwise be left with no
+// way to show in the journal. Reviews and theses are deleted on their own and
+// their linked trade is untouched.
+export async function deleteJournalEntry(db, id) {
+  return db.transaction(async (tx) => {
+    const [entry] = await tx.select().from(journalEntries).where(eq(journalEntries.id, id));
+    if (!entry) return { deleted: false, reason: 'not_found' };
+
+    if (entry.kind === 'plan' && entry.tradeId) {
+      const [trade] = await tx.select().from(trades).where(eq(trades.id, entry.tradeId));
+      if (trade?.openedAt) return { deleted: false, reason: 'filled' };
+      await tx.delete(journalEntries).where(eq(journalEntries.id, id));
+      if (trade) await tx.delete(trades).where(eq(trades.id, trade.id));
+      return { deleted: true };
+    }
+
+    await tx.delete(journalEntries).where(eq(journalEntries.id, id));
+    return { deleted: true };
+  });
+}
