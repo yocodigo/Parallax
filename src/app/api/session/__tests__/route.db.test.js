@@ -100,6 +100,34 @@ describe('POST /api/session', () => {
     const response = await signIn({ password: PASSWORD });
 
     expect(response.status).toBe(200);
+  });
+
+  it('removes failures older than 15 minutes as new ones come in', async () => {
+    await recordSignInFailure(getDb(), OTHER_IP, new Date(Date.now() - 16 * 60 * 1000));
+
+    await signIn({ password: 'guess' });
+
+    expect(await countSignInFailures(getDb(), OTHER_IP, EPOCH)).toBe(0);
+    expect(await countSignInFailures(getDb(), IP, EPOCH)).toBe(1);
+  });
+
+  it('counts by the first x-forwarded-for address where there is no x-real-ip', async () => {
+    const response = await POST(
+      new Request('http://localhost/api/session', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-forwarded-for': `${OTHER_IP}, 10.0.0.1` },
+        body: JSON.stringify({ password: 'guess' }),
+      })
+    );
+
+    expect(response.status).toBe(401);
+    expect(await countSignInFailures(getDb(), OTHER_IP, EPOCH)).toBe(1);
+  });
+
+  it('answers 400 for a password over 1000 characters, without counting it', async () => {
+    const response = await signIn({ password: 'x'.repeat(1001) });
+
+    expect(response.status).toBe(400);
     expect(await countSignInFailures(getDb(), IP, EPOCH)).toBe(0);
   });
 
@@ -118,7 +146,22 @@ describe('POST /api/session', () => {
 
     expect(response.status).toBe(500);
     expect(sessionCookie(response)).toBeUndefined();
-    expect(logs()[0].error.message).toMatch(/APP_PASSWORD/);
+    const [logged] = logs();
+    expect(logged.error.message).toMatch(/APP_PASSWORD/);
+    expect(logged.requestId).toBe((await response.json()).requestId);
+  });
+
+  it('answers 500 and logs when SESSION_SECRET is not set', async () => {
+    vi.stubEnv('SESSION_SECRET', '');
+    const logs = captureErrorLogs();
+
+    const response = await signIn({ password: PASSWORD });
+
+    expect(response.status).toBe(500);
+    expect(sessionCookie(response)).toBeUndefined();
+    const [logged] = logs();
+    expect(logged.error.message).toMatch(/SESSION_SECRET/);
+    expect(logged.requestId).toBe((await response.json()).requestId);
   });
 });
 
@@ -128,6 +171,10 @@ describe('DELETE /api/session', () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ signedIn: false });
-    expect(sessionCookie(response)).toMatch(/Max-Age=0/);
+    const cookie = sessionCookie(response);
+    expect(cookie).toMatch(/Max-Age=0/);
+    // The browser only replaces the cookie if the path matches the one sign-in set.
+    expect(cookie).toMatch(/Path=\//);
+    expect(cookie).toMatch(/HttpOnly/i);
   });
 });

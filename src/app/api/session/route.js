@@ -8,6 +8,7 @@ import {
   recordSignInFailure,
 } from '@/db/signIn';
 import { withErrorLogging } from '@/lib/log';
+import { clientKey } from '@/lib/rateLimit';
 import {
   SESSION_COOKIE,
   SESSION_MAX_AGE_SECONDS,
@@ -19,7 +20,9 @@ const ROUTE = '/api/session';
 const MAX_FAILURES = 5;
 const FAILURE_WINDOW_SECONDS = 15 * 60;
 
-const signInSchema = z.object({ password: z.string().min(1, 'Enter the password') });
+const signInSchema = z.object({
+  password: z.string().min(1, 'Enter the password').max(1000, 'That is longer than any password here'),
+});
 
 const cookieOptions = (maxAge) => ({
   httpOnly: true,
@@ -31,9 +34,10 @@ const cookieOptions = (maxAge) => ({
 });
 
 // Vercel sets x-real-ip itself, so a client can't pick its own IP to dodge the
-// limit, as it could with the first entry of x-forwarded-for. Locally there is
-// none, and every attempt shares one count.
-const clientIp = (request) => request.headers.get('x-real-ip') ?? 'local';
+// limit, as it could with the first entry of x-forwarded-for. That is only the
+// fallback for hosts without it; one shared count would let any visitor lock
+// the owner out. Locally there is neither, and attempts share one count.
+const clientIp = (request) => request.headers.get('x-real-ip') ?? clientKey(request);
 
 // Signs in with the one password (APP_PASSWORD) and sets the session cookie.
 // After MAX_FAILURES wrong passwords from an IP within the window, that IP gets
