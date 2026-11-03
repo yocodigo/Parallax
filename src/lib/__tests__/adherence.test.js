@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { adherence } from '../adherence';
+import { adherence, violationCosts } from '../adherence';
 
 // A closed long option with the given contracts, net P/L, and entry time.
 function option(net, { quantity = 1, openedAt = '2026-04-13T14:00:00Z' } = {}) {
@@ -69,5 +69,46 @@ describe('adherence', () => {
       window: { ok: 0, missed: 0, cost: 0 },
       size: { ok: 0, missed: 0, cost: 0 },
     });
+  });
+});
+
+describe('violationCosts', () => {
+  it('splits net P/L by which rules the entry broke, each trade in one bucket', () => {
+    const result = violationCosts([
+      option(50, { openedAt: FREE }),
+      option(-30, { openedAt: LOCKED }),
+      option(-20, { openedAt: FREE, quantity: 3 }),
+      option(-15, { openedAt: LOCKED, quantity: 3 }),
+      option(10, { openedAt: FREE }),
+    ]);
+
+    expect(result).toEqual({
+      followed: { trades: 2, net: 60 },
+      window: { trades: 1, net: -30 },
+      size: { trades: 1, net: -20 },
+      both: { trades: 1, net: -15 },
+    });
+  });
+
+  it('counts a trade the window gate cannot judge as followed unless size was broken', () => {
+    const result = violationCosts([{ ...option(-10), openedAt: null }]);
+    expect(result.followed).toEqual({ trades: 1, net: -10 });
+  });
+
+  it('leaves out stocks and trades with no P/L, and sums in cents', () => {
+    const stock = { ...option(10), assetClass: 'stock', quantity: 100, multiplier: 1 };
+    const open = { ...option(10), closedAt: null, exitPrice: null };
+    const result = violationCosts([
+      stock,
+      open,
+      option(-0.1, { openedAt: FREE }),
+      option(-0.2, { openedAt: FREE }),
+    ]);
+    expect(result.followed).toEqual({ trades: 2, net: -0.3 });
+  });
+
+  it('returns zeros for no trades', () => {
+    const zero = { trades: 0, net: 0 };
+    expect(violationCosts([])).toEqual({ followed: zero, window: zero, size: zero, both: zero });
   });
 });

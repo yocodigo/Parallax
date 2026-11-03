@@ -27,17 +27,39 @@ function tally(rows, grade) {
   return { ...tallied, cost: cents / 100 };
 }
 
-export function adherence(trades) {
+// Option trades closed with a P/L, with the net in cents.
+function pricedOptionRows(trades) {
   // profitLoss is null until the trade is closed with both prices.
-  const rows = trades
+  return trades
     .filter((trade) => trade.assetClass === 'option')
     .map((trade) => ({ trade, pnl: profitLoss(trade) }))
     .filter(({ pnl }) => pnl !== null)
     .map(({ trade, pnl }) => ({ trade, net: toCents(pnl) }));
+}
+
+export function adherence(trades) {
+  const rows = pricedOptionRows(trades);
 
   return {
     trades: rows.length,
     window: tally(rows, (trade) => windowGate(trade.openedAt && new Date(trade.openedAt))),
     size: tally(rows, (trade) => sizeGate(trade.quantity)),
   };
+}
+
+// Net P/L by which rules the entry broke, for the mistake cost ledger chart
+// (dashboard.md section 4, chart 1). Unlike `adherence`, each trade lands in
+// exactly one bucket, so the buckets add up to the total: `followed` (neither
+// gate missed; a gate that can't judge counts as not missed), `window` (the
+// lockout only), `size` (the size only), or `both`.
+export function violationCosts(trades) {
+  const cents = { followed: [0, 0], window: [0, 0], size: [0, 0], both: [0, 0] };
+  for (const { trade, net } of pricedOptionRows(trades)) {
+    const windowMissed = windowGate(trade.openedAt && new Date(trade.openedAt)) === MISSED;
+    const sizeMissed = sizeGate(trade.quantity) === MISSED;
+    const bucket = cents[windowMissed && sizeMissed ? 'both' : windowMissed ? 'window' : sizeMissed ? 'size' : 'followed'];
+    bucket[0] += 1;
+    bucket[1] += net;
+  }
+  return Object.fromEntries(Object.entries(cents).map(([key, [count, sum]]) => [key, { trades: count, net: sum / 100 }]));
 }

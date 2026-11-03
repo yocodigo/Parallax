@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getDb } from '@/db';
 import { listClosedTradesBetween } from '@/db/trades';
-import { adherence } from '@/lib/adherence';
+import { adherence, violationCosts } from '@/lib/adherence';
 import { withErrorLogging } from '@/lib/log';
 import { equityCurve, monthlySummary, summarize } from '@/lib/performance';
 
@@ -20,7 +20,7 @@ const querySchema = z.object({
 
 // Query: ?mode=live|paper|backtest (live by default), ?year=YYYY (the current
 // New York year by default), ?asset=stock|option|crypto (all by default).
-// Returns { months, yearToDate, adherence, equity } for trades closed in that
+// Returns { months, yearToDate, adherence, violationCosts, equity } for trades closed in that
 // New York calendar year (docs/private/dashboard.md sections 1 to 3).
 export const GET = withErrorLogging('/api/insights/performance', async (request) => {
   const { searchParams } = new URL(request.url);
@@ -49,6 +49,7 @@ export const GET = withErrorLogging('/api/insights/performance', async (request)
     months: monthlySummary(closed),
     yearToDate: summarize(closed),
     adherence: adherence(closed),
+    violationCosts: violationCosts(closed),
     equity: equityCurve(closed),
   });
 });
