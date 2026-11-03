@@ -59,7 +59,9 @@ export function summarize(trades) {
 // Cumulative net P/L after each closed trade, in closing order, and how far it
 // sits below its running peak. The peak starts at zero, so early losses count.
 export function equityCurve(trades) {
-  const rows = closedInCents(trades).sort((a, b) => a.trade.closedAt - b.trade.closedAt);
+  // Dates from the database or ISO strings from JSON both sort by time.
+  const time = (row) => new Date(row.trade.closedAt).getTime();
+  const rows = closedInCents(trades).sort((a, b) => time(a) - time(b));
   let cumulative = 0;
   let peak = 0;
   return rows.map(({ trade, gross, fees }) => {

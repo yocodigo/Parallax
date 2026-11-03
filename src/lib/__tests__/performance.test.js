@@ -68,6 +68,10 @@ describe('summarize', () => {
   it('leaves out trades that are not closed', () => {
     expect(summarize([...trades, { ...option(50), closedAt: null }]).trades).toBe(5);
   });
+
+  it('leaves out a closed trade with no exit price, rather than counting it a scratch', () => {
+    expect(summarize([...trades, { ...option(50), exitPrice: null }]).trades).toBe(5);
+  });
 });
 
 describe('equityCurve', () => {
@@ -80,6 +84,14 @@ describe('equityCurve', () => {
     expect(curve.map((p) => p.cumulative)).toEqual([29, -22, -33]);
     expect(curve.map((p) => p.drawdown)).toEqual([0, 51, 62]);
     expect(curve[0].closedAt).toEqual(new Date('2026-04-13T20:00:00Z'));
+  });
+
+  it('sorts closing times given as ISO strings, as they arrive from JSON', () => {
+    const curve = equityCurve([
+      { ...option(-50), closedAt: '2026-04-14T20:00:00Z' },
+      { ...option(30), closedAt: '2026-04-13T20:00:00Z' },
+    ]);
+    expect(curve.map((p) => p.cumulative)).toEqual([30, -20]);
   });
 
   it('counts a loss from the start as drawdown, since the peak begins at zero', () => {
