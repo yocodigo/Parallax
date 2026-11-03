@@ -126,4 +126,20 @@ describe('JournalEntries', () => {
 
     expect(await screen.findByText('Database unavailable (Reference: req-123)')).toBeInTheDocument();
   });
+
+  it('offers coaching on reviews only', async () => {
+    serveJournal(
+      HttpResponse.json({
+        entries: [
+          entry({ kind: 'review', coaching: 'Hold to the first target.', coachedAt: '2026-10-20T22:00:00.000Z' }),
+          entry({ kind: 'plan', notes: 'A plan' }),
+        ],
+      })
+    );
+
+    renderEntries();
+
+    expect(await screen.findByText('Hold to the first target.')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /coach/i })).toHaveLength(1);
+  });
 });
