@@ -47,6 +47,8 @@ describe('GET /api/insights/performance', () => {
     await closedOption(-10, '2026-04-13T20:00:00Z');
     await closedOption(500, '2026-04-14T20:00:00Z', { mode: 'paper' });
     await closedOption(900, '2025-12-31T20:00:00Z');
+    // 05:00Z on January 1, 2027 is New York midnight: the next year's first moment.
+    await closedOption(700, '2027-01-01T05:00:00Z');
 
     const response = await get('?year=2026');
     const body = await response.json();
