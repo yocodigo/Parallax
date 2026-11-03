@@ -61,6 +61,28 @@ describe('SiteNav', () => {
     expect(deletes).toHaveLength(1);
   });
 
+  it('stays put and says so when signing out fails, since the session is still live', async () => {
+    server.use(http.delete('*/api/session', () => HttpResponse.json({ error: 'Down' }, { status: 500 })));
+    usePathname.mockReturnValue('/journal');
+    render(<SiteNav />);
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Sign out' }));
+
+    expect(await screen.findByText(/couldn't sign out/i)).toBeInTheDocument();
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+
+  it('stays put when the server cannot be reached', async () => {
+    server.use(http.delete('*/api/session', () => HttpResponse.error()));
+    usePathname.mockReturnValue('/journal');
+    render(<SiteNav />);
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Sign out' }));
+
+    expect(await screen.findByText(/couldn't sign out/i)).toBeInTheDocument();
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+
   it('shows only the theme picker on the login page', () => {
     usePathname.mockReturnValue('/login');
     render(<SiteNav />);

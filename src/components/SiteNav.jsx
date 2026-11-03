@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import ThemePicker from './ThemePicker';
@@ -12,21 +13,35 @@ const LINKS = [
   { href: '/import', label: 'Import' },
 ];
 
-// Clears the session cookie, then shows the login page. Even if the request
-// fails, the proxy sends the next signed-out request there anyway.
+// Clears the session cookie, then shows the login page. If the request fails
+// the cookie is still set, so it stays put and says so rather than looking
+// signed out on a shared machine.
 function SignOut() {
   const router = useRouter();
+  const [failed, setFailed] = useState(false);
 
   async function signOut() {
-    await fetch('/api/session', { method: 'DELETE' }).catch(() => {});
+    setFailed(false);
+    const res = await fetch('/api/session', { method: 'DELETE' }).catch(() => null);
+    if (!res?.ok) {
+      setFailed(true);
+      return;
+    }
     router.replace('/login');
     router.refresh();
   }
 
   return (
-    <button type="button" onClick={signOut} className="text-gray-500 hover:text-gray-800">
-      Sign out
-    </button>
+    <>
+      {failed && (
+        <span role="alert" className="text-red-700">
+          Couldn&apos;t sign out. Try again.
+        </span>
+      )}
+      <button type="button" onClick={signOut} className="text-gray-500 hover:text-gray-800">
+        Sign out
+      </button>
+    </>
   );
 }
 
