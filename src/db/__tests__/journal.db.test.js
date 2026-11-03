@@ -165,6 +165,31 @@ describe('deleteJournalEntry', () => {
     expect(await db.select().from(trades)).toHaveLength(1);
   });
 
+  it('does not delete a trade that gets filled while the delete is running', async () => {
+    const { trade, entry } = await savePlan(db, { plan, entry: { notes: 'Plan.' } });
+
+    let release;
+    const held = new Promise((resolve) => (release = resolve));
+    let filling;
+    const filled = new Promise((resolve) => (filling = resolve));
+
+    // A fill that is written but not yet committed when the delete starts.
+    const fill = db.transaction(async (tx) => {
+      await tx.update(trades).set({ openedAt: new Date(), entryPrice: 100 }).where(eq(trades.id, trade.id));
+      filling();
+      await held;
+    });
+    await filled;
+
+    const deletion = deleteJournalEntry(db, entry.id);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    release();
+    await fill;
+
+    expect(await deletion).toEqual({ deleted: false, reason: 'filled' });
+    expect(await db.select().from(trades).where(eq(trades.id, trade.id))).toHaveLength(1);
+  });
+
   it('reports an unknown entry', async () => {
     expect(await deleteJournalEntry(db, '00000000-0000-0000-0000-000000000000')).toEqual({
       deleted: false,

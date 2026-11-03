@@ -85,7 +85,8 @@ export async function deleteJournalEntry(db, id) {
     if (!entry) return { deleted: false, reason: 'not_found' };
 
     if (entry.kind === 'plan' && entry.tradeId) {
-      const [trade] = await tx.select().from(trades).where(eq(trades.id, entry.tradeId));
+      // Locked so a fill recorded at the same moment is seen, not deleted.
+      const [trade] = await tx.select().from(trades).where(eq(trades.id, entry.tradeId)).for('update');
       if (trade?.openedAt) return { deleted: false, reason: 'filled' };
       await tx.delete(journalEntries).where(eq(journalEntries.id, id));
       if (trade) await tx.delete(trades).where(eq(trades.id, trade.id));
