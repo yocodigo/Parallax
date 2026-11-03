@@ -92,4 +92,14 @@ describe('SignInForm', () => {
 
     expect(await screen.findByText(/something went wrong.*\(Reference: req-1\)/i)).toBeInTheDocument();
   });
+
+  it('says when the server could not be reached and lets you try again', async () => {
+    serveSignIn(() => HttpResponse.error());
+    render(<SignInForm next="/" />);
+
+    await submit('correct horse');
+
+    expect(await screen.findByText(/could not reach the server/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /sign in/i })).toBeEnabled();
+  });
 });

@@ -65,9 +65,9 @@ export async function passwordMatches(given, expected) {
 // tabs and newlines, so "/\t/host" is too) and never back to the login page.
 export function safeNextPath(next) {
   if (typeof next !== 'string' || !next.startsWith('/')) return '/';
-  // eslint-disable-next-line no-control-regex
   if (/[\x00-\x1f\x7f]/.test(next)) return '/';
   if (next.startsWith('//') || next.startsWith('/\\')) return '/';
-  if (next === '/login' || next.startsWith('/login?')) return '/';
+  const { pathname } = new URL(next, 'http://localhost');
+  if (pathname.replace(/\/+$/, '').toLowerCase() === '/login') return '/';
   return next;
 }

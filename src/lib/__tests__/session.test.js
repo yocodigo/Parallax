@@ -91,6 +91,10 @@ describe('safeNextPath', () => {
     ['/\n/evil.example/', '/'],
     ['/login', '/'],
     ['/login?next=/journal', '/'],
+    ['/login/', '/'],
+    ['/LOGIN', '/'],
+    ['/login#top', '/'],
+    ['/login-history', '/login-history'],
     [['/journal', '/insights'], '/'],
   ])('turns %j into %j', (next, expected) => {
     expect(safeNextPath(next)).toBe(expected);
