@@ -11,6 +11,9 @@ Vitest, JavaScript (not TypeScript).
 - `npm run dev`: dev server
 - `npm run db:generate -- --name=<snake_case_description>`: generate a migration after editing `src/db/schema.js`
 - `npm run db:migrate`: apply migrations to the dev database
+- `npm run db:seed-demo`: fill the demo's database (`DEMO_DATABASE_URL`, never `DATABASE_URL`) with the
+  made-up week in `src/lib/demoSeed.js`. Migrate it first with `DATABASE_URL=<demo url> npm run db:migrate`.
+  Refuses a database with any trade, entry, strategy, or daily plan; to reseed, start a fresh one.
 - `npm run test:unit`: unit and component tests (no database needed)
 - `npm run test:db`: database integration tests (needs Postgres running)
 - `npm run test:run`: all tests

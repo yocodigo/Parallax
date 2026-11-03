@@ -11,6 +11,7 @@
     "test:run": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:seed-demo": "tsx --tsconfig jsconfig.json scripts/seed-demo.js",
     "test:unit": "vitest run --project unit",
     "test:db": "vitest run --project db"
   },
@@ -42,6 +43,7 @@
     "msw": "^2.15.0",
     "postcss": "^8.5.29",
     "tailwindcss": "^3.4.17",
+    "tsx": "4.23.15",
     "vitest": "^5.0.3"
   }
 }
