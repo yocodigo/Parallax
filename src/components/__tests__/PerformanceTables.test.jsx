@@ -82,6 +82,23 @@ describe('PerformanceTables', () => {
     expect(second).not.toHaveClass('text-left');
   });
 
+  it('keeps the first column in view while the wide tables scroll sideways', () => {
+    renderTables();
+    for (const name of ['Monthly summary', 'Totals', 'Rule adherence']) {
+      const table = screen.getByRole('table', { name });
+      const [header] = within(table).getAllByRole('columnheader');
+      const [, row] = within(table).getAllByRole('row');
+      const rowName = within(row).getByRole('rowheader');
+      const figure = within(row).getAllByRole('cell')[0];
+      for (const sticky of [header, rowName]) {
+        expect(sticky).toHaveClass('sticky', 'left-0');
+        // Opaque, or the figures scrolling under it show through.
+        expect(sticky).toHaveClass('bg-white');
+      }
+      expect(figure).not.toHaveClass('sticky');
+    }
+  });
+
   it('shows a month’s figures formatted, and a dash for one that can’t be worked out', () => {
     renderTables();
     const [, march, april] = within(screen.getByRole('table', { name: 'Monthly summary' })).getAllByRole('row');
