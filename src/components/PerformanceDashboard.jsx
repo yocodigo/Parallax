@@ -10,6 +10,7 @@ import EquityCurve from './EquityCurve';
 import MistakeCostLedger from './MistakeCostLedger';
 import MonthlyPnl from './MonthlyPnl';
 import RollingExpectancy from './RollingExpectancy';
+import TimeOfDay from './TimeOfDay';
 
 const MODES = [
   ['live', 'Live'],
@@ -111,6 +112,7 @@ export default function PerformanceDashboard() {
         <div className="grid gap-6 lg:grid-cols-2">
           <MonthlyPnl months={data.months} />
           <MistakeCostLedger costs={data.violationCosts} />
+          <TimeOfDay buckets={data.timeOfDay} />
           <RollingExpectancy points={data.rolling} />
         </div>
       </div>

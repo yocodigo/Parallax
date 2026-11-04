@@ -36,6 +36,12 @@ const body = (extra = {}) => ({
     { closedAt: '2026-04-13T20:00:00.000Z', cumulative: 18.7, drawdown: 11.3 },
   ],
   rolling: [],
+  // Every half hour of the session, as the route sends them.
+  timeOfDay: Array.from({ length: 13 }, (_, i) => ({
+    start: `${String(9 + Math.floor((i + 1) / 2)).padStart(2, '0')}:${i % 2 ? '00' : '30'}`,
+    trades: 0,
+    netPnl: 0,
+  })),
   ...extra,
 });
 
@@ -86,6 +92,7 @@ describe('PerformanceDashboard', () => {
       'Equity curve',
       'Net P/L by month',
       'Mistake cost ledger',
+      'Results by time of day',
       'Expectancy, last 20 trades',
     ]);
   });
