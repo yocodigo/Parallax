@@ -168,7 +168,8 @@ Vitest, JavaScript (not TypeScript).
   net or gross. `rollingExpectancy` is the last 20 trades and has no point until 20 have closed, so it
   restarts each January with a single year's filter (not with `all`); `timeOfDay` buckets by New York entry time in half hours
   (9:30 to 15:30, entries outside the session in a last `outside` bucket). The charts (`EquityCurve`,
-  `MonthlyPnl`, `MistakeCostLedger`, `TimeOfDay`, `RollingExpectancy`) are presentational Recharts
+  `MonthlyPnl`, `MistakeCostLedger`, `TimeOfDay`, `RollingExpectancy`, `WinRateVsBreakeven`: a month's win rate against
+  its `breakevenWinRate`, a gap where that is null) are presentational Recharts
   components taking route data as props, with round ticks from `chartTicks.js`; `TimeOfDay` shades the
   `LOCKOUTS` windows on a hidden clock axis, which needs `allowDataOverflow` or it drifts off the bars.
   Below the grid, `AllModes` loads `GET /api/insights/modes` (`?asset`, `?strategyId`, `?optionType`, as above; every closed trade, all years

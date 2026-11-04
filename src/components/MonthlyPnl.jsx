@@ -132,7 +132,7 @@ function capLabel(labelled) {
 
 // The month on one line and, where monthColumns gives one, the year under it,
 // so a label is never wider than "Sep" and crowded months still fit.
-function monthTick(columns) {
+export function monthTick(columns) {
   const byMonth = new Map(columns.map((c) => [c.month, c]));
   return function MonthTick({ x, y, payload }) {
     const { label, year } = byMonth.get(payload.value);

@@ -151,6 +151,7 @@ describe('PerformanceDashboard', () => {
       'Mistake cost ledger',
       'Results by time of day',
       'Expectancy, last 20 trades',
+      'Win rate vs breakeven',
       'Mode comparison',
       'Graduation tracker',
     ]);
