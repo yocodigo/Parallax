@@ -4,7 +4,7 @@ import { getDb } from '@/db';
 import { listStrategies } from '@/db/strategies';
 import { listAllClosedTrades } from '@/db/trades';
 import { withErrorLogging } from '@/lib/log';
-import { graduation, modeComparison } from '@/lib/performance';
+import { GRAD_N, graduation, modeComparison } from '@/lib/performance';
 
 // Read fresh from the database on every request, never prerendered.
 export const dynamic = 'force-dynamic';
@@ -13,11 +13,13 @@ const querySchema = z.object({
   asset: z.enum(['stock', 'option', 'crypto']).optional(),
 });
 
-// Query: ?asset=stock|option|crypto (all by default). Returns { modes, setups }
+// Query: ?asset=stock|option|crypto (all by default). Returns { modes, setups, gradN }
 // over every closed trade, whatever its mode and year: the modes are compared
 // with each other, and a setup's graduation counts build up over the years
 // (docs/private/dashboard.md section 4 charts 11 and 12, and section 8). `setups`
-// are the strategies with their name (null for the row of trades with none).
+// are the strategies with their name (null for the row of trades with none), and
+// `gradN` is the trades in a graduation window, sent so the page doesn't import the
+// detector code that lib/performance.js pulls in just to show the number.
 export const GET = withErrorLogging('/api/insights/modes', async (request) => {
   const { searchParams } = new URL(request.url);
   const parsed = querySchema.safeParse({ asset: searchParams.get('asset') ?? undefined });
@@ -36,6 +38,7 @@ export const GET = withErrorLogging('/api/insights/modes', async (request) => {
   const names = new Map(strategies.map((strategy) => [strategy.id, strategy.name]));
 
   return NextResponse.json({
+    gradN: GRAD_N,
     modes: modeComparison(closed),
     setups: graduation(closed).map((setup) => ({ ...setup, name: names.get(setup.strategyId) ?? null })),
   });

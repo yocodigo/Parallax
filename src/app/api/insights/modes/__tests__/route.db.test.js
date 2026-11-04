@@ -80,6 +80,12 @@ describe('GET /api/insights/modes', () => {
     expect(setups[1].gap).toBeNull();
   });
 
+  it('says how many trades fill a graduation window, so the page need not repeat the number', async () => {
+    const body = await (await get()).json();
+
+    expect(body.gradN).toBe(30);
+  });
+
   it('limits both to one asset class when asked', async () => {
     await closedTrade(30, '2026-04-13T20:00:00Z');
     await closedTrade(8, '2026-04-14T20:00:00Z', { stock: true });
