@@ -24,6 +24,7 @@ const COLUMNS = [
   ['Losses', (s) => s.losses],
   ['Scratches', (s) => s.scratches],
   ['Win rate', (s) => pct(s.winRate)],
+  ['Loss rate', (s) => pct(s.lossRate)],
   ['Breakeven win rate', (s) => pct(s.breakevenWinRate)],
   ['Avg win', (s) => signed(s.avgWin)],
   ['Avg loss', (s) => signed(s.avgLoss)],

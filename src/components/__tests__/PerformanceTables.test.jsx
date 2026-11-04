@@ -8,6 +8,7 @@ const summary = (extra = {}) => ({
   losses: 1,
   scratches: 1,
   winRate: 0.5,
+  lossRate: 0.25,
   breakevenWinRate: 0.4,
   avgWin: 30,
   avgLoss: -20,
@@ -58,6 +59,7 @@ describe('PerformanceTables', () => {
       'Losses',
       'Scratches',
       'Win rate',
+      'Loss rate',
       'Breakeven win rate',
       'Avg win',
       'Avg loss',
@@ -109,7 +111,7 @@ describe('PerformanceTables', () => {
     const [, march, april] = within(screen.getByRole('table', { name: 'Monthly summary' })).getAllByRole('row');
     const cells = (row) => within(row).getAllByRole('cell').map((c) => c.textContent);
     expect(cells(march)).toEqual([
-      '4', '2', '1', '1', '50%', '40%', '+$30.00', '-$20.00', '1.50', '+$40.00', '$2.60', '+$37.40', '3.00', '2.80', '+$10.00', '+$9.35',
+      '4', '2', '1', '1', '50%', '25%', '40%', '+$30.00', '-$20.00', '1.50', '+$40.00', '$2.60', '+$37.40', '3.00', '2.80', '+$10.00', '+$9.35',
     ]);
     // Win rate, profit factor, avg loss, and payoff ratio are dashes, not zeros.
     expect(cells(april).filter((c) => c === '–')).toHaveLength(4);
