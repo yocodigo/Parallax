@@ -39,7 +39,7 @@ const percent = new Intl.NumberFormat('en-US', { style: 'percent', maximumFracti
 const orDash = (value, format) => (value === null || value === undefined ? '–' : format(value));
 
 // The route filters by New York calendar year, so the picker offers this year
-// and the five before it.
+// and the five before it, then every year.
 const nyYear = () =>
   Number(new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric' }).format(new Date()));
 
@@ -120,7 +120,7 @@ export default function PerformanceDashboard() {
   const thisYear = nyYear();
   const [mode, setMode] = useState('live');
   const [asset, setAsset] = useState('');
-  const [year, setYear] = useState(thisYear);
+  const [year, setYear] = useState(String(thisYear));
   const [strategyId, setStrategyId] = useState('');
   const [pickedSide, setPickedSide] = useState('');
   // Only options are calls or puts, so the pick is off (and not sent) for stocks and crypto;
@@ -141,7 +141,7 @@ export default function PerformanceDashboard() {
     ...(strategyId && { strategyId }),
     ...(optionType && { optionType }),
   };
-  const query = new URLSearchParams({ mode, ...filters, year: String(year) });
+  const query = new URLSearchParams({ mode, ...filters, year });
   const { data, error, isLoading } = useSWR(`/api/insights/performance?${query}`, fetchJson, {
     revalidateOnFocus: false,
   });
@@ -158,7 +158,7 @@ export default function PerformanceDashboard() {
   } else if (data.yearToDate.trades === 0) {
     body = (
       <div className="rounded-lg border border-gray-200 bg-white p-6 text-sm text-gray-500">
-        <p>No closed trades for these filters in {year}. Try widening the filters, or import an account statement to fill the charts.</p>
+        <p>No closed trades for these filters in {year === 'all' ? 'any year' : year}. Try widening the filters, or import an account statement to fill the charts.</p>
         <Link href="/import" className="mt-3 inline-block font-medium text-blue-700 hover:underline">
           Import trades
         </Link>
@@ -188,9 +188,12 @@ export default function PerformanceDashboard() {
         <Select label="Call/Put" value={optionType} onChange={setPickedSide} options={SIDES} disabled={!sideApplies} />
         <Select
           label="Year"
-          value={String(year)}
-          onChange={(value) => setYear(Number(value))}
-          options={Array.from({ length: 6 }, (_, i) => [String(thisYear - i), String(thisYear - i)])}
+          value={year}
+          onChange={setYear}
+          options={[
+            ...Array.from({ length: 6 }, (_, i) => [String(thisYear - i), String(thisYear - i)]),
+            ['all', 'All years'],
+          ]}
         />
       </div>
       {body}

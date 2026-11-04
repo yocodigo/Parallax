@@ -167,6 +167,33 @@ describe('PerformanceDashboard', () => {
     expect(queries.at(-1)).toEqual({ mode: 'paper', asset: 'option', year: '2025' });
   });
 
+  it('offers the last six years and all years, and asks for all of them', async () => {
+    const queries = servePerformance();
+    renderDashboard();
+    await screen.findByText('Net P/L (net)');
+
+    const year = screen.getByLabelText('Year');
+    const years = [...year.options].map((option) => option.text);
+    expect(years).toHaveLength(7);
+    expect(years[0]).toBe(nyYear);
+    expect(years.at(-1)).toBe('All years');
+
+    await userEvent.selectOptions(year, 'All years');
+    await waitFor(() => expect(queries.at(-1)).toEqual({ mode: 'live', year: 'all' }));
+
+    await userEvent.selectOptions(year, '2025');
+    await waitFor(() => expect(queries.at(-1)).toEqual({ mode: 'live', year: '2025' }));
+  });
+
+  it('says no year had trades, not a named year, when all years come back empty', async () => {
+    servePerformance(body({ yearToDate: summary({ trades: 0 }), equity: [] }));
+    renderDashboard();
+
+    await userEvent.selectOptions(await screen.findByLabelText('Year'), 'All years');
+
+    expect(await screen.findByText(/No closed trades for these filters in any year/)).toBeInTheDocument();
+  });
+
   it('offers every setup, and the trades taken without one, and asks for the one picked', async () => {
     const queries = servePerformance();
     renderDashboard();

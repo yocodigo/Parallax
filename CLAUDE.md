@@ -160,13 +160,13 @@ Vitest, JavaScript (not TypeScript).
   and when met. Rules are grouped by id (named by their latest text); deleted rules by their text.
 - Performance (`/performance`, in the nav): the dollar-based dashboard (`docs/private/dashboard.md`).
   `PerformanceDashboard.jsx` loads `GET /api/insights/performance` (`?mode`, live by default; `?year`, the
-  current New York year; `?asset`; `?strategyId`, a strategy id or `none` for trades with no setup;
+  current New York year, or `all` for every year; `?asset`; `?strategyId`, a strategy id or `none` for trades with no setup;
   `?optionType`, call or put) for the trades closed in that year: `{ months, yearToDate, adherence,
   violationCosts, equity, rolling, timeOfDay }`, built by the pure functions in `src/lib/performance.js`
   (`summarize`, `monthlySummary`, `equityCurve`, `rollingExpectancy`, `timeOfDay`) and `adherence.js`. Wins
   and losses are judged on gross P/L, money is summed in whole cents, and every headline figure is labelled
   net or gross. `rollingExpectancy` is the last 20 trades and has no point until 20 have closed, so it
-  restarts each January with the year filter; `timeOfDay` buckets by New York entry time in half hours
+  restarts each January with a single year's filter (not with `all`); `timeOfDay` buckets by New York entry time in half hours
   (9:30 to 15:30, entries outside the session in a last `outside` bucket). The charts (`EquityCurve`,
   `MonthlyPnl`, `MistakeCostLedger`, `TimeOfDay`, `RollingExpectancy`) are presentational Recharts
   components taking route data as props, with round ticks from `chartTicks.js`; `TimeOfDay` shades the
@@ -177,7 +177,7 @@ Vitest, JavaScript (not TypeScript).
   the last row). Each gate (backtest to paper, paper to live, live to a bigger size) is met when the last
   `GRAD_N` = 30 closed trades in that mode have net expectancy above zero; the live-minus-paper gap uses
   the same windows and shows only once both are full. `GRAD_N` is a default the spec marks (confirm), sent as `gradN` so the page doesn't
-  import `performance.js`, which pulls in the detector code. The page's Setup and Call/Put filters (like Asset) feed both routes. Not built yet: an all-years range, and links to the section 3 tables.
+  import `performance.js`, which pulls in the detector code. The page's Setup and Call/Put filters (like Asset) feed both routes. The Year select ends with All years. Not built yet: links to the section 3 tables.
 - History warnings: `HistoryWarnings.jsx` in the plan form asks `GET /api/insights/warnings` (mode,
   direction, assetClass, symbol; debounced) and lists what `historyWarnings` finds in closed trades of
   the same mode: same symbol, same direction and asset class, and same part of the New York session
