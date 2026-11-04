@@ -116,7 +116,8 @@ export default function MistakeCostLedger({ costs }) {
               <BarChart
                 data={rows}
                 layout="vertical"
-                margin={{ top: 4, right: 8, bottom: 0, left: 0 }}
+                // Room for half of the last axis label, which is centered on the plot's edge.
+                margin={{ top: 4, right: 24, bottom: 0, left: 0 }}
                 accessibilityLayer
               >
                 <CartesianGrid
