@@ -27,6 +27,12 @@ const ASSETS = [
   ['crypto', 'Crypto'],
 ];
 
+const SIDES = [
+  ['', 'Both'],
+  ['call', 'Calls'],
+  ['put', 'Puts'],
+];
+
 const percent = new Intl.NumberFormat('en-US', { style: 'percent', maximumFractionDigits: 0 });
 
 // A ratio or percent that can't be worked out (no losses, no trades) is a dash.
@@ -77,11 +83,12 @@ function HeadlineStrip({ yearToDate, equity }) {
 
 // The modes side by side and each setup's progress through the promotion gates
 // (dashboard.md sections 4 and 8). They compare the modes with each other, so
-// the page's Mode and Year filters don't apply: only the Asset one does. Left
-// out while loading, and when nothing has closed in any mode (the page's own
-// empty state already says to import); an error shows beside the charts.
-function AllModes({ asset }) {
-  const { data, error } = useSWR(`/api/insights/modes${asset ? `?asset=${asset}` : ''}`, fetchJson, {
+// the page's Mode and Year filters don't apply: the others do. Left out while
+// loading, and when nothing has closed in any mode (the page's own empty state
+// already says to import); an error shows beside the charts.
+function AllModes({ filters }) {
+  const query = new URLSearchParams(filters).toString();
+  const { data, error } = useSWR(`/api/insights/modes${query ? `?${query}` : ''}`, fetchJson, {
     revalidateOnFocus: false,
   });
 
@@ -95,7 +102,7 @@ function AllModes({ asset }) {
   if (!data || Object.values(data.modes).every((mode) => mode.trades === 0)) return null;
   return (
     <div className="space-y-6">
-      <p className="text-xs text-gray-500">Across all modes and years; only the Asset filter applies.</p>
+      <p className="text-xs text-gray-500">Across all modes and years; the Mode and Year filters don&apos;t apply.</p>
       <ModeComparison modes={data.modes} />
       <GraduationTracker setups={data.setups} gradN={data.gradN} />
     </div>
@@ -109,8 +116,23 @@ export default function PerformanceDashboard() {
   const [mode, setMode] = useState('live');
   const [asset, setAsset] = useState('');
   const [year, setYear] = useState(thisYear);
+  const [strategyId, setStrategyId] = useState('');
+  const [optionType, setOptionType] = useState('');
 
-  const query = new URLSearchParams({ mode, ...(asset && { asset }), year: String(year) });
+  const { data: strategyData } = useSWR('/api/strategies', fetchJson, { revalidateOnFocus: false });
+  const setups = [
+    ['', 'All setups'],
+    ...(strategyData?.strategies ?? []).map((strategy) => [strategy.id, strategy.name]),
+    ['none', 'No setup'],
+  ];
+
+  // The filters both routes share; only the performance one also takes mode and year.
+  const filters = {
+    ...(asset && { asset }),
+    ...(strategyId && { strategyId }),
+    ...(optionType && { optionType }),
+  };
+  const query = new URLSearchParams({ mode, ...filters, year: String(year) });
   const { data, error, isLoading } = useSWR(`/api/insights/performance?${query}`, fetchJson, {
     revalidateOnFocus: false,
   });
@@ -153,6 +175,8 @@ export default function PerformanceDashboard() {
       <div className="flex flex-wrap gap-4">
         <Select label="Mode" value={mode} onChange={setMode} options={MODES} />
         <Select label="Asset" value={asset} onChange={setAsset} options={ASSETS} />
+        <Select label="Setup" value={strategyId} onChange={setStrategyId} options={setups} />
+        <Select label="Call/Put" value={optionType} onChange={setOptionType} options={SIDES} />
         <Select
           label="Year"
           value={String(year)}
@@ -161,7 +185,7 @@ export default function PerformanceDashboard() {
         />
       </div>
       {body}
-      <AllModes asset={asset} />
+      <AllModes filters={filters} />
     </div>
   );
 }

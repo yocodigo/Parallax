@@ -104,7 +104,19 @@ function renderDashboard() {
 
 describe('PerformanceDashboard', () => {
   // Every test has the modes route answering; the ones about it serve their own.
-  beforeEach(() => serveModes());
+  beforeEach(() => {
+    serveModes();
+    server.use(
+      http.get('*/api/strategies', () =>
+        HttpResponse.json({
+          strategies: [
+            { id: '5b2b1a5e-0d52-4f0e-9a39-1f6a2f7f6c11', name: 'Trend pullback' },
+            { id: '9c0e7a1d-3b64-4a3c-8c70-2d1b8a6e4f22', name: 'Opening range' },
+          ],
+        })
+      )
+    );
+  });
 
   it('shows the headline strip, each figure labelled net or gross, above the charts', async () => {
     servePerformance();
@@ -155,17 +167,63 @@ describe('PerformanceDashboard', () => {
     expect(queries.at(-1)).toEqual({ mode: 'paper', asset: 'option', year: '2025' });
   });
 
+  it('offers every setup, and the trades taken without one, and asks for the one picked', async () => {
+    const queries = servePerformance();
+    renderDashboard();
+    await screen.findByText('Net P/L (net)');
+
+    const setup = screen.getByLabelText('Setup');
+    await screen.findByRole('option', { name: 'Opening range' });
+    expect([...setup.options].map((option) => option.text)).toEqual([
+      'All setups',
+      'Trend pullback',
+      'Opening range',
+      'No setup',
+    ]);
+
+    await userEvent.selectOptions(setup, 'Opening range');
+    await waitFor(() =>
+      expect(queries.at(-1)).toEqual({
+        mode: 'live',
+        year: nyYear,
+        strategyId: '9c0e7a1d-3b64-4a3c-8c70-2d1b8a6e4f22',
+      })
+    );
+
+    await userEvent.selectOptions(setup, 'No setup');
+    await waitFor(() => expect(queries.at(-1).strategyId).toBe('none'));
+
+    await userEvent.selectOptions(setup, 'All setups');
+    await waitFor(() => expect(queries.at(-1)).toEqual({ mode: 'live', year: nyYear }));
+  });
+
+  it('asks for calls or puts only, and back to both', async () => {
+    const queries = servePerformance();
+    renderDashboard();
+    await screen.findByText('Net P/L (net)');
+
+    const side = screen.getByLabelText('Call/Put');
+    expect([...side.options].map((option) => option.text)).toEqual(['Both', 'Calls', 'Puts']);
+
+    await userEvent.selectOptions(side, 'Puts');
+    await waitFor(() => expect(queries.at(-1)).toEqual({ mode: 'live', year: nyYear, optionType: 'put' }));
+
+    await userEvent.selectOptions(side, 'Both');
+    await waitFor(() => expect(queries.at(-1)).toEqual({ mode: 'live', year: nyYear }));
+  });
+
   it('compares the modes and tracks graduation below the charts, whatever mode the charts show', async () => {
     servePerformance();
     renderDashboard();
 
     expect(await screen.findByRole('heading', { name: 'Mode comparison' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Graduation tracker' })).toBeInTheDocument();
-    expect(screen.getByText('Trend pullback')).toBeInTheDocument();
-    expect(screen.getByText(/only the Asset filter applies/)).toBeInTheDocument();
+    // The Setup filter lists it too, so look for the table's own cell.
+    expect(screen.getByText('Trend pullback', { selector: 'td, th' })).toBeInTheDocument();
+    expect(screen.getByText(/the Mode and Year filters don't apply/)).toBeInTheDocument();
   });
 
-  it('asks the modes route for the asset only, never the mode or the year', async () => {
+  it('asks the modes route for the asset, setup, and call/put picks, never the mode or the year', async () => {
     servePerformance();
     const queries = serveModes();
     renderDashboard();
@@ -174,9 +232,15 @@ describe('PerformanceDashboard', () => {
     await userEvent.selectOptions(screen.getByLabelText('Mode'), 'paper');
     await userEvent.selectOptions(screen.getByLabelText('Year'), '2025');
     await userEvent.selectOptions(screen.getByLabelText('Asset'), 'option');
+    await screen.findByRole('option', { name: 'Trend pullback' });
+    await userEvent.selectOptions(screen.getByLabelText('Setup'), 'No setup');
+    await userEvent.selectOptions(screen.getByLabelText('Call/Put'), 'Calls');
 
-    await waitFor(() => expect(queries.at(-1)).toEqual({ asset: 'option' }));
-    expect(queries.every((query) => Object.keys(query).every((key) => key === 'asset'))).toBe(true);
+    await waitFor(() =>
+      expect(queries.at(-1)).toEqual({ asset: 'option', strategyId: 'none', optionType: 'call' })
+    );
+    const allowed = ['asset', 'strategyId', 'optionType'];
+    expect(queries.every((query) => Object.keys(query).every((key) => allowed.includes(key)))).toBe(true);
   });
 
   it('leaves the modes out when no trade has closed in any of them', async () => {
