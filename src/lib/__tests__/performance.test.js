@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { equityCurve, modeComparison, monthlySummary, rollingExpectancy, summarize, timeOfDay } from '../performance';
+import { equityCurve, GRAD_N, graduation, modeComparison, monthlySummary, rollingExpectancy, summarize, timeOfDay } from '../performance';
 
 // A closed long option, 1 contract: gross P/L is (exit - entry) * 100.
 function option(gross, fees = 0, closedAt = '2026-04-13T20:00:00Z') {
@@ -242,5 +242,81 @@ describe('modeComparison', () => {
 
     expect(result.live.trades).toBe(1);
     expect(Object.values(result).reduce((total, s) => total + s.trades, 0)).toBe(1);
+  });
+});
+
+describe('graduation', () => {
+  // The i-th trade of a run, closing an hour after the one before it.
+  const hour = (i) => new Date(Date.UTC(2026, 3, 1, 14 + i)).toISOString();
+  const trade = (mode, strategyId, gross, i, fees = 0) => ({ ...option(gross, fees, hour(i)), mode, strategyId });
+  const run = (mode, strategyId, grosses, fees = 0) => grosses.map((g, i) => trade(mode, strategyId, g, i, fees));
+  const row = (rows, id) => rows.find((r) => r.strategyId === id);
+
+  it('defaults to a window of 30 trades', () => {
+    expect(GRAD_N).toBe(30);
+  });
+
+  it('has a row per setup with a cell per mode, the trades without a setup in the last row', () => {
+    const rows = graduation([
+      ...run('paper', null, [5, 5, 5]),
+      ...run('live', 'a', [10]),
+      ...run('paper', 'a', [10, 10]),
+      ...run('backtest', 'b', [10, 10, 10, 10]),
+    ]);
+
+    expect(rows.map((r) => r.strategyId)).toEqual(['b', 'a', null]);
+    expect(row(rows, 'a').modes.live).toMatchObject({ trades: 1, window: 1 });
+    expect(row(rows, 'a').modes.paper).toMatchObject({ trades: 2, window: 2 });
+    expect(row(rows, 'a').modes.backtest).toMatchObject({ trades: 0, window: 0, netExpectancy: null, met: false });
+  });
+
+  it('is met on the most recent 30 trades, so old losses drop out', () => {
+    // Five losses, then thirty wins: 35 trades, but the last 30 are all wins.
+    const rows = graduation(run('paper', 'a', [...Array(5).fill(-10), ...Array(30).fill(10)]));
+
+    expect(row(rows, 'a').modes.paper).toMatchObject({ trades: 35, window: 30, netExpectancy: 10, met: true });
+  });
+
+  it('is not met before 30 trades, however good they are', () => {
+    const rows = graduation(run('backtest', 'a', Array(12).fill(10)));
+
+    expect(row(rows, 'a').modes.backtest).toMatchObject({ trades: 12, window: 12, netExpectancy: 10, met: false });
+  });
+
+  it('is not met at 30 trades unless expectancy is above zero', () => {
+    const rows = graduation([...run('live', 'a', Array(30).fill(0)), ...run('live', 'b', Array(30).fill(-1))]);
+
+    expect(row(rows, 'a').modes.live).toMatchObject({ window: 30, netExpectancy: 0, met: false });
+    expect(row(rows, 'b').modes.live.met).toBe(false);
+  });
+
+  it('judges expectancy after fees: a trade that wins gross but nets zero does not count', () => {
+    // 1.00 gross each, 1.00 in fees: gross expectancy is +1, net is 0.
+    const rows = graduation(run('paper', 'a', Array(30).fill(1), 1));
+
+    expect(row(rows, 'a').modes.paper).toMatchObject({ netExpectancy: 0, met: false });
+  });
+
+  it('sorts by closing time, whatever order the trades arrive in', () => {
+    const trades = run('paper', 'a', [...Array(5).fill(-10), ...Array(30).fill(10)]).reverse();
+
+    expect(row(graduation(trades), 'a').modes.paper.met).toBe(true);
+  });
+
+  it('gives the live-minus-paper gap in net expectancy, and none unless both modes have trades', () => {
+    const rows = graduation([
+      ...run('live', 'a', [10, 20]),
+      ...run('paper', 'a', [40]),
+      ...run('live', 'b', [10]),
+    ]);
+
+    expect(row(rows, 'a').gap).toBe(-25);
+    expect(row(rows, 'b').gap).toBeNull();
+  });
+
+  it('counts only closed trades', () => {
+    const open = { ...trade('live', 'a', 10, 0), exitPrice: null, closedAt: null };
+
+    expect(graduation([open])).toEqual([]);
   });
 });

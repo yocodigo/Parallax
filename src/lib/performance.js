@@ -159,3 +159,51 @@ export const MODES = ['live', 'paper', 'backtest'];
 export function modeComparison(trades) {
   return Object.fromEntries(MODES.map((mode) => [mode, summarize(trades.filter((t) => t.mode === mode))]));
 }
+
+// Trades in a graduation window: a setup moves up a mode once its last GRAD_N
+// closed trades there average above zero (dashboard.md section 8). A default
+// the spec marks (confirm); small samples mislead, so treat it as a hint.
+export const GRAD_N = 30;
+
+// One mode's cell for a setup: the count of all its closed trades, then the
+// last GRAD_N of them (the window) and their net expectancy. Met needs a full
+// window and net expectancy above zero, so exactly zero is not enough.
+function gateCell(closed) {
+  const window = closed.slice(-GRAD_N);
+  const { netExpectancy } = summarize(window);
+  return {
+    trades: closed.length,
+    window: window.length,
+    netExpectancy,
+    met: window.length === GRAD_N && netExpectancy > 0,
+  };
+}
+
+// Progress through the promotion gates for each setup (a strategy; trades
+// with none are the last row, strategyId null), dashboard.md section 4 chart
+// 12. Each setup has a cell per mode, and the gap between live and paper net
+// expectancy over their windows: how much execution and emotion cost against
+// the idealized version. The gap is null unless both modes have trades.
+// Backtest cells gate the move to paper, paper to live, live to a bigger size.
+export function graduation(trades) {
+  const bySetup = new Map();
+  for (const trade of trades) {
+    if (!isCounted(trade)) continue;
+    const id = trade.strategyId ?? null;
+    bySetup.set(id, [...(bySetup.get(id) ?? []), trade]);
+  }
+
+  const time = (trade) => new Date(trade.closedAt).getTime();
+  const rows = [...bySetup].map(([strategyId, list]) => {
+    const modes = Object.fromEntries(
+      MODES.map((mode) => [mode, gateCell(list.filter((t) => t.mode === mode).sort((a, b) => time(a) - time(b)))])
+    );
+    const { live, paper } = modes;
+    const gap = live.window && paper.window ? (live.netExpectancy * 100 - paper.netExpectancy * 100) / 100 : null;
+    return { strategyId, modes, gap, total: list.length };
+  });
+
+  // The most traded setups first, trades without a setup last.
+  rows.sort((a, b) => (a.strategyId === null) - (b.strategyId === null) || b.total - a.total);
+  return rows.map(({ total, ...row }) => row);
+}
