@@ -24,7 +24,11 @@ const summary = (extra = {}) => ({
 const body = (extra = {}) => ({
   months: [],
   yearToDate: summary(),
-  adherence: {},
+  adherence: {
+    trades: 0,
+    window: { ok: 0, missed: 0, cost: 0 },
+    size: { ok: 0, missed: 0, cost: 0 },
+  },
   violationCosts: {
     followed: { trades: 0, cents: 0 },
     window: { trades: 0, cents: 0 },
@@ -328,6 +332,60 @@ describe('PerformanceDashboard', () => {
     expect(screen.queryByRole('heading', { name: 'Equity curve' })).not.toBeInTheDocument();
     // The filters stay, so another mode or year can be tried.
     expect(screen.getByLabelText('Mode')).toBeInTheDocument();
+  });
+
+  it('opens on the Charts tab, beside a Tables tab', async () => {
+    servePerformance();
+    renderDashboard();
+
+    expect(await screen.findByRole('heading', { name: 'Equity curve' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Charts' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Tables' })).toHaveAttribute('aria-selected', 'false');
+    expect(screen.queryByRole('table', { name: 'Monthly summary' })).not.toBeInTheDocument();
+  });
+
+  it('swaps the charts and the modes for the tables, keeping the headline strip', async () => {
+    servePerformance(body({ months: [{ month: '2026-03', ...summary() }] }));
+    renderDashboard();
+    await screen.findByRole('heading', { name: 'Equity curve' });
+    await screen.findByRole('heading', { name: 'Mode comparison' });
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Tables' }));
+
+    expect(screen.getByRole('tab', { name: 'Tables' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('table', { name: 'Monthly summary' })).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Totals' })).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Rule adherence' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Equity curve' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Mode comparison' })).not.toBeInTheDocument();
+    expect(screen.getByText('Net P/L (net)', STRIP)).toBeInTheDocument();
+  });
+
+  it('keeps the filters and asks for nothing new when switching tabs', async () => {
+    const queries = servePerformance();
+    renderDashboard();
+    await screen.findByRole('heading', { name: 'Equity curve' });
+    await userEvent.selectOptions(screen.getByLabelText('Asset'), 'option');
+    await waitFor(() => expect(queries.at(-1)).toMatchObject({ asset: 'option' }));
+    const asked = queries.length;
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Tables' }));
+    await userEvent.click(screen.getByRole('tab', { name: 'Charts' }));
+
+    expect(screen.getByLabelText('Asset')).toHaveValue('option');
+    expect(await screen.findByRole('heading', { name: 'Equity curve' })).toBeInTheDocument();
+    expect(queries).toHaveLength(asked);
+  });
+
+  it('shows the empty prompt on the Tables tab too', async () => {
+    servePerformance(body({ yearToDate: summary({ trades: 0 }), equity: [] }));
+    renderDashboard();
+    await screen.findByText(/No closed trades/);
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Tables' }));
+
+    expect(screen.getByText(/No closed trades/)).toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: 'Monthly summary' })).not.toBeInTheDocument();
   });
 
   it('shows the API error instead of the dashboard', async () => {

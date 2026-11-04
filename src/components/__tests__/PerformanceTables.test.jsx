@@ -34,7 +34,7 @@ const months = [
 ];
 
 function renderTables(props = {}) {
-  return render(<PerformanceTables months={months} yearToDate={summary({ trades: 6 })} adherence={adherence} {...props} />);
+  return render(<PerformanceTables months={months} yearToDate={summary({ trades: 6 })} adherence={adherence} rangeLabel="2026" {...props} />);
 }
 
 describe('PerformanceTables', () => {
@@ -83,12 +83,12 @@ describe('PerformanceTables', () => {
     expect(cells(april).filter((c) => c === '–')).toHaveLength(4);
   });
 
-  it('shows the year to date as one row of the same columns', () => {
+  it('shows the totals as one row of the same columns, named for the range', () => {
     renderTables();
-    const table = screen.getByRole('table', { name: 'Year to date' });
+    const table = screen.getByRole('table', { name: 'Totals' });
     const rows = within(table).getAllByRole('row');
     expect(rows).toHaveLength(2);
-    expect(within(rows[1]).getByRole('rowheader')).toHaveTextContent('Total');
+    expect(within(rows[1]).getByRole('rowheader')).toHaveTextContent('2026');
     expect(within(rows[1]).getAllByRole('cell')[0]).toHaveTextContent('6');
   });
 

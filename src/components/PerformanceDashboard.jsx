@@ -12,6 +12,7 @@ import MistakeCostLedger from './MistakeCostLedger';
 import ModeComparison from './ModeComparison';
 import MonthlyPnl from './MonthlyPnl';
 import RollingExpectancy from './RollingExpectancy';
+import PerformanceTables from './PerformanceTables';
 import TimeOfDay from './TimeOfDay';
 
 const MODES = [
@@ -42,6 +43,33 @@ const orDash = (value, format) => (value === null || value === undefined ? '–'
 // and the five before it, then every year.
 const nyYear = () =>
   Number(new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric' }).format(new Date()));
+
+const TABS = [
+  ['charts', 'Charts'],
+  ['tables', 'Tables'],
+];
+
+// Charts or the full tables (dashboard.md section 3) over the same filters.
+function Tabs({ value, onChange }) {
+  return (
+    <div role="tablist" aria-label="View" className="flex gap-1 border-b border-gray-200">
+      {TABS.map(([id, label]) => (
+        <button
+          key={id}
+          type="button"
+          role="tab"
+          aria-selected={value === id}
+          onClick={() => onChange(id)}
+          className={`-mb-px border-b-2 px-3 py-1.5 text-sm font-medium ${
+            value === id ? 'border-blue-600 text-blue-700' : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function Select({ label, value, onChange, options, disabled = false }) {
   return (
@@ -123,6 +151,7 @@ export default function PerformanceDashboard() {
   const [year, setYear] = useState(String(thisYear));
   const [strategyId, setStrategyId] = useState('');
   const [pickedSide, setPickedSide] = useState('');
+  const [tab, setTab] = useState('charts');
   // Only options are calls or puts, so the pick is off (and not sent) for stocks and crypto;
   // it comes back if the asset does.
   const sideApplies = asset === '' || asset === 'option';
@@ -168,13 +197,24 @@ export default function PerformanceDashboard() {
     body = (
       <div className="space-y-6">
         <HeadlineStrip yearToDate={data.yearToDate} equity={data.equity} />
-        <EquityCurve points={data.equity} />
-        <div className="grid gap-6 lg:grid-cols-2">
-          <MonthlyPnl months={data.months} />
-          <MistakeCostLedger costs={data.violationCosts} />
-          <TimeOfDay buckets={data.timeOfDay} />
-          <RollingExpectancy points={data.rolling} />
-        </div>
+        {tab === 'charts' ? (
+          <>
+            <EquityCurve points={data.equity} />
+            <div className="grid gap-6 lg:grid-cols-2">
+              <MonthlyPnl months={data.months} />
+              <MistakeCostLedger costs={data.violationCosts} />
+              <TimeOfDay buckets={data.timeOfDay} />
+              <RollingExpectancy points={data.rolling} />
+            </div>
+          </>
+        ) : (
+          <PerformanceTables
+            months={data.months}
+            yearToDate={data.yearToDate}
+            adherence={data.adherence}
+            rangeLabel={year === 'all' ? 'All years' : year}
+          />
+        )}
       </div>
     );
   }
@@ -196,8 +236,9 @@ export default function PerformanceDashboard() {
           ]}
         />
       </div>
+      <Tabs value={tab} onChange={setTab} />
       {body}
-      <AllModes filters={filters} />
+      {tab === 'charts' && <AllModes filters={filters} />}
     </div>
   );
 }

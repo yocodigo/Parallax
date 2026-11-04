@@ -91,8 +91,9 @@ const ADHERENCE_COLUMNS = [
 
 // The section 3 tables (dashboard.md): the monthly summary, year to date, and
 // rule adherence, from the performance route's `months`, `yearToDate`, and
-// `adherence`.
-export default function PerformanceTables({ months, yearToDate, adherence }) {
+// `adherence`. `yearToDate` is the totals for whatever range was asked for, so
+// the table is titled "Totals" and its row names that range ("2026", "All years").
+export default function PerformanceTables({ months, yearToDate, adherence, rangeLabel }) {
   return (
     <div className="space-y-6">
       <Table
@@ -104,10 +105,10 @@ export default function PerformanceTables({ months, yearToDate, adherence }) {
         {months.length === 0 && <p className="text-sm text-gray-500">No closed trades in this range.</p>}
       </Table>
       <Table
-        label="Year to date"
+        label="Totals"
         firstColumn="Range"
         columns={COLUMNS}
-        rows={[{ key: 'total', name: 'Total', values: yearToDate }]}
+        rows={[{ key: 'total', name: rangeLabel, values: yearToDate }]}
       />
       <Table
         label="Rule adherence"

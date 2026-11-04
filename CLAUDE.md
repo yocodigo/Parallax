@@ -177,7 +177,7 @@ Vitest, JavaScript (not TypeScript).
   the last row). Each gate (backtest to paper, paper to live, live to a bigger size) is met when the last
   `GRAD_N` = 30 closed trades in that mode have net expectancy above zero; the live-minus-paper gap uses
   the same windows and shows only once both are full. `GRAD_N` is a default the spec marks (confirm), sent as `gradN` so the page doesn't
-  import `performance.js`, which pulls in the detector code. The page's Setup and Call/Put filters (like Asset) feed both routes. The Year select ends with All years. Not built yet: links to the section 3 tables.
+  import `performance.js`, which pulls in the detector code. The page's Setup and Call/Put filters (like Asset) feed both routes. The Year select ends with All years. Charts and Tables tabs sit under the filters: Tables (`PerformanceTables.jsx`) shows the monthly summary, the range's totals (named for the year or All years), and rule adherence (Window OK and Size OK only) from the same response, and the modes below the charts belong to the Charts tab.
 - History warnings: `HistoryWarnings.jsx` in the plan form asks `GET /api/insights/warnings` (mode,
   direction, assetClass, symbol; debounced) and lists what `historyWarnings` finds in closed trades of
   the same mode: same symbol, same direction and asset class, and same part of the New York session
