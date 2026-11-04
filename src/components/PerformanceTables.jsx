@@ -40,8 +40,9 @@ const COLUMNS = [
 const thBase = 'whitespace-nowrap px-3 py-2 text-xs font-medium text-gray-500';
 const th = `${thBase} text-right`;
 // The first column stays put while the wide tables scroll sideways. It needs an
-// opaque background, or the figures scrolling under it show through.
-const sticky = 'sticky left-0 bg-white';
+// opaque background, or the figures scrolling under it show through, and an
+// edge, or a figure cut off beside it reads as a smaller number.
+const sticky = 'sticky left-0 border-r border-gray-200 bg-white';
 const td = 'whitespace-nowrap px-3 py-1.5 text-right text-gray-900 tabular-nums';
 const rowHead = `whitespace-nowrap px-3 py-1.5 text-left font-medium text-gray-700 ${sticky}`;
 

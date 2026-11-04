@@ -94,6 +94,8 @@ describe('PerformanceTables', () => {
         expect(sticky).toHaveClass('sticky', 'left-0');
         // Opaque, or the figures scrolling under it show through.
         expect(sticky).toHaveClass('bg-white');
+        // An edge, so a figure cut off beside it reads as scrolled away, not as a smaller number.
+        expect(sticky).toHaveClass('border-r', 'border-gray-200');
       }
       expect(figure).not.toHaveClass('sticky');
     }
