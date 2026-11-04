@@ -14,6 +14,7 @@ import MonthlyPnl from './MonthlyPnl';
 import RollingExpectancy from './RollingExpectancy';
 import PerformanceTables from './PerformanceTables';
 import WinRateVsBreakeven from './WinRateVsBreakeven';
+import WinsLossesScratches from './WinsLossesScratches';
 import TimeOfDay from './TimeOfDay';
 
 const MODES = [
@@ -207,6 +208,7 @@ export default function PerformanceDashboard() {
               <TimeOfDay buckets={data.timeOfDay} />
               <RollingExpectancy points={data.rolling} />
               <WinRateVsBreakeven months={data.months} />
+              <WinsLossesScratches months={data.months} />
             </div>
           </>
         ) : (

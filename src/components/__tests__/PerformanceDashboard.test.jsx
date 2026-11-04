@@ -11,6 +11,9 @@ const nyYear = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', 
 
 const summary = (extra = {}) => ({
   trades: 5,
+  wins: 3,
+  losses: 2,
+  scratches: 0,
   grossPnl: 20,
   netPnl: 18.7,
   winRate: 0.6,
@@ -152,6 +155,7 @@ describe('PerformanceDashboard', () => {
       'Results by time of day',
       'Expectancy, last 20 trades',
       'Win rate vs breakeven',
+      'Wins, losses, scratches by month',
       'Mode comparison',
       'Graduation tracker',
     ]);
