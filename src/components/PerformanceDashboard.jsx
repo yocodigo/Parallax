@@ -8,6 +8,7 @@ import { formatProfitLoss } from '@/lib/format';
 import { inputClass } from './Field';
 import AverageWinLoss from './AverageWinLoss';
 import EquityCurve from './EquityCurve';
+import ExpectancyByMonth from './ExpectancyByMonth';
 import GraduationTracker from './GraduationTracker';
 import MistakeCostLedger from './MistakeCostLedger';
 import ModeComparison from './ModeComparison';
@@ -211,6 +212,7 @@ export default function PerformanceDashboard() {
               <WinRateVsBreakeven months={data.months} />
               <WinsLossesScratches months={data.months} />
               <AverageWinLoss months={data.months} />
+              <ExpectancyByMonth months={data.months} />
             </div>
           </>
         ) : (

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { averageTicks, monthColumns, outcomeColumns, outcomeTicks, timeTicks, valueTicks } from '../chartTicks';
+import { averageTicks, expectancyTicks, monthColumns, outcomeColumns, outcomeTicks, timeTicks, valueTicks } from '../chartTicks';
 
 describe('timeTicks', () => {
   it('marks the first point of each New York day over a short span', () => {
@@ -181,5 +181,16 @@ describe('averageTicks', () => {
   it('skips a side a month lacked, and a scale with nothing to plot', () => {
     expect(averageTicks([{ avgWin: 40, avgLoss: null }])).toEqual([0, 10, 20, 30, 40]);
     expect(averageTicks([{ avgWin: null, avgLoss: null }, {}])).toEqual([0, 1]);
+  });
+});
+
+describe('expectancyTicks', () => {
+  it('runs from the lowest to the highest net expectancy, always taking in zero', () => {
+    expect(expectancyTicks([{ netExpectancy: 12.5 }, { netExpectancy: -40 }])).toEqual([-40, -30, -20, -10, 0, 10, 20]);
+  });
+
+  it('skips a month with no value, and a scale with nothing to plot', () => {
+    expect(expectancyTicks([{ netExpectancy: 30 }, {}])).toEqual([0, 5, 10, 15, 20, 25, 30]);
+    expect(expectancyTicks([{ netExpectancy: null }])).toEqual([0, 1]);
   });
 });

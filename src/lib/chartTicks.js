@@ -134,3 +134,11 @@ export function averageTicks(months) {
   const values = months.flatMap((m) => [m.avgWin, m.avgLoss]).filter(Number.isFinite);
   return valueTicks(Math.min(0, ...values), Math.max(0, ...values));
 }
+
+// Dollar ticks for the expectancy by month chart, from the lowest to the highest
+// net expectancy. A month with no value is left out of the range, so a missing
+// number never reaches valueTicks, where NaN never finishes.
+export function expectancyTicks(months) {
+  const values = months.map((m) => m.netExpectancy).filter(Number.isFinite);
+  return valueTicks(Math.min(0, ...values), Math.max(0, ...values));
+}
