@@ -36,6 +36,13 @@ describe('WinRateVsBreakeven', () => {
     expect(screen.getByText('No month had both a win and a loss, so there is no breakeven rate to compare.')).toBeInTheDocument();
   });
 
+  it('says the rates are gross and that scratches count as trades', () => {
+    render(<WinRateVsBreakeven months={[month('2026-01', 0.6, 0.45)]} />);
+
+    expect(screen.getByText(/judged on gross P\/L/)).toBeInTheDocument();
+    expect(screen.getByText(/scratches count as trades/)).toBeInTheDocument();
+  });
+
   it('says so when there are no closed trades, instead of drawing empty axes', () => {
     render(<WinRateVsBreakeven months={[]} />);
 

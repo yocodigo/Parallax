@@ -78,7 +78,9 @@ export default function WinRateVsBreakeven({ months }) {
       <div>
         <h2 className="text-sm font-semibold text-gray-700">Win rate vs breakeven</h2>
         <p className="text-xs text-gray-500">
-          Solid: share of trades that won. Dashed: the share needed to break even at that month&apos;s average win and loss.
+          Solid: share of trades that won. Dashed: the share needed to break even at that month&apos;s average win and
+          loss. Both are judged on gross P/L, and scratches count as trades, so a month with many looks lower against
+          the dashed line.
         </p>
       </div>
 
