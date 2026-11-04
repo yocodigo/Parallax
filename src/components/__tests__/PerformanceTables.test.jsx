@@ -95,7 +95,10 @@ describe('PerformanceTables', () => {
         // Opaque, or the figures scrolling under it show through.
         expect(sticky).toHaveClass('bg-white');
         // An edge, so a figure cut off beside it reads as scrolled away, not as a smaller number.
-        expect(sticky).toHaveClass('border-r', 'border-gray-200');
+        // A pseudo-element line, not a border or a shadow: the tables are border-collapse, where
+        // a cell's border stays behind when the cell is pinned and Chrome paints no cell shadow.
+        expect(sticky).toHaveClass('after:absolute', 'after:inset-y-0', 'after:right-0', 'after:w-px', 'after:bg-gray-200');
+        expect(sticky).not.toHaveClass('border-r');
       }
       expect(figure).not.toHaveClass('sticky');
     }

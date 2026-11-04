@@ -41,8 +41,11 @@ const thBase = 'whitespace-nowrap px-3 py-2 text-xs font-medium text-gray-500';
 const th = `${thBase} text-right`;
 // The first column stays put while the wide tables scroll sideways. It needs an
 // opaque background, or the figures scrolling under it show through, and an
-// edge, or a figure cut off beside it reads as a smaller number.
-const sticky = 'sticky left-0 border-r border-gray-200 bg-white';
+// edge, or a figure cut off beside it reads as a smaller number. The edge is a
+// pseudo-element line: the tables are border-collapse, where a cell's border
+// doesn't move with the cell once it is pinned, and Chrome paints no shadow on
+// a collapsed table's cells.
+const sticky = 'sticky left-0 bg-white after:absolute after:inset-y-0 after:right-0 after:w-px after:bg-gray-200';
 const td = 'whitespace-nowrap px-3 py-1.5 text-right text-gray-900 tabular-nums';
 const rowHead = `whitespace-nowrap px-3 py-1.5 text-left font-medium text-gray-700 ${sticky}`;
 
