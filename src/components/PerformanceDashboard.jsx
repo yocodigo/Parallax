@@ -43,11 +43,16 @@ const orDash = (value, format) => (value === null || value === undefined ? '–'
 const nyYear = () =>
   Number(new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric' }).format(new Date()));
 
-function Select({ label, value, onChange, options }) {
+function Select({ label, value, onChange, options, disabled = false }) {
   return (
     <label className="flex flex-col gap-1 text-xs text-gray-500">
       {label}
-      <select value={value} onChange={(e) => onChange(e.target.value)} className={inputClass}>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        className={`${inputClass} disabled:opacity-50`}
+      >
         {options.map(([optionValue, text]) => (
           <option key={optionValue} value={optionValue}>
             {text}
@@ -117,7 +122,11 @@ export default function PerformanceDashboard() {
   const [asset, setAsset] = useState('');
   const [year, setYear] = useState(thisYear);
   const [strategyId, setStrategyId] = useState('');
-  const [optionType, setOptionType] = useState('');
+  const [pickedSide, setPickedSide] = useState('');
+  // Only options are calls or puts, so the pick is off (and not sent) for stocks and crypto;
+  // it comes back if the asset does.
+  const sideApplies = asset === '' || asset === 'option';
+  const optionType = sideApplies ? pickedSide : '';
 
   const { data: strategyData } = useSWR('/api/strategies', fetchJson, { revalidateOnFocus: false });
   const setups = [
@@ -176,7 +185,7 @@ export default function PerformanceDashboard() {
         <Select label="Mode" value={mode} onChange={setMode} options={MODES} />
         <Select label="Asset" value={asset} onChange={setAsset} options={ASSETS} />
         <Select label="Setup" value={strategyId} onChange={setStrategyId} options={setups} />
-        <Select label="Call/Put" value={optionType} onChange={setOptionType} options={SIDES} />
+        <Select label="Call/Put" value={optionType} onChange={setPickedSide} options={SIDES} disabled={!sideApplies} />
         <Select
           label="Year"
           value={String(year)}

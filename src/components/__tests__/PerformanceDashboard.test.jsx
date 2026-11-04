@@ -212,6 +212,33 @@ describe('PerformanceDashboard', () => {
     await waitFor(() => expect(queries.at(-1)).toEqual({ mode: 'live', year: nyYear }));
   });
 
+  it('turns Call/Put off for stocks and crypto, and stops sending a pick made before', async () => {
+    const queries = servePerformance();
+    const modeQueries = serveModes();
+    renderDashboard();
+    await screen.findByText('Net P/L (net)');
+    const side = screen.getByLabelText('Call/Put');
+
+    await userEvent.selectOptions(side, 'Puts');
+    await userEvent.selectOptions(screen.getByLabelText('Asset'), 'Stocks');
+
+    expect(side).toBeDisabled();
+    expect(side).toHaveValue('');
+    await waitFor(() => expect(queries.at(-1)).toEqual({ mode: 'live', year: nyYear, asset: 'stock' }));
+    await waitFor(() => expect(modeQueries.at(-1)).toEqual({ asset: 'stock' }));
+
+    await userEvent.selectOptions(screen.getByLabelText('Asset'), 'Crypto');
+    expect(side).toBeDisabled();
+
+    // Options and All allow it again, and the earlier pick is back.
+    await userEvent.selectOptions(screen.getByLabelText('Asset'), 'Options');
+    expect(side).toBeEnabled();
+    expect(side).toHaveValue('put');
+    await waitFor(() => expect(queries.at(-1)).toMatchObject({ asset: 'option', optionType: 'put' }));
+    await userEvent.selectOptions(screen.getByLabelText('Asset'), 'All');
+    expect(side).toBeEnabled();
+  });
+
   it('compares the modes and tracks graduation below the charts, whatever mode the charts show', async () => {
     servePerformance();
     renderDashboard();
