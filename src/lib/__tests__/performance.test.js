@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { equityCurve, monthlySummary, rollingExpectancy, summarize, timeOfDay } from '../performance';
+import { equityCurve, modeComparison, monthlySummary, rollingExpectancy, summarize, timeOfDay } from '../performance';
 
 // A closed long option, 1 contract: gross P/L is (exit - entry) * 100.
 function option(gross, fees = 0, closedAt = '2026-04-13T20:00:00Z') {
@@ -208,5 +208,39 @@ describe('timeOfDay', () => {
     const open = { ...enteredAt('2026-04-13T14:00:00Z'), exitPrice: null, closedAt: null };
     const buckets = timeOfDay([enteredAt('2026-04-13T14:05:00Z', 30), enteredAt('2026-04-13T14:10:00Z', -10), open]);
     expect(bucket(buckets, '10:00')).toMatchObject({ trades: 2, wins: 1, losses: 1, winRate: 0.5, netPnl: 20 });
+  });
+});
+
+describe('modeComparison', () => {
+  const inMode = (mode, gross, fees = 1) => ({ ...option(gross, fees), mode });
+
+  it('summarizes each mode on its own, never blended into one number', () => {
+    const result = modeComparison([
+      inMode('live', 30),
+      inMode('live', -10),
+      inMode('paper', 50),
+      inMode('backtest', -20),
+      inMode('backtest', -20),
+    ]);
+
+    expect(result.live).toMatchObject({ trades: 2, winRate: 0.5, netExpectancy: 9, avgWin: 30, avgLoss: -10 });
+    expect(result.paper).toMatchObject({ trades: 1, winRate: 1, netExpectancy: 49 });
+    expect(result.backtest).toMatchObject({ trades: 2, winRate: 0, netExpectancy: -21 });
+    expect(result.live.profitFactor).toBe(3);
+  });
+
+  it('always has all three modes, with no figures for one that has no trades', () => {
+    const result = modeComparison([inMode('live', 10)]);
+
+    expect(Object.keys(result)).toEqual(['live', 'paper', 'backtest']);
+    expect(result.paper).toMatchObject({ trades: 0, winRate: null, expectancy: null, profitFactor: null });
+  });
+
+  it('counts only closed trades, and ignores a trade in a mode it does not know', () => {
+    const open = { ...inMode('live', 10), exitPrice: null, closedAt: null };
+    const result = modeComparison([open, inMode('live', 10), inMode('demo', 99)]);
+
+    expect(result.live.trades).toBe(1);
+    expect(Object.values(result).reduce((total, s) => total + s.trades, 0)).toBe(1);
   });
 });

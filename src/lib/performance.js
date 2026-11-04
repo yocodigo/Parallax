@@ -148,3 +148,14 @@ export function timeOfDay(trades) {
   }));
   return outside.length ? [...rows, { start: 'outside', ...summarize(outside) }] : rows;
 }
+
+export const MODES = ['live', 'paper', 'backtest'];
+
+// summarize() per mode (dashboard.md section 4, chart 11). The modes are
+// separate tracks that are never blended: paper and backtest skip spread,
+// slippage, and emotion, so folding them into live would flatter it. A mode
+// with no closed trades is still there, with null figures. A trade in any
+// other mode is left out.
+export function modeComparison(trades) {
+  return Object.fromEntries(MODES.map((mode) => [mode, summarize(trades.filter((t) => t.mode === mode))]));
+}
