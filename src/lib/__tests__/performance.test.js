@@ -178,6 +178,17 @@ describe('timeOfDay', () => {
     expect(bucket(buckets, '15:30')).toMatchObject({ trades: 1, netPnl: 5 });
   });
 
+  it('starts the session at 9:30 sharp and puts 15:30 in the last bucket', () => {
+    const buckets = timeOfDay([
+      enteredAt('2026-04-13T13:29:00Z'), // 9:29 EDT, a minute before the open
+      enteredAt('2026-04-13T13:30:00Z'), // 9:30 EDT
+      enteredAt('2026-04-13T19:30:00Z'), // 15:30 EDT
+    ]);
+    expect(bucket(buckets, 'outside').trades).toBe(1);
+    expect(bucket(buckets, '09:30').trades).toBe(1);
+    expect(bucket(buckets, '15:30').trades).toBe(1);
+  });
+
   it('follows the New York clock through the time change', () => {
     const buckets = timeOfDay([enteredAt('2026-01-13T15:00:00Z')]); // 10:00 EST
     expect(bucket(buckets, '10:00').trades).toBe(1);

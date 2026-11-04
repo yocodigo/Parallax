@@ -94,6 +94,8 @@ describe('GET /api/insights/performance', () => {
     await closedOption(30, '2026-04-13T15:00:00Z');
     await closedOption(-10, '2026-04-14T15:20:00Z');
     await closedOption(5, '2026-04-15T20:00:00Z'); // opened 15:00 EDT, the 15:00 bucket
+    // Closed in 2027, so out of the 2026 view even though its entry time would fit a bucket.
+    await closedOption(99, '2027-01-04T15:00:00Z');
 
     const body = await (await get('?year=2026')).json();
 
