@@ -160,6 +160,7 @@ describe('PerformanceDashboard', () => {
       'Wins, losses, scratches by month',
       'Average win vs average loss',
       'Expectancy by month',
+      'Profit factor by month',
       'Mode comparison',
       'Graduation tracker',
     ]);

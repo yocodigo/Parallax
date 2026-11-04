@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { averageTicks, expectancyTicks, monthColumns, outcomeColumns, outcomeTicks, timeTicks, valueTicks } from '../chartTicks';
+import {
+  averageTicks,
+  expectancyTicks,
+  monthColumns,
+  outcomeColumns,
+  outcomeTicks,
+  profitFactorTicks,
+  timeTicks,
+  valueTicks,
+} from '../chartTicks';
 
 describe('timeTicks', () => {
   it('marks the first point of each New York day over a short span', () => {
@@ -192,5 +201,19 @@ describe('expectancyTicks', () => {
   it('skips a month with no value, and a scale with nothing to plot', () => {
     expect(expectancyTicks([{ netExpectancy: 30 }, {}])).toEqual([0, 5, 10, 15, 20, 25, 30]);
     expect(expectancyTicks([{ netExpectancy: null }])).toEqual([0, 1]);
+  });
+});
+
+describe('profitFactorTicks', () => {
+  it('starts at zero and reaches at least 2, so the 1.0 baseline has room on both sides', () => {
+    expect(profitFactorTicks([{ netProfitFactor: 0.4 }, { netProfitFactor: 1.3 }])).toEqual([0, 1, 2]);
+  });
+
+  it('grows to take in the highest month', () => {
+    expect(profitFactorTicks([{ netProfitFactor: 7.2 }])).toEqual([0, 2, 4, 6, 8]);
+  });
+
+  it('skips a month with no value', () => {
+    expect(profitFactorTicks([{ netProfitFactor: null }, {}])).toEqual([0, 1, 2]);
   });
 });

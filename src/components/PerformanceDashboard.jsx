@@ -15,6 +15,7 @@ import ModeComparison from './ModeComparison';
 import MonthlyPnl from './MonthlyPnl';
 import RollingExpectancy from './RollingExpectancy';
 import PerformanceTables from './PerformanceTables';
+import ProfitFactorByMonth from './ProfitFactorByMonth';
 import WinRateVsBreakeven from './WinRateVsBreakeven';
 import WinsLossesScratches from './WinsLossesScratches';
 import TimeOfDay from './TimeOfDay';
@@ -213,6 +214,7 @@ export default function PerformanceDashboard() {
               <WinsLossesScratches months={data.months} />
               <AverageWinLoss months={data.months} />
               <ExpectancyByMonth months={data.months} />
+              <ProfitFactorByMonth months={data.months} />
             </div>
           </>
         ) : (

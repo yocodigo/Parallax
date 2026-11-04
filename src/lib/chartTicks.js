@@ -142,3 +142,11 @@ export function expectancyTicks(months) {
   const values = months.map((m) => m.netExpectancy).filter(Number.isFinite);
   return valueTicks(Math.min(0, ...values), Math.max(0, ...values));
 }
+
+// Ticks for the profit factor by month chart: zero up past the highest net profit
+// factor, and never below 2, so the 1.0 baseline always has room above and below
+// it. A month with no value is left out of the range.
+export function profitFactorTicks(months) {
+  const values = months.map((m) => m.netProfitFactor).filter(Number.isFinite);
+  return valueTicks(0, Math.max(2, ...values));
+}
