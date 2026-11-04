@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { equityCurve, monthlySummary, rollingExpectancy, summarize } from '../performance';
+import { equityCurve, monthlySummary, rollingExpectancy, summarize, timeOfDay } from '../performance';
 
 // A closed long option, 1 contract: gross P/L is (exit - entry) * 100.
 function option(gross, fees = 0, closedAt = '2026-04-13T20:00:00Z') {
@@ -146,5 +146,56 @@ describe('rollingExpectancy', () => {
     expect(rollingExpectancy(series([10, 20]), 3)).toEqual([]);
     expect(rollingExpectancy(series(Array(19).fill(5)))).toEqual([]);
     expect(rollingExpectancy(series(Array(20).fill(5)))).toHaveLength(1);
+  });
+});
+
+describe('timeOfDay', () => {
+  // A trade entered at `openedAt`, closed a minute later.
+  const enteredAt = (openedAt, gross = 10) => ({
+    ...option(gross, 0),
+    openedAt: new Date(openedAt),
+    closedAt: new Date(new Date(openedAt).getTime() + 60_000),
+  });
+  const bucket = (buckets, start) => buckets.find((b) => b.start === start);
+
+  it('lays out the regular session in 30-minute buckets, 9:30 to 15:30, even the empty ones', () => {
+    const buckets = timeOfDay([]);
+    expect(buckets).toHaveLength(13);
+    expect(buckets[0].start).toBe('09:30');
+    expect(buckets[1].start).toBe('10:00');
+    expect(buckets.at(-1).start).toBe('15:30');
+    expect(buckets.every((b) => b.trades === 0)).toBe(true);
+  });
+
+  it('puts each trade in the bucket of its entry time in New York, not its close', () => {
+    const buckets = timeOfDay([
+      enteredAt('2026-04-13T13:45:00Z', 30), // 9:45 EDT
+      enteredAt('2026-04-13T14:00:00Z', -10), // 10:00 EDT
+      enteredAt('2026-04-13T19:59:00Z', 5), // 15:59 EDT, closes after the bell
+    ]);
+    expect(bucket(buckets, '09:30')).toMatchObject({ trades: 1, netPnl: 30 });
+    expect(bucket(buckets, '10:00')).toMatchObject({ trades: 1, netPnl: -10 });
+    expect(bucket(buckets, '15:30')).toMatchObject({ trades: 1, netPnl: 5 });
+  });
+
+  it('follows the New York clock through the time change', () => {
+    const buckets = timeOfDay([enteredAt('2026-01-13T15:00:00Z')]); // 10:00 EST
+    expect(bucket(buckets, '10:00').trades).toBe(1);
+  });
+
+  it('adds an Outside session bucket for entries before 9:30 or at 16:00 or later, only when there are some', () => {
+    expect(timeOfDay([]).some((b) => b.start === 'outside')).toBe(false);
+
+    const buckets = timeOfDay([
+      enteredAt('2026-04-13T12:00:00Z', 20), // 8:00 EDT
+      enteredAt('2026-04-13T20:00:00Z', -5), // 16:00 EDT, the first minute after the session
+    ]);
+    expect(buckets.at(-1)).toMatchObject({ start: 'outside', trades: 2, netPnl: 15 });
+  });
+
+  it('summarizes each bucket the way the monthly summary does, and skips trades still open', () => {
+    const open = { ...enteredAt('2026-04-13T14:00:00Z'), exitPrice: null, closedAt: null };
+    const buckets = timeOfDay([enteredAt('2026-04-13T14:05:00Z', 30), enteredAt('2026-04-13T14:10:00Z', -10), open]);
+    expect(bucket(buckets, '10:00')).toMatchObject({ trades: 2, wins: 1, losses: 1, winRate: 0.5, netPnl: 20 });
   });
 });

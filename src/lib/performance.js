@@ -1,3 +1,4 @@
+import { minutesOfDay } from './setups/gates';
 import { profitLoss, tradeStatus } from './tradeMetrics';
 
 // Performance metrics over closed trades (docs/private/dashboard.md section 1).
@@ -116,4 +117,34 @@ export function monthlySummary(trades) {
     byMonth.set(month, [...(byMonth.get(month) ?? []), trade]);
   }
   return [...byMonth.keys()].sort().map((month) => ({ month, ...summarize(byMonth.get(month)) }));
+}
+
+// The regular session in New York minutes of the day, split into half hours.
+const SESSION_OPEN = 9 * 60 + 30;
+const SESSION_CLOSE = 16 * 60;
+const BUCKET_MINUTES = 30;
+
+const clock = (minutes) =>
+  `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+
+// summarize() per half hour of the session the trade was entered in (New York
+// time, the clock the lockout windows use), earliest first. Every bucket from
+// 9:30 to 15:30 is returned, empty or not, so the axis keeps its shape. Entries
+// before the open or from the close on go in a last 'outside' bucket, present
+// only when there are some, so the buckets still add up to the total.
+export function timeOfDay(trades) {
+  const count = (SESSION_CLOSE - SESSION_OPEN) / BUCKET_MINUTES;
+  const buckets = Array.from({ length: count }, () => []);
+  const outside = [];
+  for (const trade of trades) {
+    if (!isCounted(trade) || !trade.openedAt) continue;
+    const minutes = minutesOfDay(new Date(trade.openedAt));
+    if (minutes < SESSION_OPEN || minutes >= SESSION_CLOSE) outside.push(trade);
+    else buckets[Math.floor((minutes - SESSION_OPEN) / BUCKET_MINUTES)].push(trade);
+  }
+  const rows = buckets.map((list, i) => ({
+    start: clock(SESSION_OPEN + i * BUCKET_MINUTES),
+    ...summarize(list),
+  }));
+  return outside.length ? [...rows, { start: 'outside', ...summarize(outside) }] : rows;
 }

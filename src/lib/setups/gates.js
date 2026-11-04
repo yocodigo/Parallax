@@ -25,7 +25,7 @@ const nyTime = new Intl.DateTimeFormat('en-US', {
   hourCycle: 'h23',
 });
 
-const minutesOfDay = (date) => {
+export const minutesOfDay = (date) => {
   const parts = Object.fromEntries(nyTime.formatToParts(date).map(({ type, value }) => [type, value]));
   return Number(parts.hour) * 60 + Number(parts.minute);
 };
