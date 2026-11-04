@@ -158,6 +158,26 @@ Vitest, JavaScript (not TypeScript).
   `listClosedTradesWithRuleChecks` and `checklistReport`: closed checklist trades with every rule met
   against those entered anyway, and per rule how often it was skipped and its average R when skipped
   and when met. Rules are grouped by id (named by their latest text); deleted rules by their text.
+- Performance (`/performance`, in the nav): the dollar-based dashboard (`docs/private/dashboard.md`).
+  `PerformanceDashboard.jsx` loads `GET /api/insights/performance` (`?mode`, live by default; `?year`, the
+  current New York year; `?asset`) for the trades closed in that year: `{ months, yearToDate, adherence,
+  violationCosts, equity, rolling, timeOfDay }`, built by the pure functions in `src/lib/performance.js`
+  (`summarize`, `monthlySummary`, `equityCurve`, `rollingExpectancy`, `timeOfDay`) and `adherence.js`. Wins
+  and losses are judged on gross P/L, money is summed in whole cents, and every headline figure is labelled
+  net or gross. `rollingExpectancy` is the last 20 trades and has no point until 20 have closed, so it
+  restarts each January with the year filter; `timeOfDay` buckets by New York entry time in half hours
+  (9:30 to 15:30, entries outside the session in a last `outside` bucket). The charts (`EquityCurve`,
+  `MonthlyPnl`, `MistakeCostLedger`, `TimeOfDay`, `RollingExpectancy`) are presentational Recharts
+  components taking route data as props, with round ticks from `chartTicks.js`; `TimeOfDay` shades the
+  `LOCKOUTS` windows on a hidden clock axis, which needs `allowDataOverflow` or it drifts off the bars.
+  Below the grid, `AllModes` loads `GET /api/insights/modes` (`?asset` only; every closed trade, all years
+  and modes, since modes are compared with each other and graduation counts build up): `ModeComparison`
+  (`modeComparison`) and `GraduationTracker` (`graduation`). A setup is a strategy (trades with none are
+  the last row). Each gate (backtest to paper, paper to live, live to a bigger size) is met when the last
+  `GRAD_N` = 30 closed trades in that mode have net expectancy above zero; the live-minus-paper gap uses
+  the same windows. `GRAD_N` is a default the spec marks (confirm), sent as `gradN` so the page doesn't
+  import `performance.js`, which pulls in the detector code. Not built yet: setup and call/put filters, an
+  all-years range, and links to the section 3 tables.
 - History warnings: `HistoryWarnings.jsx` in the plan form asks `GET /api/insights/warnings` (mode,
   direction, assetClass, symbol; debounced) and lists what `historyWarnings` finds in closed trades of
   the same mode: same symbol, same direction and asset class, and same part of the New York session
