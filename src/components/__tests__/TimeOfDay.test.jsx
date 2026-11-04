@@ -56,6 +56,15 @@ describe('TimeOfDay', () => {
     expect(screen.getByText(/Outside the session: 2 trades, \+\$15\.00\./)).toBeInTheDocument();
   });
 
+  it('says so, without drawing empty bars, when every trade was entered outside the session', () => {
+    render(<TimeOfDay buckets={buckets({}, { trades: 2, netPnl: 15 })} />);
+
+    expect(
+      screen.getByText('No trades entered during the session. Outside the session: 2 trades, +$15.00.')
+    ).toBeInTheDocument();
+    expect(screen.queryByText('No closed trades in this range.')).not.toBeInTheDocument();
+  });
+
   it('says so when there are no closed trades, instead of drawing empty axes', () => {
     render(<TimeOfDay buckets={buckets()} />);
 

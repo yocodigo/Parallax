@@ -31,7 +31,8 @@ const compactMoney = new Intl.NumberFormat('en-US', {
 });
 const percent = new Intl.NumberFormat('en-US', { style: 'percent', maximumFractionDigits: 0 });
 
-// The session the buckets cover, in minutes of the New York day.
+// The session the buckets cover, in minutes of the New York day. Keep these in step with
+// SESSION_OPEN, SESSION_CLOSE, and BUCKET_MINUTES in lib/performance.js, which cuts the buckets.
 const OPEN = 9 * 60 + 30;
 const CLOSE = 16 * 60;
 const BUCKET = 30;
@@ -53,13 +54,18 @@ const inLockout = (start) => lockouts.some(([from, to]) => from < start + BUCKET
 
 // The day in words: the chart's text alternative, shown to everyone.
 function summary(session, outside) {
-  const trades = session.reduce((total, b) => total + b.trades, 0);
   const traded = session.filter((b) => b.trades > 0);
-  const best = traded.reduce((a, b) => (b.netPnl > a.netPnl ? b : a), traded[0]);
-  const worst = traded.reduce((a, b) => (b.netPnl < a.netPnl ? b : a), traded[0]);
-  const parts = [`${plural(trades, 'trade')} entered from ${clock(OPEN)} to ${clock(CLOSE)} ET.`];
-  if (best.netPnl > 0) parts.push(`Best half hour: ${clock(toMinutes(best.start))}, ${formatProfitLoss(best.netPnl)}.`);
-  if (worst.netPnl < 0) parts.push(`Worst: ${clock(toMinutes(worst.start))}, ${formatProfitLoss(worst.netPnl)}.`);
+  const parts = [];
+  if (traded.length === 0) {
+    parts.push('No trades entered during the session.');
+  } else {
+    const trades = traded.reduce((total, b) => total + b.trades, 0);
+    const best = traded.reduce((a, b) => (b.netPnl > a.netPnl ? b : a));
+    const worst = traded.reduce((a, b) => (b.netPnl < a.netPnl ? b : a));
+    parts.push(`${plural(trades, 'trade')} entered from ${clock(OPEN)} to ${clock(CLOSE)} ET.`);
+    if (best.netPnl > 0) parts.push(`Best half hour: ${clock(toMinutes(best.start))}, ${formatProfitLoss(best.netPnl)}.`);
+    if (worst.netPnl < 0) parts.push(`Worst: ${clock(toMinutes(worst.start))}, ${formatProfitLoss(worst.netPnl)}.`);
+  }
   if (outside?.trades > 0) {
     parts.push(`Outside the session: ${plural(outside.trades, 'trade')}, ${formatProfitLoss(outside.netPnl)}.`);
   }
@@ -95,7 +101,7 @@ export function TimeTooltip({ active, payload }) {
 export default function TimeOfDay({ buckets }) {
   const session = buckets.filter((b) => b.start !== 'outside');
   const outside = buckets.find((b) => b.start === 'outside');
-  const trades = buckets.reduce((total, b) => total + b.trades, 0);
+  const sessionTrades = session.reduce((total, b) => total + b.trades, 0);
   const yTicks = valueTicks(
     Math.min(...session.map((b) => b.netPnl)),
     Math.max(...session.map((b) => b.netPnl))
@@ -112,8 +118,11 @@ export default function TimeOfDay({ buckets }) {
         </p>
       </div>
 
-      {trades === 0 ? (
-        <p className="text-sm text-gray-500">No closed trades in this range.</p>
+      {sessionTrades === 0 ? (
+        // Nothing to draw: say so, and still report any entries outside the session.
+        <p className="text-sm text-gray-500">
+          {outside?.trades > 0 ? summary(session, outside) : 'No closed trades in this range.'}
+        </p>
       ) : (
         <>
           <div className="h-64">
