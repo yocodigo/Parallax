@@ -30,10 +30,10 @@ const body = (extra = {}) => ({
     size: { ok: 0, missed: 0, cost: 0 },
   },
   violationCosts: {
-    followed: { trades: 0, cents: 0 },
-    window: { trades: 0, cents: 0 },
-    size: { trades: 0, cents: 0 },
-    both: { trades: 0, cents: 0 },
+    followed: { trades: 0, net: 0 },
+    window: { trades: 0, net: 0 },
+    size: { trades: 0, net: 0 },
+    both: { trades: 0, net: 0 },
   },
   equity: [
     { closedAt: '2026-03-10T20:00:00.000Z', cumulative: 30, drawdown: 0 },
@@ -356,6 +356,7 @@ describe('PerformanceDashboard', () => {
     expect(screen.getByRole('table', { name: 'Monthly summary' })).toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'Totals' })).toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'Rule adherence' })).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Rule violations' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Equity curve' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Mode comparison' })).not.toBeInTheDocument();
     expect(screen.getByText('Net P/L (net)', STRIP)).toBeInTheDocument();

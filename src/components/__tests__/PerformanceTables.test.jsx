@@ -29,13 +29,21 @@ const adherence = {
   size: { ok: 5, missed: 1, cost: -12 },
 };
 
+// The route's buckets: each option trade is in exactly one, so they add up to the total.
+const violationCosts = {
+  followed: { trades: 3, net: 187.4 },
+  window: { trades: 2, net: -55.5 },
+  size: { trades: 0, net: 0 },
+  both: { trades: 1, net: -12 },
+};
+
 const months = [
   { month: '2026-03', ...summary() },
   { month: '2026-04', ...summary({ trades: 2, winRate: null, profitFactor: null, avgLoss: null, payoffRatio: null }) },
 ];
 
 function renderTables(props = {}) {
-  return render(<PerformanceTables months={months} yearToDate={summary({ trades: 6 })} adherence={adherence} rangeLabel="2026" {...props} />);
+  return render(<PerformanceTables months={months} yearToDate={summary({ trades: 6 })} adherence={adherence} violationCosts={violationCosts} rangeLabel="2026" {...props} />);
 }
 
 describe('PerformanceTables', () => {
@@ -140,7 +148,28 @@ describe('PerformanceTables', () => {
     expect(within(windowRow).getAllByRole('cell').map((c) => c.textContent)).toEqual(['4', '2', '67%', '-$55.50']);
     expect(within(sizeRow).getByRole('rowheader')).toHaveTextContent('Size OK');
     expect(within(sizeRow).getAllByRole('cell').map((c) => c.textContent)).toEqual(['5', '1', '83%', '-$12.00']);
-    expect(screen.getByText(/option trades only/i)).toBeInTheDocument();
+    expect(screen.getByText(/option trades only \(6 closed with a p\/l\)/i)).toBeInTheDocument();
+  });
+
+  it('splits option trades by the rules broken, each trade in one row, with its trades and net P/L', () => {
+    renderTables();
+    const table = screen.getByRole('table', { name: 'Rule violations' });
+    const rows = within(table).getAllByRole('row');
+    const read = (row) => [
+      within(row).getByRole('rowheader').textContent,
+      ...within(row).getAllByRole('cell').map((c) => c.textContent),
+    ];
+    expect(within(rows[0]).getAllByRole('columnheader').map((h) => h.textContent)).toEqual([
+      'Rules broken',
+      'Trades',
+      'Net P/L',
+    ]);
+    expect(rows.slice(1).map(read)).toEqual([
+      ['Rules followed', '3', '+$187.40'],
+      ['Lockout only', '2', '-$55.50'],
+      ['Size only', '0', '–'],
+      ['Lockout and size', '1', '-$12.00'],
+    ]);
   });
 
   it('shows a dash for the kept share when no trade could be judged', () => {

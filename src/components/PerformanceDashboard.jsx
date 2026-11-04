@@ -212,6 +212,7 @@ export default function PerformanceDashboard() {
             months={data.months}
             yearToDate={data.yearToDate}
             adherence={data.adherence}
+            violationCosts={data.violationCosts}
             rangeLabel={year === 'all' ? 'All years' : year}
           />
         )}

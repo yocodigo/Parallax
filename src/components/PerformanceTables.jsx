@@ -98,11 +98,24 @@ const ADHERENCE_COLUMNS = [
   ['Cost of broken', (g) => formatProfitLoss(g.cost)],
 ];
 
+// In the order of `violationCosts`, with the names the mistake cost ledger uses.
+const VIOLATION_ROWS = [
+  ['followed', 'Rules followed'],
+  ['window', 'Lockout only'],
+  ['size', 'Size only'],
+  ['both', 'Lockout and size'],
+];
+
+const VIOLATION_COLUMNS = [
+  ['Trades', (v) => v.trades],
+  ['Net P/L', (v) => (v.trades === 0 ? '–' : formatProfitLoss(v.net))],
+];
+
 // The section 3 tables (dashboard.md): the monthly summary, year to date, and
-// rule adherence, from the performance route's `months`, `yearToDate`, and
-// `adherence`. `yearToDate` is the totals for whatever range was asked for, so
+// rule adherence and the violation costs, from the performance route's `months`,
+// `yearToDate`, `adherence`, and `violationCosts`. `yearToDate` is the totals for whatever range was asked for, so
 // the table is titled "Totals" and its row names that range ("2026", "All years").
-export default function PerformanceTables({ months, yearToDate, adherence, rangeLabel }) {
+export default function PerformanceTables({ months, yearToDate, adherence, violationCosts, rangeLabel }) {
   return (
     <div className="space-y-6">
       <Table
@@ -131,6 +144,17 @@ export default function PerformanceTables({ months, yearToDate, adherence, range
         <p className="text-xs text-gray-500">
           Option trades only ({adherence.trades} closed with a P/L). The cost is the net P/L of the trades that broke
           the rule. Plan OK, Stop OK, Exit OK, and the discipline score aren&apos;t defined yet.
+        </p>
+      </Table>
+      <Table
+        label="Rule violations"
+        firstColumn="Rules broken"
+        columns={VIOLATION_COLUMNS}
+        rows={VIOLATION_ROWS.map(([key, name]) => ({ key, name, values: violationCosts[key] }))}
+      >
+        <p className="text-xs text-gray-500">
+          Option trades only. Each trade is in one row, so a trade that broke both rules is counted in the last row
+          alone and the rows add up to the total.
         </p>
       </Table>
     </div>
