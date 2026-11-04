@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { equityCurve, monthlySummary, summarize } from '../performance';
+import { equityCurve, monthlySummary, rollingExpectancy, summarize } from '../performance';
 
 // A closed long option, 1 contract: gross P/L is (exit - entry) * 100.
 function option(gross, fees = 0, closedAt = '2026-04-13T20:00:00Z') {
@@ -120,5 +120,31 @@ describe('monthlySummary', () => {
   it('leaves out trades that are not closed', () => {
     expect(monthlySummary([{ ...option(10), closedAt: null }])).toEqual([]);
     expect(monthlySummary([{ ...option(10), exitPrice: null }])).toEqual([]);
+  });
+});
+
+describe('rollingExpectancy', () => {
+  // Closing one hour apart, so the order is the order given.
+  const series = (grosses) =>
+    grosses.map((g, i) => option(g, 1, `2026-04-13T${String(14 + i).padStart(2, '0')}:00:00Z`));
+
+  it('averages the last N trades after each close, gross and net, once N have closed', () => {
+    const points = rollingExpectancy(series([10, 20, -30, 40]), 3);
+    expect(points).toHaveLength(2);
+    expect(points.map((p) => p.expectancy)).toEqual([0, 10]);
+    expect(points.map((p) => p.netExpectancy)).toEqual([-1, 9]);
+    expect(points[0].closedAt).toEqual(new Date('2026-04-13T16:00:00Z'));
+  });
+
+  it('sorts by closing time, including times given as ISO strings', () => {
+    const [a, b, c] = series([30, -30, 60]);
+    const points = rollingExpectancy([c, a, b].map((t) => ({ ...t, closedAt: t.closedAt.toISOString() })), 2);
+    expect(points.map((p) => p.expectancy)).toEqual([0, 15]);
+  });
+
+  it('returns nothing until the window is full, and defaults to 20 trades', () => {
+    expect(rollingExpectancy(series([10, 20]), 3)).toEqual([]);
+    expect(rollingExpectancy(series(Array(19).fill(5)))).toEqual([]);
+    expect(rollingExpectancy(series(Array(20).fill(5)))).toHaveLength(1);
   });
 });

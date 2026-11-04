@@ -76,6 +76,30 @@ export function equityCurve(trades) {
   });
 }
 
+// Expectancy per trade over the last `size` closed trades, after each close.
+// Monthly samples are too small to read, so this is the trend line. Nothing
+// is returned until `size` trades have closed: a shorter window would swing.
+export function rollingExpectancy(trades, size = 20) {
+  const time = (row) => new Date(row.trade.closedAt).getTime();
+  const rows = closedInCents(trades).sort((a, b) => time(a) - time(b));
+  const points = [];
+  let gross = 0;
+  let net = 0;
+  rows.forEach(({ trade, gross: g, fees }, i) => {
+    gross += g;
+    net += g - fees;
+    if (i >= size) {
+      const old = rows[i - size];
+      gross -= old.gross;
+      net -= old.gross - old.fees;
+    }
+    if (i >= size - 1) {
+      points.push({ closedAt: trade.closedAt, expectancy: gross / size / 100, netExpectancy: net / size / 100 });
+    }
+  });
+  return points;
+}
+
 // 'YYYY-MM' of a moment in New York, where the trading day is.
 const nyMonth = new Intl.DateTimeFormat('en-CA', {
   timeZone: 'America/New_York',
