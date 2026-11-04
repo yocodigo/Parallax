@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { SWRConfig } from 'swr';
@@ -57,6 +57,43 @@ function servePerformance(response = body()) {
   return queries;
 }
 
+// The strip's labels are <dt>s; the mode table repeats some of them as row headings.
+const STRIP = { selector: 'dt' };
+
+const none = { trades: 0, winRate: null, netExpectancy: null, netProfitFactor: null, avgWin: null, avgLoss: null };
+const noCell = { trades: 0, window: 0, netExpectancy: null, met: false };
+
+// Figures that differ from the headline strip's, so a value is only ever on screen once.
+const modesBody = (extra = {}) => ({
+  gradN: 30,
+  modes: {
+    live: { trades: 8, winRate: 0.5, netExpectancy: 2.5, netProfitFactor: 1.5, avgWin: 10, avgLoss: -6 },
+    paper: none,
+    backtest: none,
+  },
+  setups: [
+    {
+      strategyId: 'a',
+      name: 'Trend pullback',
+      modes: { backtest: noCell, paper: noCell, live: { trades: 8, window: 8, netExpectancy: 2.5, met: false } },
+      gap: null,
+    },
+  ],
+  ...extra,
+});
+
+// Serve the modes route and record the query each request asked for.
+function serveModes(response = modesBody(), status = 200) {
+  const queries = [];
+  server.use(
+    http.get('*/api/insights/modes', ({ request }) => {
+      queries.push(Object.fromEntries(new URL(request.url).searchParams));
+      return HttpResponse.json(response, { status });
+    })
+  );
+  return queries;
+}
+
 function renderDashboard() {
   return render(
     <SWRConfig value={{ dedupingInterval: 0, provider: () => new Map() }}>
@@ -66,20 +103,23 @@ function renderDashboard() {
 }
 
 describe('PerformanceDashboard', () => {
+  // Every test has the modes route answering; the ones about it serve their own.
+  beforeEach(() => serveModes());
+
   it('shows the headline strip, each figure labelled net or gross, above the charts', async () => {
     servePerformance();
     renderDashboard();
 
-    expect(await screen.findByText('Net P/L (net)')).toBeInTheDocument();
+    expect(await screen.findByText('Net P/L (net)', STRIP)).toBeInTheDocument();
     expect(screen.getByText('+$18.70')).toBeInTheDocument();
-    expect(screen.getByText('Win rate (gross P/L)')).toBeInTheDocument();
+    expect(screen.getByText('Win rate (gross P/L)', STRIP)).toBeInTheDocument();
     expect(screen.getByText('60%')).toBeInTheDocument();
-    expect(screen.getByText('Profit factor (net)')).toBeInTheDocument();
+    expect(screen.getByText('Profit factor (net)', STRIP)).toBeInTheDocument();
     expect(screen.getByText('1.80')).toBeInTheDocument();
-    expect(screen.getByText('Expectancy (net)')).toBeInTheDocument();
+    expect(screen.getByText('Expectancy (net)', STRIP)).toBeInTheDocument();
     expect(screen.getByText('+$3.74')).toBeInTheDocument();
     // The last point of the equity curve is 11.30 below its peak.
-    expect(screen.getByText('Drawdown (net)')).toBeInTheDocument();
+    expect(screen.getByText('Drawdown (net)', STRIP)).toBeInTheDocument();
     expect(screen.getByText('-$11.30')).toBeInTheDocument();
   });
 
@@ -87,13 +127,16 @@ describe('PerformanceDashboard', () => {
     servePerformance();
     renderDashboard();
 
-    const headings = (await screen.findAllByRole('heading', { level: 2 })).map((h) => h.textContent);
+    await screen.findByRole('heading', { name: 'Graduation tracker' });
+    const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
     expect(headings).toEqual([
       'Equity curve',
       'Net P/L by month',
       'Mistake cost ledger',
       'Results by time of day',
       'Expectancy, last 20 trades',
+      'Mode comparison',
+      'Graduation tracker',
     ]);
   });
 
@@ -110,6 +153,50 @@ describe('PerformanceDashboard', () => {
 
     await screen.findByText('Net P/L (net)');
     expect(queries.at(-1)).toEqual({ mode: 'paper', asset: 'option', year: '2025' });
+  });
+
+  it('compares the modes and tracks graduation below the charts, whatever mode the charts show', async () => {
+    servePerformance();
+    renderDashboard();
+
+    expect(await screen.findByRole('heading', { name: 'Mode comparison' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Graduation tracker' })).toBeInTheDocument();
+    expect(screen.getByText('Trend pullback')).toBeInTheDocument();
+    expect(screen.getByText(/only the Asset filter applies/)).toBeInTheDocument();
+  });
+
+  it('asks the modes route for the asset only, never the mode or the year', async () => {
+    servePerformance();
+    const queries = serveModes();
+    renderDashboard();
+    await screen.findByRole('heading', { name: 'Mode comparison' });
+
+    await userEvent.selectOptions(screen.getByLabelText('Mode'), 'paper');
+    await userEvent.selectOptions(screen.getByLabelText('Year'), '2025');
+    await userEvent.selectOptions(screen.getByLabelText('Asset'), 'option');
+
+    await waitFor(() => expect(queries.at(-1)).toEqual({ asset: 'option' }));
+    expect(queries.every((query) => Object.keys(query).every((key) => key === 'asset'))).toBe(true);
+  });
+
+  it('leaves the modes out when no trade has closed in any of them', async () => {
+    servePerformance(body({ yearToDate: summary({ trades: 0 }), equity: [] }));
+    const queries = serveModes(modesBody({ modes: { live: none, paper: none, backtest: none }, setups: [] }));
+    renderDashboard();
+
+    await screen.findByText(/No closed trades/);
+    await waitFor(() => expect(queries.length).toBeGreaterThan(0));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByRole('heading', { name: 'Mode comparison' })).not.toBeInTheDocument();
+  });
+
+  it('shows the modes route error beside the charts, which stay', async () => {
+    servePerformance();
+    serveModes({ error: 'Modes unavailable' }, 500);
+    renderDashboard();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Modes unavailable');
+    expect(screen.getByRole('heading', { name: 'Equity curve' })).toBeInTheDocument();
   });
 
   it('shows a prompt with an Import link instead of empty axes when nothing has closed', async () => {

@@ -7,7 +7,9 @@ import { fetchJson } from '@/lib/fetchJson';
 import { formatProfitLoss } from '@/lib/format';
 import { inputClass } from './Field';
 import EquityCurve from './EquityCurve';
+import GraduationTracker from './GraduationTracker';
 import MistakeCostLedger from './MistakeCostLedger';
+import ModeComparison from './ModeComparison';
 import MonthlyPnl from './MonthlyPnl';
 import RollingExpectancy from './RollingExpectancy';
 import TimeOfDay from './TimeOfDay';
@@ -73,6 +75,33 @@ function HeadlineStrip({ yearToDate, equity }) {
   );
 }
 
+// The modes side by side and each setup's progress through the promotion gates
+// (dashboard.md sections 4 and 8). They compare the modes with each other, so
+// the page's Mode and Year filters don't apply: only the Asset one does. Left
+// out while loading, and when nothing has closed in any mode (the page's own
+// empty state already says to import); an error shows beside the charts.
+function AllModes({ asset }) {
+  const { data, error } = useSWR(`/api/insights/modes${asset ? `?asset=${asset}` : ''}`, fetchJson, {
+    revalidateOnFocus: false,
+  });
+
+  if (error) {
+    return (
+      <div role="alert" className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        {error.message}
+      </div>
+    );
+  }
+  if (!data || Object.values(data.modes).every((mode) => mode.trades === 0)) return null;
+  return (
+    <div className="space-y-6">
+      <p className="text-xs text-gray-500">Across all modes and years; only the Asset filter applies.</p>
+      <ModeComparison modes={data.modes} />
+      <GraduationTracker setups={data.setups} gradN={data.gradN} />
+    </div>
+  );
+}
+
 // The landing view (dashboard.md section 2): headline figures, the equity
 // curve, then a grid of the core charts, for one mode, asset, and year.
 export default function PerformanceDashboard() {
@@ -132,6 +161,7 @@ export default function PerformanceDashboard() {
         />
       </div>
       {body}
+      <AllModes asset={asset} />
     </div>
   );
 }
