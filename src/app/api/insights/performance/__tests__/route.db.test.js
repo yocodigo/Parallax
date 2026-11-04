@@ -89,6 +89,19 @@ describe('GET /api/insights/performance', () => {
     ]);
   });
 
+  it('returns results by half hour of entry, New York time', async () => {
+    // Entered an hour before closing: 15:00Z closes at 11:00 EDT, so it opened in the 10:00 bucket.
+    await closedOption(30, '2026-04-13T15:00:00Z');
+    await closedOption(-10, '2026-04-14T15:20:00Z');
+    await closedOption(5, '2026-04-15T20:00:00Z'); // opened 15:00 EDT, the 15:00 bucket
+
+    const body = await (await get('?year=2026')).json();
+
+    expect(body.timeOfDay).toHaveLength(13);
+    expect(body.timeOfDay.find((b) => b.start === '10:00')).toMatchObject({ trades: 2, netPnl: 20 });
+    expect(body.timeOfDay.find((b) => b.start === '15:00')).toMatchObject({ trades: 1, netPnl: 5 });
+  });
+
   it('returns net P/L by the rules the entry broke', async () => {
     // Entered an hour before closing, in New York time (EDT): 15:30 is free, 12:00 is in the 11:00-14:00 lockout.
     await closedOption(40, '2026-04-13T20:30:00Z');
