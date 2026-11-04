@@ -2,6 +2,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getDb } from '@/db';
 import { trades } from '@/db/schema';
 import { resetDb } from '@/db/testing';
+import { createStrategy } from '@/db/strategies';
 import { GET } from '../route';
 
 // Swap the app's database for the test database. Everything else is real.
@@ -12,19 +13,20 @@ vi.mock('@/db', async () => {
 });
 
 // A closed long option, 1 contract, entered an hour before it closed.
-async function closedOption(net, closedAt, { mode = 'live', fees = 0 } = {}) {
+async function closedOption(net, closedAt, { mode = 'live', fees = 0, strategyId = null, optionType = 'call' } = {}) {
   const closed = new Date(closedAt);
   const day = closedAt.slice(0, 10);
   await getDb()
     .insert(trades)
     .values({
       mode,
+      strategyId,
       symbol: 'SPY',
       assetClass: 'option',
       direction: 'long',
       quantity: 1,
       multiplier: 100,
-      optionType: 'call',
+      optionType,
       strike: 500,
       expiration: day,
       plannedEntry: 1,
@@ -102,6 +104,58 @@ describe('GET /api/insights/performance', () => {
     expect(body.timeOfDay).toHaveLength(13);
     expect(body.timeOfDay.find((b) => b.start === '10:00')).toMatchObject({ trades: 2, netPnl: 20 });
     expect(body.timeOfDay.find((b) => b.start === '15:00')).toMatchObject({ trades: 1, netPnl: 5 });
+  });
+
+  describe('filters by setup and by call or put', () => {
+    const strategy = (name) =>
+      createStrategy(getDb(), { name, description: '', rules: [{ text: 'Trend aligned', kind: 'edge' }] });
+
+    it('limits to one setup, or with none to the trades taken without one', async () => {
+      const trend = await strategy('Trend pullback');
+      await closedOption(30, '2026-04-13T20:00:00Z', { strategyId: trend.id });
+      await closedOption(-10, '2026-04-14T20:00:00Z', { strategyId: trend.id });
+      await closedOption(5, '2026-04-15T20:00:00Z');
+
+      const one = await (await get(`?year=2026&strategyId=${trend.id}`)).json();
+      const none = await (await get('?year=2026&strategyId=none')).json();
+
+      expect(one.yearToDate).toMatchObject({ trades: 2, netPnl: 20 });
+      expect(none.yearToDate).toMatchObject({ trades: 1, netPnl: 5 });
+    });
+
+    it('limits to calls or to puts', async () => {
+      await closedOption(30, '2026-04-13T20:00:00Z');
+      await closedOption(-10, '2026-04-14T20:00:00Z', { optionType: 'put' });
+
+      const calls = await (await get('?year=2026&optionType=call')).json();
+      const puts = await (await get('?year=2026&optionType=put')).json();
+
+      expect(calls.yearToDate).toMatchObject({ trades: 1, netPnl: 30 });
+      expect(puts.yearToDate).toMatchObject({ trades: 1, netPnl: -10 });
+    });
+
+    it('applies to every part of the response, and together with the rest', async () => {
+      const trend = await strategy('Trend pullback');
+      await closedOption(30, '2026-04-13T20:00:00Z', { strategyId: trend.id });
+      await closedOption(-10, '2026-04-14T20:00:00Z', { strategyId: trend.id, optionType: 'put' });
+      await closedOption(99, '2026-04-15T20:00:00Z', { strategyId: trend.id, mode: 'paper' });
+
+      const body = await (await get(`?year=2026&strategyId=${trend.id}&optionType=call`)).json();
+
+      expect(body.months.map((m) => m.netPnl)).toEqual([30]);
+      expect(body.equity.map((p) => p.cumulative)).toEqual([30]);
+      expect(body.timeOfDay.reduce((total, b) => total + b.trades, 0)).toBe(1);
+    });
+
+    it('answers 400 for an id that is not a uuid or "none", and for a side that is not call or put', async () => {
+      const badId = await get('?strategyId=banana');
+      const badSide = await get('?optionType=straddle');
+
+      expect(badId.status).toBe(400);
+      expect((await badId.json()).fieldErrors.strategyId).toBeDefined();
+      expect(badSide.status).toBe(400);
+      expect((await badSide.json()).fieldErrors.optionType).toBeDefined();
+    });
   });
 
   it('returns net P/L by the rules the entry broke', async () => {
