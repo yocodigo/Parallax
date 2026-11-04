@@ -51,9 +51,17 @@ export async function listClosedTrades(db, { symbol, mode } = {}) {
     .orderBy(trades.openedAt);
 }
 
-// Closed trades that closed in [from, to), oldest exit first. `mode` and
-// `assetClass` limit it to one mode or asset class when given.
-export async function listClosedTradesBetween(db, { from, to, mode, assetClass }) {
+// The condition for a setup filter: omitted means every setup, null the trades
+// taken with no strategy, and an id the trades taken for that strategy.
+function setupFilter(strategyId) {
+  if (strategyId === undefined) return undefined;
+  return strategyId === null ? isNull(trades.strategyId) : eq(trades.strategyId, strategyId);
+}
+
+// Closed trades that closed in [from, to), oldest exit first. `mode`,
+// `assetClass`, `strategyId` (see setupFilter), and `optionType` (call or put,
+// which leaves out stocks and crypto) limit it when given.
+export async function listClosedTradesBetween(db, { from, to, mode, assetClass, strategyId, optionType }) {
   return db
     .select()
     .from(trades)
@@ -63,19 +71,28 @@ export async function listClosedTradesBetween(db, { from, to, mode, assetClass }
         gte(trades.closedAt, from),
         lt(trades.closedAt, to),
         mode ? eq(trades.mode, mode) : undefined,
-        assetClass ? eq(trades.assetClass, assetClass) : undefined
+        assetClass ? eq(trades.assetClass, assetClass) : undefined,
+        setupFilter(strategyId),
+        optionType ? eq(trades.optionType, optionType) : undefined
       )
     )
     .orderBy(trades.closedAt);
 }
 
-// Every closed trade of any mode, oldest exit first. `assetClass` limits it to
-// one asset class when given.
-export async function listAllClosedTrades(db, { assetClass } = {}) {
+// Every closed trade of any mode, oldest exit first. `assetClass`, `strategyId`
+// (see setupFilter), and `optionType` limit it when given.
+export async function listAllClosedTrades(db, { assetClass, strategyId, optionType } = {}) {
   return db
     .select()
     .from(trades)
-    .where(and(isNotNull(trades.closedAt), assetClass ? eq(trades.assetClass, assetClass) : undefined))
+    .where(
+      and(
+        isNotNull(trades.closedAt),
+        assetClass ? eq(trades.assetClass, assetClass) : undefined,
+        setupFilter(strategyId),
+        optionType ? eq(trades.optionType, optionType) : undefined
+      )
+    )
     .orderBy(trades.closedAt);
 }
 

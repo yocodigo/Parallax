@@ -1,9 +1,12 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { journalEntries, trades } from '../schema';
 import { createTestDb, resetDb } from '../testing';
+import { createStrategy } from '../strategies';
 import {
   getTrade,
+  listAllClosedTrades,
   listClosedTrades,
+  listClosedTradesBetween,
   listClosedTradesWithMistakes,
   listClosedTradesWithRuleChecks,
   listRecentTrades,
@@ -124,6 +127,58 @@ describe('listClosedTrades', () => {
 
     const rows = await listClosedTrades(db, { symbol: 'SPY', mode: 'live' });
     expect(rows.map((trade) => trade.id)).toEqual([live.id]);
+  });
+});
+
+// A closed option or stock trade, on 2026-10-22, with the setup it was taken for.
+const closedOn = (values) =>
+  insertTrade({
+    ...values,
+    entryPrice: 100,
+    exitPrice: 101,
+    openedAt: new Date('2026-10-22T14:00:00Z'),
+    closedAt: new Date('2026-10-22T15:00:00Z'),
+  });
+const option = (optionType, values = {}) =>
+  closedOn({ assetClass: 'option', optionType, strike: 500, expiration: '2026-10-23', initialStop: null, target: null, ...values });
+const strategy = (name) =>
+  createStrategy(db, { name, description: '', rules: [{ text: 'Trend aligned', kind: 'edge' }] });
+
+const window = { from: new Date('2026-10-01T00:00:00Z'), to: new Date('2026-11-01T00:00:00Z') };
+
+describe.each([
+  ['listClosedTradesBetween', (filters) => listClosedTradesBetween(db, { ...window, ...filters })],
+  ['listAllClosedTrades', (filters) => listAllClosedTrades(db, filters)],
+])('%s filters', (_name, list) => {
+  it('limits to one setup, to trades with no setup (null), or to all (omitted)', async () => {
+    const trend = await strategy('Trend pullback');
+    const withSetup = await closedOn({ strategyId: trend.id });
+    const without = await closedOn({});
+
+    expect((await list({ strategyId: trend.id })).map((t) => t.id)).toEqual([withSetup.id]);
+    expect((await list({ strategyId: null })).map((t) => t.id)).toEqual([without.id]);
+    expect(await list({})).toHaveLength(2);
+  });
+
+  it('limits to calls or to puts, which leaves out stock trades', async () => {
+    const call = await option('call');
+    const put = await option('put');
+    await closedOn({});
+
+    expect((await list({ optionType: 'call' })).map((t) => t.id)).toEqual([call.id]);
+    expect((await list({ optionType: 'put' })).map((t) => t.id)).toEqual([put.id]);
+    expect(await list({})).toHaveLength(3);
+  });
+
+  it('combines with the asset class and with each other', async () => {
+    const trend = await strategy('Trend pullback');
+    const wanted = await option('call', { strategyId: trend.id });
+    await option('put', { strategyId: trend.id });
+    await option('call');
+    await closedOn({ strategyId: trend.id });
+
+    const rows = await list({ assetClass: 'option', strategyId: trend.id, optionType: 'call' });
+    expect(rows.map((t) => t.id)).toEqual([wanted.id]);
   });
 });
 
