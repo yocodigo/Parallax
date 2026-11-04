@@ -10,7 +10,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { monthColumns, valueTicks } from '@/lib/chartTicks';
+import { outcomeColumns, outcomeTicks } from '@/lib/chartTicks';
 import { monthTick } from './MonthlyPnl';
 
 // Same fixed green and red as MonthlyPnl (see the note there on contrast on both
@@ -61,17 +61,8 @@ export function OutcomeTooltip({ active, payload }) {
 // Wins stack up from zero with scratches on top, and losses hang below it as
 // negative counts, so the sign never rests on color alone.
 export default function WinsLossesScratches({ months }) {
-  const columns = monthColumns(months).map((c) => ({
-    ...c,
-    lossesBelow: c.losses == null ? null : -c.losses,
-  }));
-  // The axis runs from the most losses in a month (below zero) to the tallest
-  // stack of wins and scratches, in whole trades.
-  const yTicks = valueTicks(
-    Math.min(0, ...months.map((m) => -m.losses)),
-    Math.max(0, ...months.map((m) => m.wins + m.scratches)),
-    { whole: true }
-  );
+  const columns = outcomeColumns(months);
+  const yTicks = outcomeTicks(months);
 
   return (
     <section className="space-y-3 rounded-lg border border-gray-200 bg-white p-4">

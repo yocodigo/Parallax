@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { monthColumns, timeTicks, valueTicks } from '../chartTicks';
+import { monthColumns, outcomeColumns, outcomeTicks, timeTicks, valueTicks } from '../chartTicks';
 
 describe('timeTicks', () => {
   it('marks the first point of each New York day over a short span', () => {
@@ -135,5 +135,35 @@ describe('monthColumns', () => {
 
   it('returns no columns for no months', () => {
     expect(monthColumns([])).toEqual([]);
+  });
+});
+
+describe('outcomeColumns', () => {
+  it('turns each month\'s losses into a negative count to hang below zero, keeping an empty month empty', () => {
+    const months = [
+      { month: '2026-01', wins: 5, losses: 3, scratches: 1, trades: 9 },
+      { month: '2026-03', wins: 2, losses: 0, scratches: 0, trades: 2 },
+    ];
+
+    expect(outcomeColumns(months).map((c) => [c.month, c.wins, c.lossesBelow])).toEqual([
+      ['2026-01', 5, -3],
+      ['2026-02', undefined, null],
+      ['2026-03', 2, 0],
+    ]);
+  });
+});
+
+describe('outcomeTicks', () => {
+  it('runs from the most losses in a month to the tallest stack of wins and scratches', () => {
+    const months = [
+      { wins: 9, losses: 2, scratches: 3 },
+      { wins: 4, losses: 6, scratches: 0 },
+    ];
+
+    expect(outcomeTicks(months)).toEqual([-10, -5, 0, 5, 10, 15]);
+  });
+
+  it('stays in whole trades', () => {
+    expect(outcomeTicks([{ wins: 15, losses: 0, scratches: 0 }])).toEqual([0, 5, 10, 15]);
   });
 });

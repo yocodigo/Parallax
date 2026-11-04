@@ -106,3 +106,23 @@ export function monthColumns(months) {
   }
   return columns;
 }
+
+// monthColumns for the wins, losses, scratches chart: each month's losses also
+// as a negative count (`lossesBelow`), so the bars stack them below zero. The
+// `|| 0` keeps a month with no losses at 0 rather than -0.
+export function outcomeColumns(months) {
+  return monthColumns(months).map((c) => ({
+    ...c,
+    lossesBelow: c.losses == null ? null : -c.losses || 0,
+  }));
+}
+
+// Whole-trade ticks from the most losses in a month (below zero) to the tallest
+// stack of wins and scratches.
+export function outcomeTicks(months) {
+  return valueTicks(
+    Math.min(0, ...months.map((m) => -m.losses)),
+    Math.max(0, ...months.map((m) => m.wins + m.scratches)),
+    { whole: true }
+  );
+}
