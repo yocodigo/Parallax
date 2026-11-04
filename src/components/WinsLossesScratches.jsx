@@ -65,9 +65,12 @@ export default function WinsLossesScratches({ months }) {
     ...c,
     lossesBelow: c.losses == null ? null : -c.losses,
   }));
+  // The axis runs from the most losses in a month (below zero) to the tallest
+  // stack of wins and scratches, in whole trades.
   const yTicks = valueTicks(
     Math.min(0, ...months.map((m) => -m.losses)),
-    Math.max(0, ...months.map((m) => m.wins + m.scratches))
+    Math.max(0, ...months.map((m) => m.wins + m.scratches)),
+    { whole: true }
   );
 
   return (

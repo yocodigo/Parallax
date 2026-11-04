@@ -64,6 +64,16 @@ describe('valueTicks', () => {
     expect(valueTicks(0, 0)).toEqual([0, 1]);
     expect(valueTicks(-0.4, 0.2)).toEqual([-1, 0, 1]);
   });
+
+  it('keeps to whole numbers for counts, skipping the 2.5 step', () => {
+    expect(valueTicks(0, 15)).toEqual([0, 2.5, 5, 7.5, 10, 12.5, 15]);
+    expect(valueTicks(0, 15, { whole: true })).toEqual([0, 5, 10, 15]);
+    expect(valueTicks(-3, 12, { whole: true })).toEqual([-5, 0, 5, 10, 15]);
+  });
+
+  it('still uses the 25 step once it is whole', () => {
+    expect(valueTicks(0, 150, { whole: true })).toEqual([0, 25, 50, 75, 100, 125, 150]);
+  });
 });
 
 describe('monthColumns', () => {

@@ -47,7 +47,9 @@ export function timeTicks(times) {
 const MAX_INTERVALS = 7;
 const ROUND_STEPS = [1, 2, 2.5, 5];
 
-export function valueTicks(min, max) {
+// `whole` is for counts: a step that isn't a whole number (the 2.5 step at the
+// smallest sizes) is skipped, so a trade count never reads "7.5".
+export function valueTicks(min, max, { whole = false } = {}) {
   const lo = Math.min(0, min);
   // lo + 1: a curve flat at zero still gets a scale.
   const hi = Math.max(0, max, lo + 1);
@@ -59,7 +61,7 @@ export function valueTicks(min, max) {
   for (let power = Math.floor(Math.log10((hi - lo) / MAX_INTERVALS)); ; power += 1) {
     for (const multiple of ROUND_STEPS) {
       const step = multiple * 10 ** power;
-      if (step < 1) continue;
+      if (step < 1 || (whole && !Number.isInteger(step))) continue;
       const first = Math.floor(lo / step);
       const last = Math.ceil(hi / step);
       if (last - first <= MAX_INTERVALS) {
