@@ -1,0 +1,135 @@
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import useSWR from 'swr';
+import { fetchJson } from '@/lib/fetchJson';
+import { formatProfitLoss } from '@/lib/format';
+import { inputClass } from './Field';
+import EquityCurve from './EquityCurve';
+import MistakeCostLedger from './MistakeCostLedger';
+import MonthlyPnl from './MonthlyPnl';
+import RollingExpectancy from './RollingExpectancy';
+
+const MODES = [
+  ['live', 'Live'],
+  ['paper', 'Paper'],
+  ['backtest', 'Backtest'],
+];
+
+const ASSETS = [
+  ['', 'All'],
+  ['stock', 'Stocks'],
+  ['option', 'Options'],
+  ['crypto', 'Crypto'],
+];
+
+const percent = new Intl.NumberFormat('en-US', { style: 'percent', maximumFractionDigits: 0 });
+
+// A ratio or percent that can't be worked out (no losses, no trades) is a dash.
+const orDash = (value, format) => (value === null || value === undefined ? '–' : format(value));
+
+// The route filters by New York calendar year, so the picker offers this year
+// and the five before it.
+const nyYear = () =>
+  Number(new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric' }).format(new Date()));
+
+function Select({ label, value, onChange, options }) {
+  return (
+    <label className="flex flex-col gap-1 text-xs text-gray-500">
+      {label}
+      <select value={value} onChange={(e) => onChange(e.target.value)} className={inputClass}>
+        {options.map(([optionValue, text]) => (
+          <option key={optionValue} value={optionValue}>
+            {text}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+// Each figure says whether it is before or after fees: wins and losses are
+// judged on gross P/L, the rest are shown net (dashboard.md section 1).
+function HeadlineStrip({ yearToDate, equity }) {
+  const drawdown = equity.at(-1)?.drawdown ?? 0;
+  const stats = [
+    ['Net P/L (net)', formatProfitLoss(yearToDate.netPnl)],
+    ['Win rate (gross P/L)', orDash(yearToDate.winRate, percent.format)],
+    ['Profit factor (net)', orDash(yearToDate.netProfitFactor, (v) => v.toFixed(2))],
+    ['Expectancy (net)', orDash(yearToDate.netExpectancy, formatProfitLoss)],
+    ['Drawdown (net)', drawdown > 0 ? formatProfitLoss(-drawdown) : 'At peak'],
+  ];
+  return (
+    <dl className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+      {stats.map(([label, value]) => (
+        <div key={label} className="rounded-lg border border-gray-200 bg-white px-4 py-3">
+          <dt className="text-xs text-gray-500">{label}</dt>
+          <dd className="mt-1 text-lg font-semibold text-gray-900 tabular-nums">{value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+// The landing view (dashboard.md section 2): headline figures, the equity
+// curve, then a grid of the core charts, for one mode, asset, and year.
+export default function PerformanceDashboard() {
+  const thisYear = nyYear();
+  const [mode, setMode] = useState('live');
+  const [asset, setAsset] = useState('');
+  const [year, setYear] = useState(thisYear);
+
+  const query = new URLSearchParams({ mode, ...(asset && { asset }), year: String(year) });
+  const { data, error, isLoading } = useSWR(`/api/insights/performance?${query}`, fetchJson, {
+    revalidateOnFocus: false,
+  });
+
+  let body;
+  if (isLoading) {
+    body = <p className="text-sm text-gray-500">Loading…</p>;
+  } else if (error) {
+    body = (
+      <div role="alert" className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        {error.message}
+      </div>
+    );
+  } else if (data.yearToDate.trades === 0) {
+    body = (
+      <div className="rounded-lg border border-gray-200 bg-white p-6 text-sm text-gray-500">
+        <p>No closed trades for these filters in {year}. Import an account statement to fill the charts.</p>
+        <Link href="/import" className="mt-3 inline-block font-medium text-blue-700 hover:underline">
+          Import trades
+        </Link>
+      </div>
+    );
+  } else {
+    body = (
+      <div className="space-y-6">
+        <HeadlineStrip yearToDate={data.yearToDate} equity={data.equity} />
+        <EquityCurve points={data.equity} />
+        <div className="grid gap-6 lg:grid-cols-2">
+          <MonthlyPnl months={data.months} />
+          <MistakeCostLedger costs={data.violationCosts} />
+          <RollingExpectancy points={data.rolling} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap gap-4">
+        <Select label="Mode" value={mode} onChange={setMode} options={MODES} />
+        <Select label="Asset" value={asset} onChange={setAsset} options={ASSETS} />
+        <Select
+          label="Year"
+          value={String(year)}
+          onChange={(value) => setYear(Number(value))}
+          options={Array.from({ length: 6 }, (_, i) => [String(thisYear - i), String(thisYear - i)])}
+        />
+      </div>
+      {body}
+    </div>
+  );
+}
