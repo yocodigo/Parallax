@@ -68,6 +68,12 @@ describe('GraduationTracker', () => {
     expect(cellsOf('Trend pullback')[3]).toHaveTextContent('–');
   });
 
+  it('says when the gap appears, so a dash is not mistaken for no difference', () => {
+    render(<GraduationTracker setups={setups} gradN={30} />);
+
+    expect(screen.getByText(/gap appears once live and paper both have a full window/)).toBeInTheDocument();
+  });
+
   it('names the trades without a strategy as such', () => {
     render(<GraduationTracker setups={setups} gradN={30} />);
 

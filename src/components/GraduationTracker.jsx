@@ -41,7 +41,8 @@ export default function GraduationTracker({ setups, gradN }) {
         <h2 className="text-sm font-semibold text-gray-700">Graduation tracker</h2>
         <p className="text-xs text-gray-500">
           A setup moves up a mode once its last {gradN} closed trades there average above zero after fees. Small
-          samples mislead, so treat these as hints until the counts are real.
+          samples mislead, so treat these as hints until the counts are real. The gap appears once live and paper
+          both have a full window.
         </p>
       </div>
 

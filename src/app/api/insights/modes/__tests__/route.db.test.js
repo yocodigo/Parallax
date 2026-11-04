@@ -63,7 +63,7 @@ describe('GET /api/insights/modes', () => {
     expect(body.modes.backtest.trades).toBe(0);
   });
 
-  it('lists each setup by name with its gate cells and gap, trades without one last', async () => {
+  it('lists each setup by name with its gate cells, no gap while the windows fill, trades without one last', async () => {
     const trend = await strategy('Trend pullback');
     await closedTrade(20, '2026-04-13T20:00:00Z', { strategyId: trend.id });
     await closedTrade(60, '2026-04-14T20:00:00Z', { strategyId: trend.id, mode: 'paper' });
@@ -76,7 +76,8 @@ describe('GET /api/insights/modes', () => {
       [null, null],
     ]);
     expect(setups[0].modes.live).toMatchObject({ trades: 1, window: 1, netExpectancy: 20, met: false });
-    expect(setups[0].gap).toBe(-40);
+    // One live and one paper trade: far short of a full window, so no gap yet.
+    expect(setups[0].gap).toBeNull();
     expect(setups[1].gap).toBeNull();
   });
 

@@ -183,7 +183,8 @@ function gateCell(closed) {
 // with none are the last row, strategyId null), dashboard.md section 4 chart
 // 12. Each setup has a cell per mode, and the gap between live and paper net
 // expectancy over their windows: how much execution and emotion cost against
-// the idealized version. The gap is null unless both modes have trades.
+// the idealized version. The gap is null until both windows are full: a few trades
+// in either mode say little, and the gap would overstate what they show.
 // Backtest cells gate the move to paper, paper to live, live to a bigger size.
 export function graduation(trades) {
   const bySetup = new Map();
@@ -199,7 +200,7 @@ export function graduation(trades) {
       MODES.map((mode) => [mode, gateCell(list.filter((t) => t.mode === mode).sort((a, b) => time(a) - time(b)))])
     );
     const { live, paper } = modes;
-    const gap = live.window > 0 && paper.window > 0 ? live.netExpectancy - paper.netExpectancy : null;
+    const gap = live.window === GRAD_N && paper.window === GRAD_N ? live.netExpectancy - paper.netExpectancy : null;
     return { strategyId, modes, gap, total: list.length };
   });
 

@@ -175,7 +175,7 @@ Vitest, JavaScript (not TypeScript).
   (`modeComparison`) and `GraduationTracker` (`graduation`). A setup is a strategy (trades with none are
   the last row). Each gate (backtest to paper, paper to live, live to a bigger size) is met when the last
   `GRAD_N` = 30 closed trades in that mode have net expectancy above zero; the live-minus-paper gap uses
-  the same windows. `GRAD_N` is a default the spec marks (confirm), sent as `gradN` so the page doesn't
+  the same windows and shows only once both are full. `GRAD_N` is a default the spec marks (confirm), sent as `gradN` so the page doesn't
   import `performance.js`, which pulls in the detector code. Not built yet: setup and call/put filters, an
   all-years range, and links to the section 3 tables.
 - History warnings: `HistoryWarnings.jsx` in the plan form asks `GET /api/insights/warnings` (mode,

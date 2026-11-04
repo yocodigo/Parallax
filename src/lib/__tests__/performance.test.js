@@ -303,15 +303,24 @@ describe('graduation', () => {
     expect(row(graduation(trades), 'a').modes.paper.met).toBe(true);
   });
 
-  it('gives the live-minus-paper gap in net expectancy, and none unless both modes have trades', () => {
+  it('gives the live-minus-paper gap in net expectancy once both windows are full', () => {
+    const rows = graduation([...run('live', 'a', Array(30).fill(10)), ...run('paper', 'a', Array(30).fill(40))]);
+
+    expect(row(rows, 'a').gap).toBe(-30);
+  });
+
+  it('gives no gap while either window is still filling, since a few trades say little', () => {
     const rows = graduation([
-      ...run('live', 'a', [10, 20]),
-      ...run('paper', 'a', [40]),
-      ...run('live', 'b', [10]),
+      ...run('live', 'a', Array(30).fill(10)),
+      ...run('paper', 'a', Array(29).fill(40)),
+      ...run('live', 'b', Array(29).fill(10)),
+      ...run('paper', 'b', Array(30).fill(40)),
+      ...run('live', 'c', [10, 20]),
+      ...run('paper', 'c', [40]),
+      ...run('live', 'd', Array(30).fill(10)),
     ]);
 
-    expect(row(rows, 'a').gap).toBe(-25);
-    expect(row(rows, 'b').gap).toBeNull();
+    expect(['a', 'b', 'c', 'd'].map((id) => row(rows, id).gap)).toEqual([null, null, null, null]);
   });
 
   it('counts only closed trades', () => {
