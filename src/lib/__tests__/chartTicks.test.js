@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { monthColumns, outcomeColumns, outcomeTicks, timeTicks, valueTicks } from '../chartTicks';
+import { averageTicks, monthColumns, outcomeColumns, outcomeTicks, timeTicks, valueTicks } from '../chartTicks';
 
 describe('timeTicks', () => {
   it('marks the first point of each New York day over a short span', () => {
@@ -165,5 +165,21 @@ describe('outcomeTicks', () => {
 
   it('stays in whole trades', () => {
     expect(outcomeTicks([{ wins: 15, losses: 0, scratches: 0 }])).toEqual([0, 5, 10, 15]);
+  });
+});
+
+describe('averageTicks', () => {
+  it('runs from the largest average loss to the largest average win, in dollars', () => {
+    const months = [
+      { avgWin: 120, avgLoss: -80 },
+      { avgWin: 60, avgLoss: -210 },
+    ];
+
+    expect(averageTicks(months)).toEqual([-300, -200, -100, 0, 100, 200]);
+  });
+
+  it('skips a side a month lacked, and a scale with nothing to plot', () => {
+    expect(averageTicks([{ avgWin: 40, avgLoss: null }])).toEqual([0, 10, 20, 30, 40]);
+    expect(averageTicks([{ avgWin: null, avgLoss: null }, {}])).toEqual([0, 1]);
   });
 });

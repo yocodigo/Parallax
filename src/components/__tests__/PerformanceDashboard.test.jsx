@@ -14,6 +14,8 @@ const summary = (extra = {}) => ({
   wins: 3,
   losses: 2,
   scratches: 0,
+  avgWin: 15,
+  avgLoss: -12.5,
   grossPnl: 20,
   netPnl: 18.7,
   winRate: 0.6,
@@ -156,6 +158,7 @@ describe('PerformanceDashboard', () => {
       'Expectancy, last 20 trades',
       'Win rate vs breakeven',
       'Wins, losses, scratches by month',
+      'Average win vs average loss',
       'Mode comparison',
       'Graduation tracker',
     ]);

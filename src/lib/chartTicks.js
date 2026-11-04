@@ -126,3 +126,11 @@ export function outcomeTicks(months) {
     { whole: true }
   );
 }
+
+// Dollar ticks for the average win and average loss chart: from the largest
+// average loss (negative) to the largest average win. A month without wins or
+// losses has no average there, and is left out of the range.
+export function averageTicks(months) {
+  const values = months.flatMap((m) => [m.avgWin, m.avgLoss]).filter(Number.isFinite);
+  return valueTicks(Math.min(0, ...values), Math.max(0, ...values));
+}

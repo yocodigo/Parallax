@@ -6,6 +6,7 @@ import useSWR from 'swr';
 import { fetchJson } from '@/lib/fetchJson';
 import { formatProfitLoss } from '@/lib/format';
 import { inputClass } from './Field';
+import AverageWinLoss from './AverageWinLoss';
 import EquityCurve from './EquityCurve';
 import GraduationTracker from './GraduationTracker';
 import MistakeCostLedger from './MistakeCostLedger';
@@ -209,6 +210,7 @@ export default function PerformanceDashboard() {
               <RollingExpectancy points={data.rolling} />
               <WinRateVsBreakeven months={data.months} />
               <WinsLossesScratches months={data.months} />
+              <AverageWinLoss months={data.months} />
             </div>
           </>
         ) : (
