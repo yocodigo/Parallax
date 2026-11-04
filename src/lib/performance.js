@@ -199,7 +199,7 @@ export function graduation(trades) {
       MODES.map((mode) => [mode, gateCell(list.filter((t) => t.mode === mode).sort((a, b) => time(a) - time(b)))])
     );
     const { live, paper } = modes;
-    const gap = live.window && paper.window ? (live.netExpectancy * 100 - paper.netExpectancy * 100) / 100 : null;
+    const gap = live.window > 0 && paper.window > 0 ? live.netExpectancy - paper.netExpectancy : null;
     return { strategyId, modes, gap, total: list.length };
   });
 
