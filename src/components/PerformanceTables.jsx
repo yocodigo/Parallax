@@ -37,7 +37,8 @@ const COLUMNS = [
   ['Expectancy (net)', (s) => signed(s.netExpectancy)],
 ];
 
-const th = 'whitespace-nowrap px-3 py-2 text-right text-xs font-medium text-gray-500';
+const thBase = 'whitespace-nowrap px-3 py-2 text-xs font-medium text-gray-500';
+const th = `${thBase} text-right`;
 const td = 'whitespace-nowrap px-3 py-1.5 text-right text-gray-900 tabular-nums';
 const rowHead = 'whitespace-nowrap px-3 py-1.5 text-left font-medium text-gray-700';
 
@@ -51,7 +52,7 @@ function Table({ label, firstColumn, rows, columns, children }) {
           <table aria-label={label} className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200">
-                <th scope="col" className={`${th} text-left`}>
+                <th scope="col" className={`${thBase} text-left`}>
                   {firstColumn}
                 </th>
                 {columns.map(([name]) => (

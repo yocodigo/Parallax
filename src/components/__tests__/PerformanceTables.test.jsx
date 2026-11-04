@@ -72,6 +72,16 @@ describe('PerformanceTables', () => {
     ]);
   });
 
+  it('aligns the first column’s header left, with its row names, and the figures’ headers right', () => {
+    renderTables();
+    const [first, second] = within(screen.getByRole('table', { name: 'Monthly summary' })).getAllByRole('columnheader');
+    // Conflicting text-left and text-right classes resolve by stylesheet order, so a header may carry only one.
+    expect(first).toHaveClass('text-left');
+    expect(first).not.toHaveClass('text-right');
+    expect(second).toHaveClass('text-right');
+    expect(second).not.toHaveClass('text-left');
+  });
+
   it('shows a month’s figures formatted, and a dash for one that can’t be worked out', () => {
     renderTables();
     const [, march, april] = within(screen.getByRole('table', { name: 'Monthly summary' })).getAllByRole('row');
