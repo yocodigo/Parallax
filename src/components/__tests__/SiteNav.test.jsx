@@ -17,13 +17,14 @@ beforeEach(() => {
 });
 
 describe('SiteNav', () => {
-  it('links to the dashboard, the journal, strategies, insights, and the import', () => {
+  it('links to the dashboard, the journal, strategies, performance, insights, and the import', () => {
     usePathname.mockReturnValue('/');
     render(<SiteNav />);
 
     expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('href', '/');
     expect(screen.getByRole('link', { name: 'Journal' })).toHaveAttribute('href', '/journal');
     expect(screen.getByRole('link', { name: 'Strategies' })).toHaveAttribute('href', '/strategies');
+    expect(screen.getByRole('link', { name: 'Performance' })).toHaveAttribute('href', '/performance');
     expect(screen.getByRole('link', { name: 'Insights' })).toHaveAttribute('href', '/insights');
     expect(screen.getByRole('link', { name: 'Import' })).toHaveAttribute('href', '/import');
   });
