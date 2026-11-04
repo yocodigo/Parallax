@@ -149,7 +149,7 @@ export default function PerformanceDashboard() {
   } else if (data.yearToDate.trades === 0) {
     body = (
       <div className="rounded-lg border border-gray-200 bg-white p-6 text-sm text-gray-500">
-        <p>No closed trades for these filters in {year}. Import an account statement to fill the charts.</p>
+        <p>No closed trades for these filters in {year}. Try widening the filters, or import an account statement to fill the charts.</p>
         <Link href="/import" className="mt-3 inline-block font-medium text-blue-700 hover:underline">
           Import trades
         </Link>

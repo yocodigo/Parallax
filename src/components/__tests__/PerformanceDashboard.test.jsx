@@ -268,6 +268,8 @@ describe('PerformanceDashboard', () => {
     renderDashboard();
 
     expect(await screen.findByText(/No closed trades/)).toBeInTheDocument();
+    // A narrow filter can empty the page as well as a missing import.
+    expect(screen.getByText(/Try widening the filters, or import an account statement/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Import trades' })).toHaveAttribute('href', '/import');
     expect(screen.queryByRole('heading', { name: 'Equity curve' })).not.toBeInTheDocument();
     // The filters stay, so another mode or year can be tried.
