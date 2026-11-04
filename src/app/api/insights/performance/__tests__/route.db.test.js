@@ -106,6 +106,35 @@ describe('GET /api/insights/performance', () => {
     expect(body.timeOfDay.find((b) => b.start === '15:00')).toMatchObject({ trades: 1, netPnl: 5 });
   });
 
+  it('with year=all returns the mode\'s trades from every year, the months in order across them', async () => {
+    await closedOption(-10, '2026-04-13T20:00:00Z');
+    await closedOption(30, '2025-12-10T20:00:00Z');
+    await closedOption(5, '2024-01-02T20:00:00Z');
+    await closedOption(500, '2025-12-11T20:00:00Z', { mode: 'paper' });
+
+    const body = await (await get('?year=all')).json();
+
+    expect(body.months.map((m) => [m.month, m.netPnl])).toEqual([
+      ['2024-01', 5],
+      ['2025-12', 30],
+      ['2026-04', -10],
+    ]);
+    expect(body.yearToDate).toMatchObject({ trades: 3, netPnl: 25 });
+    expect(body.equity.map((point) => point.cumulative)).toEqual([5, 35, 25]);
+  });
+
+  it('with year=all still applies the mode and the other filters', async () => {
+    await closedOption(30, '2025-12-10T20:00:00Z', { optionType: 'put' });
+    await closedOption(7, '2026-04-13T20:00:00Z', { optionType: 'call' });
+    await closedOption(500, '2025-12-11T20:00:00Z', { mode: 'paper' });
+
+    const puts = await (await get('?year=all&optionType=put')).json();
+    const paper = await (await get('?year=all&mode=paper')).json();
+
+    expect(puts.yearToDate).toMatchObject({ trades: 1, netPnl: 30 });
+    expect(paper.yearToDate).toMatchObject({ trades: 1, netPnl: 500 });
+  });
+
   describe('filters by setup and by call or put', () => {
     const strategy = (name) =>
       createStrategy(getDb(), { name, description: '', rules: [{ text: 'Trend aligned', kind: 'edge' }] });

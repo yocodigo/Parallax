@@ -58,7 +58,8 @@ function setupFilter(strategyId) {
   return strategyId === null ? isNull(trades.strategyId) : eq(trades.strategyId, strategyId);
 }
 
-// Closed trades that closed in [from, to), oldest exit first. `mode`,
+// Closed trades that closed in [from, to), oldest exit first; a bound left out is
+// open on that side. `mode`,
 // `assetClass`, `strategyId` (see setupFilter), and `optionType` (call or put,
 // which leaves out stocks and crypto) limit it when given.
 export async function listClosedTradesBetween(db, { from, to, mode, assetClass, strategyId, optionType }) {
@@ -68,8 +69,8 @@ export async function listClosedTradesBetween(db, { from, to, mode, assetClass, 
     .where(
       and(
         isNotNull(trades.closedAt),
-        gte(trades.closedAt, from),
-        lt(trades.closedAt, to),
+        from ? gte(trades.closedAt, from) : undefined,
+        to ? lt(trades.closedAt, to) : undefined,
         mode ? eq(trades.mode, mode) : undefined,
         assetClass ? eq(trades.assetClass, assetClass) : undefined,
         setupFilter(strategyId),
