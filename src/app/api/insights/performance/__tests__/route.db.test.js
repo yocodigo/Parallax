@@ -74,6 +74,21 @@ describe('GET /api/insights/performance', () => {
     ]);
   });
 
+  it('returns expectancy over the last 20 closed trades of the year, once 20 have closed', async () => {
+    // One loss, then twenty wins: the first window holds the loss, the second has dropped it.
+    await closedOption(-10, '2026-03-02T20:00:00Z', { fees: 1 });
+    for (let day = 3; day <= 22; day++) {
+      await closedOption(10, `2026-03-${String(day).padStart(2, '0')}T20:00:00Z`, { fees: 1 });
+    }
+
+    const body = await (await get('?year=2026')).json();
+
+    expect(body.rolling).toEqual([
+      { closedAt: '2026-03-21T20:00:00.000Z', expectancy: 9, netExpectancy: 8 },
+      { closedAt: '2026-03-22T20:00:00.000Z', expectancy: 10, netExpectancy: 9 },
+    ]);
+  });
+
   it('returns net P/L by the rules the entry broke', async () => {
     // Entered an hour before closing, in New York time (EDT): 15:30 is free, 12:00 is in the 11:00-14:00 lockout.
     await closedOption(40, '2026-04-13T20:30:00Z');
