@@ -14,7 +14,7 @@ vi.mock('@/db', async () => {
 
 // A closed long option, 1 contract, entered an hour before it closed. A stock
 // trade passes `stock: true`, which drops the contract fields.
-async function closedTrade(net, closedAt, { mode = 'live', strategyId = null, stock = false } = {}) {
+async function closedTrade(net, closedAt, { mode = 'live', strategyId = null, stock = false, optionType = 'call' } = {}) {
   const closed = new Date(closedAt);
   await getDb()
     .insert(trades)
@@ -26,7 +26,7 @@ async function closedTrade(net, closedAt, { mode = 'live', strategyId = null, st
       direction: 'long',
       quantity: 1,
       multiplier: stock ? 1 : 100,
-      optionType: stock ? null : 'call',
+      optionType: stock ? null : optionType,
       strike: stock ? null : 500,
       expiration: stock ? null : closedAt.slice(0, 10),
       plannedEntry: 1,
@@ -94,6 +94,42 @@ describe('GET /api/insights/modes', () => {
     const { modes } = await (await get('?asset=stock')).json();
 
     expect(modes.live).toMatchObject({ trades: 1, netPnl: 8 });
+  });
+
+  it('limits both to one setup, or with none to the trades taken without one', async () => {
+    const trend = await strategy('Trend pullback');
+    await closedTrade(20, '2026-04-13T20:00:00Z', { strategyId: trend.id });
+    await closedTrade(60, '2026-04-14T20:00:00Z', { strategyId: trend.id, mode: 'paper' });
+    await closedTrade(5, '2026-04-15T20:00:00Z');
+
+    const one = await (await get(`?strategyId=${trend.id}`)).json();
+    const none = await (await get('?strategyId=none')).json();
+
+    expect(one.modes.live.trades + one.modes.paper.trades).toBe(2);
+    expect(one.setups.map((s) => s.name)).toEqual(['Trend pullback']);
+    expect(none.modes.live).toMatchObject({ trades: 1, netPnl: 5 });
+    expect(none.setups.map((s) => s.strategyId)).toEqual([null]);
+  });
+
+  it('limits both to calls or to puts', async () => {
+    await closedTrade(30, '2026-04-13T20:00:00Z');
+    await closedTrade(-10, '2026-04-14T20:00:00Z', { optionType: 'put' });
+    await closedTrade(8, '2026-04-15T20:00:00Z', { stock: true });
+
+    const puts = await (await get('?optionType=put')).json();
+
+    expect(puts.modes.live).toMatchObject({ trades: 1, netPnl: -10 });
+    expect(puts.setups).toHaveLength(1);
+  });
+
+  it('answers 400 for an id that is not a uuid or "none", and for a side that is not call or put', async () => {
+    const badId = await get('?strategyId=banana');
+    const badSide = await get('?optionType=straddle');
+
+    expect(badId.status).toBe(400);
+    expect((await badId.json()).fieldErrors.strategyId).toBeDefined();
+    expect(badSide.status).toBe(400);
+    expect((await badSide.json()).fieldErrors.optionType).toBeDefined();
   });
 
   it('answers 400 for an asset class it does not know', async () => {
