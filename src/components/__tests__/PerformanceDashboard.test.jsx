@@ -6,6 +6,9 @@ import { SWRConfig } from 'swr';
 import { server } from '@/mocks/server';
 import PerformanceDashboard from '../PerformanceDashboard';
 
+// The page's default year is the New York one, which differs from the local year around New Year's.
+const nyYear = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric' }).format(new Date());
+
 const summary = (extra = {}) => ({
   trades: 5,
   grossPnl: 20,
@@ -92,7 +95,7 @@ describe('PerformanceDashboard', () => {
     renderDashboard();
     await screen.findByText('Net P/L (net)');
 
-    expect(queries[0]).toEqual({ mode: 'live', year: String(new Date().getFullYear()) });
+    expect(queries[0]).toEqual({ mode: 'live', year: nyYear });
 
     await userEvent.selectOptions(screen.getByLabelText('Mode'), 'paper');
     await userEvent.selectOptions(screen.getByLabelText('Asset'), 'option');
