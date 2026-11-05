@@ -4,6 +4,23 @@ Two Vercel projects build the same repo: **yours**, behind the password, on your
 and the **public demo**, read-only, on a separate Neon database of made-up trades. Nothing below
 runs automatically; each step is yours to do in the Vercel and Neon dashboards.
 
+## Keeping it private until you decide
+
+Nothing is reachable until something is deployed, so set everything up in this order:
+
+1. Do Neon (section 1) first. A database alone exposes nothing.
+2. Create the Vercel projects **without connecting Git**, so a push can't deploy by surprise.
+3. Set the Production variables before the first deploy, `APP_PASSWORD` and `SESSION_SECRET` first. A
+   deployment missing either one fails closed: nobody can sign in.
+4. Deploy **your** project only, and run the checks in section 5 against it. Signed out, a page must
+   redirect to `/login` and an API route must answer 401.
+5. Leave the demo project empty (or undeployed, or without a domain) until you want it public. It has
+   no sign-in by design.
+
+Vercel's Deployment Protection can put its own login in front of a deployment. As far as we know
+preview deployments are protected on every plan and production needs a paid one; check Vercel's
+current plan page before relying on it. The app's own sign-in does not depend on it.
+
 ## 1. Neon (Postgres 17)
 
 1. Create two Neon projects, `parallax` and `parallax-demo`, in the region nearest your Vercel
