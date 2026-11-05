@@ -8,7 +8,7 @@ import { MET, MISSED, UNKNOWN, sizeGate, windowGate } from './setups/gates';
 // `cost` is the net P/L of the trades that missed, so a costly rule is negative.
 // Option trades only: the gates count contracts, and a stock's share count
 // would read as an oversized entry.
-// Plan OK, from the facts the route adds to each trade (`planFacts`): a plan
+// Plan OK, from the facts the route adds to each trade (`listPlanFacts`): a plan
 // entry written before the fill, a strategy picked, and no checklist rule
 // entered unmet. Stop OK, Exit OK, and a discipline score aren't defined yet.
 

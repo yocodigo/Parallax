@@ -92,6 +92,7 @@ export async function listPlanFacts(db, tradeIds) {
     .from(journalEntries)
     .where(and(eq(journalEntries.kind, 'plan'), inArray(journalEntries.tradeId, tradeIds)))
     .groupBy(journalEntries.tradeId);
+  // min() is raw SQL, so the driver hands back a string rather than a Date.
   for (const { tradeId, writtenAt } of plans) facts.get(tradeId).planWrittenAt = new Date(writtenAt);
 
   const unmet = await db
