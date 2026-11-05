@@ -95,7 +95,7 @@ const ADHERENCE_COLUMNS = [
   ['Kept', (g) => g.ok],
   ['Broken', (g) => g.missed],
   ['Share kept', (g) => (g.ok + g.missed === 0 ? '–' : percent.format(g.ok / (g.ok + g.missed)))],
-  ['Cost of broken', (g) => formatProfitLoss(g.cost)],
+  ['Cost of broken', (g) => (g.cost === null ? '–' : formatProfitLoss(g.cost))],
 ];
 
 // In the order of `violationCosts`, with the names the mistake cost ledger uses.
@@ -142,13 +142,16 @@ export default function PerformanceTables({ months, yearToDate, adherence, viola
           { key: 'plan', name: 'Plan OK', values: adherence.plan },
           { key: 'stop', name: 'Stop OK', values: adherence.stop },
           { key: 'exit', name: 'Exit OK', values: adherence.exit },
+          { key: 'discipline', name: 'Discipline score', values: adherence.discipline },
         ]}
       >
         <p className="text-xs text-gray-500">
           Option trades only ({adherence.trades} closed with a P/L). The cost is the net P/L of the trades that broke
           the rule. Plan OK: a plan written before the fill, a strategy picked, and every checklist rule met. Stop OK: the
           exit was no worse than the stop; trades with no stop aren&apos;t judged. Exit OK: the recorded exit reason was a
-          planned one, not a discomfort exit. The discipline score isn&apos;t built yet.
+          planned one, not a discomfort exit. Discipline score: the Plan OK, Stop OK, and Exit OK checks passed out of the
+          ones that applied (Window OK and Size OK aren&apos;t in it). It has no cost, since one trade can fail
+          several checks.
         </p>
       </Table>
       <Table

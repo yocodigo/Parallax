@@ -36,6 +36,7 @@ const body = (extra = {}) => ({
     plan: { ok: 0, missed: 0, cost: 0 },
     stop: { ok: 0, missed: 0, cost: 0 },
     exit: { ok: 0, missed: 0, cost: 0 },
+    discipline: { ok: 0, missed: 0, cost: null },
   },
   violationCosts: {
     followed: { trades: 0, net: 0 },

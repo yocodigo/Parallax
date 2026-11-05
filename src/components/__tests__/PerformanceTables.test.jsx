@@ -30,6 +30,7 @@ const adherence = {
   plan: { ok: 3, missed: 3, cost: -80 },
   stop: { ok: 2, missed: 0, cost: 0 },
   exit: { ok: 4, missed: 2, cost: -35 },
+  discipline: { ok: 9, missed: 5, cost: null },
 };
 
 // The route's buckets: each option trade is in exactly one, so they add up to the total.
@@ -146,7 +147,7 @@ describe('PerformanceTables', () => {
   it('shows the rules kept and broken with the cost of the broken ones, for option trades', () => {
     renderTables();
     const table = screen.getByRole('table', { name: 'Rule adherence' });
-    const [, windowRow, sizeRow, planRow, stopRow, exitRow] = within(table).getAllByRole('row');
+    const [, windowRow, sizeRow, planRow, stopRow, exitRow, disciplineRow] = within(table).getAllByRole('row');
     expect(within(windowRow).getByRole('rowheader')).toHaveTextContent('Window OK');
     expect(within(windowRow).getAllByRole('cell').map((c) => c.textContent)).toEqual(['4', '2', '67%', '-$55.50']);
     expect(within(sizeRow).getByRole('rowheader')).toHaveTextContent('Size OK');
@@ -157,6 +158,8 @@ describe('PerformanceTables', () => {
     expect(within(stopRow).getAllByRole('cell').map((c) => c.textContent)).toEqual(['2', '0', '100%', '+$0.00']);
     expect(within(exitRow).getByRole('rowheader')).toHaveTextContent('Exit OK');
     expect(within(exitRow).getAllByRole('cell').map((c) => c.textContent)).toEqual(['4', '2', '67%', '-$35.00']);
+    expect(within(disciplineRow).getByRole('rowheader')).toHaveTextContent('Discipline score');
+    expect(within(disciplineRow).getAllByRole('cell').map((c) => c.textContent)).toEqual(['9', '5', '64%', '–']);
     expect(screen.getByText(/option trades only \(6 closed with a p\/l\)/i)).toBeInTheDocument();
   });
 
@@ -183,7 +186,7 @@ describe('PerformanceTables', () => {
 
   it('shows a dash for the kept share when no trade could be judged', () => {
     const empty = { ok: 0, missed: 0, cost: 0 };
-    renderTables({ adherence: { trades: 0, window: empty, size: empty, plan: empty, stop: empty, exit: empty } });
+    renderTables({ adherence: { trades: 0, window: empty, size: empty, plan: empty, stop: empty, exit: empty, discipline: { ok: 0, missed: 0, cost: null } } });
     const [, windowRow] = within(screen.getByRole('table', { name: 'Rule adherence' })).getAllByRole('row');
     expect(within(windowRow).getAllByRole('cell')[2]).toHaveTextContent('–');
   });

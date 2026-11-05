@@ -14,7 +14,9 @@ import { MET, MISSED, UNKNOWN, sizeGate, windowGate } from './setups/gates';
 // entered unmet. Stop OK: the exit wasn't worse than the stop that was set (an
 // option's stop is optional, so one without a stop isn't judged). Exit OK: the
 // recorded exit reason was a planned one, not a discomfort exit (a trade with no
-// reason isn't judged). A discipline score isn't defined yet.
+// reason isn't judged). The discipline score pools the Plan OK, Stop OK, and Exit
+// OK checks: how many of the ones that applied were passed. Window OK and Size OK
+// are left out of it.
 
 // Money is summed in whole cents so totals don't drift with floating-point error.
 const toCents = (dollars) => Math.round(dollars * 100);
@@ -69,14 +71,23 @@ function pricedOptionRows(trades) {
 
 export function adherence(trades) {
   const rows = pricedOptionRows(trades);
+  const plan = tally(rows, planGate);
+  const stop = tally(rows, stopHeldGate);
+  const exit = tally(rows, exitGate);
 
   return {
     trades: rows.length,
     window: tally(rows, (trade) => windowGate(trade.openedAt && new Date(trade.openedAt))),
     size: tally(rows, (trade) => sizeGate(trade.quantity)),
-    plan: tally(rows, planGate),
-    stop: tally(rows, stopHeldGate),
-    exit: tally(rows, exitGate),
+    plan,
+    stop,
+    exit,
+    // No cost: a trade can fail several checks, so the costs would count it twice.
+    discipline: {
+      ok: plan.ok + stop.ok + exit.ok,
+      missed: plan.missed + stop.missed + exit.missed,
+      cost: null,
+    },
   };
 }
 

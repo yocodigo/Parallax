@@ -71,6 +71,7 @@ describe('adherence', () => {
       plan: { ok: 0, missed: 0, cost: 0 },
       stop: { ok: 0, missed: 0, cost: 0 },
       exit: { ok: 0, missed: 0, cost: 0 },
+      discipline: { ok: 0, missed: 0, cost: null },
     });
   });
 });
@@ -192,5 +193,39 @@ describe('adherence: Exit OK', () => {
 
   it('counts a trade with no recorded reason toward neither side', () => {
     expect(adherence([exited(-5, null)]).exit).toEqual({ ok: 0, missed: 0, cost: 0 });
+  });
+});
+
+describe('adherence: discipline score', () => {
+  // Plan OK met, Stop OK met, Exit OK missed.
+  const trade = (extra = {}) => ({
+    ...option(10),
+    strategyId: 'strategy-1',
+    planWrittenAt: new Date('2026-04-13T13:00:00Z'),
+    unmetRuleCount: 0,
+    initialStop: 0.5,
+    exitReason: 'felt_heavy',
+    ...extra,
+  });
+
+  it('pools the Plan OK, Stop OK, and Exit OK checks that were passed and failed', () => {
+    const result = adherence([trade(), trade({ strategyId: null, exitReason: 'target' })]);
+
+    // First trade: plan met, stop met, exit missed. Second: plan missed, stop met, exit met.
+    expect(result.discipline).toEqual({ ok: 4, missed: 2, cost: null });
+  });
+
+  it('counts only the checks that apply: a trade with no stop or reason adds just its plan check', () => {
+    const result = adherence([trade({ initialStop: null, exitReason: null })]);
+
+    expect(result.discipline).toEqual({ ok: 1, missed: 0, cost: null });
+  });
+
+  it('leaves out the window and size rules', () => {
+    const result = adherence([trade({ openedAt: new Date(LOCKED), quantity: 3, strategyId: null, initialStop: null, exitReason: null })]);
+
+    expect(result.window.missed).toBe(1);
+    expect(result.size.missed).toBe(1);
+    expect(result.discipline).toEqual({ ok: 0, missed: 1, cost: null });
   });
 });
