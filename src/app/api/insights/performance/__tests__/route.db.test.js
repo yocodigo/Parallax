@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getDb } from '@/db';
-import { trades } from '@/db/schema';
+import { journalEntries, trades } from '@/db/schema';
 import { resetDb } from '@/db/testing';
 import { createStrategy } from '@/db/strategies';
 import { GET } from '../route';
@@ -13,10 +13,10 @@ vi.mock('@/db', async () => {
 });
 
 // A closed long option, 1 contract, entered an hour before it closed.
-async function closedOption(net, closedAt, { mode = 'live', fees = 0, strategyId = null, optionType = 'call' } = {}) {
+async function closedOption(net, closedAt, { mode = 'live', fees = 0, strategyId = null, optionType = 'call', planned = false } = {}) {
   const closed = new Date(closedAt);
   const day = closedAt.slice(0, 10);
-  await getDb()
+  const [trade] = await getDb()
     .insert(trades)
     .values({
       mode,
@@ -35,7 +35,14 @@ async function closedOption(net, closedAt, { mode = 'live', fees = 0, strategyId
       fees,
       openedAt: new Date(closed.getTime() - 60 * 60 * 1000),
       closedAt: closed,
-    });
+    })
+    .returning();
+  // A plan written two hours before the fill.
+  if (planned) {
+    await getDb()
+      .insert(journalEntries)
+      .values({ kind: 'plan', notes: 'Plan.', tradeId: trade.id, createdAt: new Date(closed.getTime() - 3 * 60 * 60 * 1000) });
+  }
 }
 
 const get = (query = '') => GET(new Request(`http://localhost/api/insights/performance${query}`));
@@ -62,6 +69,17 @@ describe('GET /api/insights/performance', () => {
     ]);
     expect(body.yearToDate).toMatchObject({ trades: 2, netPnl: 20 });
     expect(body.adherence).toMatchObject({ trades: 2, size: { ok: 2, missed: 0, cost: 0 } });
+  });
+
+  it('counts Plan OK from a plan written before the fill and a strategy picked', async () => {
+    const strategy = await createStrategy(getDb(), { name: 'Band cross', description: '', rules: [{ text: 'Trend aligned', kind: 'edge' }] });
+    await closedOption(30, '2026-03-10T20:00:00Z', { planned: true, strategyId: strategy.id });
+    await closedOption(-10, '2026-04-13T20:00:00Z', { planned: true });
+    await closedOption(-20, '2026-04-14T20:00:00Z');
+
+    const body = await (await get('?year=2026')).json();
+
+    expect(body.adherence.plan).toEqual({ ok: 1, missed: 2, cost: -30 });
   });
 
   it('returns the equity curve of the year, net of fees, in closing order', async () => {

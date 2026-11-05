@@ -27,6 +27,7 @@ const adherence = {
   trades: 6,
   window: { ok: 4, missed: 2, cost: -55.5 },
   size: { ok: 5, missed: 1, cost: -12 },
+  plan: { ok: 3, missed: 3, cost: -80 },
 };
 
 // The route's buckets: each option trade is in exactly one, so they add up to the total.
@@ -143,11 +144,13 @@ describe('PerformanceTables', () => {
   it('shows the rules kept and broken with the cost of the broken ones, for option trades', () => {
     renderTables();
     const table = screen.getByRole('table', { name: 'Rule adherence' });
-    const [, windowRow, sizeRow] = within(table).getAllByRole('row');
+    const [, windowRow, sizeRow, planRow] = within(table).getAllByRole('row');
     expect(within(windowRow).getByRole('rowheader')).toHaveTextContent('Window OK');
     expect(within(windowRow).getAllByRole('cell').map((c) => c.textContent)).toEqual(['4', '2', '67%', '-$55.50']);
     expect(within(sizeRow).getByRole('rowheader')).toHaveTextContent('Size OK');
     expect(within(sizeRow).getAllByRole('cell').map((c) => c.textContent)).toEqual(['5', '1', '83%', '-$12.00']);
+    expect(within(planRow).getByRole('rowheader')).toHaveTextContent('Plan OK');
+    expect(within(planRow).getAllByRole('cell').map((c) => c.textContent)).toEqual(['3', '3', '50%', '-$80.00']);
     expect(screen.getByText(/option trades only \(6 closed with a p\/l\)/i)).toBeInTheDocument();
   });
 
@@ -174,7 +177,7 @@ describe('PerformanceTables', () => {
 
   it('shows a dash for the kept share when no trade could be judged', () => {
     const empty = { ok: 0, missed: 0, cost: 0 };
-    renderTables({ adherence: { trades: 0, window: empty, size: empty } });
+    renderTables({ adherence: { trades: 0, window: empty, size: empty, plan: empty } });
     const [, windowRow] = within(screen.getByRole('table', { name: 'Rule adherence' })).getAllByRole('row');
     expect(within(windowRow).getAllByRole('cell')[2]).toHaveTextContent('–');
   });

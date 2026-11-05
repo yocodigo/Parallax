@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getDb } from '@/db';
-import { listClosedTradesBetween } from '@/db/trades';
+import { listClosedTradesBetween, listPlanFacts } from '@/db/trades';
 import { adherence, violationCosts } from '@/lib/adherence';
 import { withErrorLogging } from '@/lib/log';
 import { equityCurve, monthlySummary, rollingExpectancy, summarize, timeOfDay } from '@/lib/performance';
@@ -55,10 +55,17 @@ export const GET = withErrorLogging('/api/insights/performance', async (request)
     optionType,
   });
 
+  // Rule adherence also needs each trade's plan entry and checklist answers.
+  const facts = await listPlanFacts(
+    getDb(),
+    closed.map((trade) => trade.id)
+  );
+  const withFacts = closed.map((trade) => ({ ...trade, ...facts.get(trade.id) }));
+
   return NextResponse.json({
     months: monthlySummary(closed),
     yearToDate: summarize(closed),
-    adherence: adherence(closed),
+    adherence: adherence(withFacts),
     violationCosts: violationCosts(closed),
     equity: equityCurve(closed),
     rolling: rollingExpectancy(closed),

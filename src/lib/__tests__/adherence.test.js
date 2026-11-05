@@ -68,6 +68,7 @@ describe('adherence', () => {
       trades: 0,
       window: { ok: 0, missed: 0, cost: 0 },
       size: { ok: 0, missed: 0, cost: 0 },
+      plan: { ok: 0, missed: 0, cost: 0 },
     });
   });
 });
@@ -110,5 +111,39 @@ describe('violationCosts', () => {
   it('returns zeros for no trades', () => {
     const zero = { trades: 0, net: 0 };
     expect(violationCosts([])).toEqual({ followed: zero, window: zero, size: zero, both: zero });
+  });
+});
+
+describe('adherence: Plan OK', () => {
+  // A plan written before the fill, with a strategy picked and no unmet rule.
+  const planned = (net, extra = {}) => ({
+    ...option(net),
+    strategyId: 'strategy-1',
+    planWrittenAt: new Date('2026-04-13T13:00:00Z'),
+    unmetRuleCount: 0,
+    ...extra,
+  });
+
+  it('is met with a plan written before the fill, a strategy, and every checklist rule met', () => {
+    expect(adherence([planned(20)]).plan).toEqual({ ok: 1, missed: 0, cost: 0 });
+  });
+
+  it('is missed with no plan entry, a plan written after the fill, or no strategy, and costs the net P/L', () => {
+    const result = adherence([
+      planned(-10, { planWrittenAt: null }),
+      planned(-20, { planWrittenAt: new Date('2026-04-13T15:00:00Z') }),
+      planned(-30, { strategyId: null }),
+      planned(40),
+    ]);
+
+    expect(result.plan).toEqual({ ok: 1, missed: 3, cost: -60 });
+  });
+
+  it('is missed when a checklist rule was unmet and the entry went ahead anyway', () => {
+    expect(adherence([planned(-15, { unmetRuleCount: 2 })]).plan).toEqual({ ok: 0, missed: 1, cost: -15 });
+  });
+
+  it('counts a trade with no entry time toward neither side', () => {
+    expect(adherence([planned(-15, { openedAt: null })]).plan).toEqual({ ok: 0, missed: 0, cost: 0 });
   });
 });

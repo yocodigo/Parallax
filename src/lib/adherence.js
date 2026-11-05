@@ -1,5 +1,5 @@
 import { profitLoss } from './tradeMetrics';
-import { MET, MISSED, sizeGate, windowGate } from './setups/gates';
+import { MET, MISSED, UNKNOWN, sizeGate, windowGate } from './setups/gates';
 
 // Rule adherence over closed trades (docs/private/dashboard.md section 3): how
 // many entries held the Window OK and Size OK gates, and what the ones that
@@ -8,10 +8,21 @@ import { MET, MISSED, sizeGate, windowGate } from './setups/gates';
 // `cost` is the net P/L of the trades that missed, so a costly rule is negative.
 // Option trades only: the gates count contracts, and a stock's share count
 // would read as an oversized entry.
-// Plan OK, Stop OK, Exit OK, and a discipline score aren't defined yet.
+// Plan OK, from the facts the route adds to each trade (`planFacts`): a plan
+// entry written before the fill, a strategy picked, and no checklist rule
+// entered unmet. Stop OK, Exit OK, and a discipline score aren't defined yet.
 
 // Money is summed in whole cents so totals don't drift with floating-point error.
 const toCents = (dollars) => Math.round(dollars * 100);
+
+// Plan OK. `trade.planWrittenAt` is the earliest plan entry's creation time and
+// `trade.unmetRuleCount` the checklist rules answered unmet (the entry went
+// ahead by override). Without an entry time there is no "before the fill".
+export function planGate(trade) {
+  if (!trade.openedAt) return UNKNOWN;
+  const planned = trade.planWrittenAt && new Date(trade.planWrittenAt) < new Date(trade.openedAt);
+  return planned && trade.strategyId && !trade.unmetRuleCount ? MET : MISSED;
+}
 
 function tally(rows, grade) {
   const tallied = { ok: 0, missed: 0, cost: 0 };
@@ -44,6 +55,7 @@ export function adherence(trades) {
     trades: rows.length,
     window: tally(rows, (trade) => windowGate(trade.openedAt && new Date(trade.openedAt))),
     size: tally(rows, (trade) => sizeGate(trade.quantity)),
+    plan: tally(rows, planGate),
   };
 }
 

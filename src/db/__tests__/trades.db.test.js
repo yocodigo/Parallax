@@ -9,6 +9,7 @@ import {
   listClosedTradesBetween,
   listClosedTradesWithMistakes,
   listClosedTradesWithRuleChecks,
+  listPlanFacts,
   listRecentTrades,
   recordEntry,
   recordExit,
@@ -285,5 +286,36 @@ describe('listRecentTrades', () => {
     for (let i = 0; i < 3; i += 1) await insertTrade({ ...entry, mode: 'live' });
 
     expect(await listRecentTrades(db, { modes: ['live'], limit: 2 })).toHaveLength(2);
+  });
+});
+
+describe('listPlanFacts', () => {
+  it('gives the time of the earliest plan entry and how many checklist answers were unmet, by trade', async () => {
+    const withPlan = await insertTrade();
+    await db.insert(journalEntries).values([
+      { kind: 'plan', notes: 'n', tradeId: withPlan.id, createdAt: new Date('2026-10-20T13:00:00Z') },
+      { kind: 'plan', notes: 'n', tradeId: withPlan.id, createdAt: new Date('2026-10-20T12:00:00Z') },
+      { kind: 'review', notes: 'n', tradeId: withPlan.id, createdAt: new Date('2026-10-20T09:00:00Z') },
+    ]);
+    await recordEntry(db, withPlan.id, {
+      ...entry,
+      ruleChecks: [
+        { ruleId: null, ruleText: 'Volume rising', met: true },
+        { ruleId: null, ruleText: 'Not the first bar', met: false },
+      ],
+    });
+    const bare = await insertTrade();
+
+    const facts = await listPlanFacts(db, [withPlan.id, bare.id]);
+
+    expect(facts.get(withPlan.id)).toEqual({
+      planWrittenAt: new Date('2026-10-20T12:00:00Z'),
+      unmetRuleCount: 1,
+    });
+    expect(facts.get(bare.id)).toEqual({ planWrittenAt: null, unmetRuleCount: 0 });
+  });
+
+  it('returns nothing for no trades', async () => {
+    expect((await listPlanFacts(db, [])).size).toBe(0);
   });
 });

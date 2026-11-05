@@ -80,6 +80,30 @@ export async function listClosedTradesBetween(db, { from, to, mode, assetClass, 
     .orderBy(trades.closedAt);
 }
 
+// What Plan OK needs (adherence.js) for these trades, as a Map by trade id:
+// `planWrittenAt`, when the earliest plan entry was written (null if none), and
+// `unmetRuleCount`, the checklist answers recorded as not met.
+export async function listPlanFacts(db, tradeIds) {
+  const facts = new Map(tradeIds.map((id) => [id, { planWrittenAt: null, unmetRuleCount: 0 }]));
+  if (tradeIds.length === 0) return facts;
+
+  const plans = await db
+    .select({ tradeId: journalEntries.tradeId, writtenAt: sql`min(${journalEntries.createdAt})` })
+    .from(journalEntries)
+    .where(and(eq(journalEntries.kind, 'plan'), inArray(journalEntries.tradeId, tradeIds)))
+    .groupBy(journalEntries.tradeId);
+  for (const { tradeId, writtenAt } of plans) facts.get(tradeId).planWrittenAt = new Date(writtenAt);
+
+  const unmet = await db
+    .select({ tradeId: tradeRuleChecks.tradeId, count: sql`count(*)::int` })
+    .from(tradeRuleChecks)
+    .where(and(eq(tradeRuleChecks.met, false), inArray(tradeRuleChecks.tradeId, tradeIds)))
+    .groupBy(tradeRuleChecks.tradeId);
+  for (const { tradeId, count } of unmet) facts.get(tradeId).unmetRuleCount = count;
+
+  return facts;
+}
+
 // Every closed trade of any mode, oldest exit first. `assetClass`, `strategyId`
 // (see setupFilter), and `optionType` limit it when given.
 export async function listAllClosedTrades(db, { assetClass, strategyId, optionType } = {}) {
