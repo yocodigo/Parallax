@@ -13,7 +13,8 @@ export async function getTradeContext(db, tradeId) {
 }
 
 // The trades whose snapshot predates `setups` (version 1), oldest entry
-// first, with what working them out needs.
+// first, with what working them out needs. `?` is Postgres's jsonb "has this
+// key" operator, not a query placeholder.
 export async function listContextsWithoutSetups(db) {
   return db
     .select({
@@ -31,7 +32,9 @@ export async function listContextsWithoutSetups(db) {
 }
 
 // Adds `setups` to a version 1 snapshot, which makes it version 2. The rest is
-// still as captured at entry; a snapshot that already has setups is left alone.
+// still as captured at entry: `||` merges the two objects, the right side's
+// keys winning. A snapshot that already has setups is left alone, checked in
+// the update itself so a capture saved at the same moment is never replaced.
 export async function addContextSetups(db, tradeId, setups) {
   await db
     .update(tradeContexts)

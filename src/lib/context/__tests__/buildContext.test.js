@@ -151,6 +151,16 @@ describe('buildContext', () => {
       expect(withBars(putAt956, [...preMarket, ...flatSession]).setups).toEqual({ fourTouch: null });
     });
 
+    it('reads nothing after the fill, so bars fetched past it change nothing', () => {
+      const bars = asMinutes(breakout);
+      // Before the break (bar 22, 9:52), just after it, and well after.
+      for (const time of ['09:50', '09:53', '09:56']) {
+        const trade = { ...putAt956, openedAt: new Date(`2026-10-27T${time}:00-04:00`) };
+        const upToFill = bars.filter((bar) => Date.parse(bar.t) < trade.openedAt.getTime());
+        expect(withBars(trade, bars).setups).toEqual(withBars(trade, upToFill).setups);
+      }
+    });
+
     it('has no four-touch break when the line broke against the trade', () => {
       expect(withBars({ ...putAt956, optionType: 'call' }, asMinutes(breakout)).setups).toEqual({ fourTouch: null });
     });
