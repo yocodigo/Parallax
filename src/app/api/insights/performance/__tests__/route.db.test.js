@@ -171,6 +171,20 @@ describe('GET /api/insights/performance', () => {
     });
   });
 
+  it('returns results by setup with the strategy names, the trades with none last', async () => {
+    const strategy = await createStrategy(getDb(), { name: 'Band cross', description: '', rules: [{ text: 'Trend aligned', kind: 'edge' }] });
+    await closedOption(30, '2026-04-13T20:00:00Z', { strategyId: strategy.id });
+    await closedOption(-20, '2026-04-14T20:00:00Z', { strategyId: strategy.id });
+    await closedOption(50, '2026-04-15T20:00:00Z');
+
+    const body = await (await get('?year=2026')).json();
+
+    expect(body.bySetup.map((r) => [r.name, r.trades, r.netPnl])).toEqual([
+      ['Band cross', 2, 10],
+      [null, 1, 50],
+    ]);
+  });
+
   it('with year=all returns the mode\'s trades from every year, the months in order across them', async () => {
     await closedOption(-10, '2026-04-13T20:00:00Z');
     await closedOption(30, '2025-12-10T20:00:00Z');

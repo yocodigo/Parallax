@@ -174,6 +174,24 @@ export function byUnderlying(trades) {
     .sort((a, b) => b.netPnl - a.netPnl || a.symbol.localeCompare(b.symbol));
 }
 
+// summarize() per setup, that is per strategy (dashboard.md section 4, chart 7),
+// the best net P/L first and ties by id, so the order is stable. The trades
+// taken with no strategy (strategyId null) are the last row, as in graduation(),
+// whatever they made. A setup with no closed trade has no row.
+export function bySetup(trades) {
+  const byId = new Map();
+  for (const trade of trades) {
+    if (!isCounted(trade)) continue;
+    const id = trade.strategyId ?? null;
+    byId.set(id, [...(byId.get(id) ?? []), trade]);
+  }
+  const rows = [...byId].map(([strategyId, list]) => ({ strategyId, ...summarize(list) }));
+  const named = rows
+    .filter((r) => r.strategyId !== null)
+    .sort((a, b) => b.netPnl - a.netPnl || a.strategyId.localeCompare(b.strategyId));
+  return [...named, ...rows.filter((r) => r.strategyId === null)];
+}
+
 // How wide a bin of the R-multiple distribution is, in R.
 export const R_BIN = 1;
 

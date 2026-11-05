@@ -60,6 +60,7 @@ const body = (extra = {}) => ({
     { type: 'put', trades: 0, netPnl: 0 },
   ],
   byUnderlying: [],
+  bySetup: [],
   rDistribution: { bins: [], measured: 0, total: 0 },
   ...extra,
 });
@@ -175,6 +176,7 @@ describe('PerformanceDashboard', () => {
       'Fees vs gross P/L',
       'Calls vs puts',
       'Results by underlying',
+      'Results by setup',
       'R-multiple distribution',
       'Mode comparison',
       'Graduation tracker',

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { byUnderlying, callsVsPuts, equityCurve, GRAD_N, graduation, modeComparison, monthlySummary, rDistribution, rollingExpectancy, summarize, timeOfDay } from '../performance';
+import { bySetup, byUnderlying, callsVsPuts, equityCurve, GRAD_N, graduation, modeComparison, monthlySummary, rDistribution, rollingExpectancy, summarize, timeOfDay } from '../performance';
 
 // A closed long option, 1 contract: gross P/L is (exit - entry) * 100.
 function option(gross, fees = 0, closedAt = '2026-04-13T20:00:00Z') {
@@ -253,6 +253,37 @@ describe('byUnderlying', () => {
     const open = { ...on('SPY', 10), exitPrice: null, closedAt: null };
     expect(byUnderlying([open])).toEqual([]);
     expect(byUnderlying([])).toEqual([]);
+  });
+});
+
+describe('bySetup', () => {
+  const under = (strategyId, gross) => ({ ...option(gross, 0), strategyId });
+
+  it('summarizes each strategy, the best net P/L first', () => {
+    const rows = bySetup([under('a', -20), under('b', 30), under('b', 10), under('c', 5)]);
+    expect(rows.map((r) => [r.strategyId, r.trades, r.netPnl])).toEqual([
+      ['b', 2, 40],
+      ['c', 1, 5],
+      ['a', 1, -20],
+    ]);
+  });
+
+  it('puts the trades taken with no strategy in the last row, however well they did', () => {
+    const rows = bySetup([under(null, 500), under('a', 10), { ...option(5, 0) }]);
+    expect(rows.map((r) => [r.strategyId, r.trades, r.netPnl])).toEqual([
+      ['a', 1, 10],
+      [null, 2, 505],
+    ]);
+  });
+
+  it('breaks a tie in net P/L by strategy id, so the order is stable', () => {
+    expect(bySetup([under('b', 10), under('a', 10)]).map((r) => r.strategyId)).toEqual(['a', 'b']);
+  });
+
+  it('skips trades still open, and has no rows without trades', () => {
+    const open = { ...under('a', 10), exitPrice: null, closedAt: null };
+    expect(bySetup([open])).toEqual([]);
+    expect(bySetup([])).toEqual([]);
   });
 });
 
