@@ -124,6 +124,19 @@ describe('GET /api/insights/performance', () => {
     expect(body.timeOfDay.find((b) => b.start === '15:00')).toMatchObject({ trades: 1, netPnl: 5 });
   });
 
+  it('returns calls and puts summarized separately', async () => {
+    await closedOption(30, '2026-04-13T20:00:00Z', { optionType: 'call' });
+    await closedOption(-10, '2026-04-14T20:00:00Z', { optionType: 'put' });
+    await closedOption(-5, '2026-04-15T20:00:00Z', { optionType: 'put' });
+
+    const body = await (await get('?year=2026')).json();
+
+    expect(body.callsVsPuts.map((r) => [r.type, r.trades, r.netPnl])).toEqual([
+      ['call', 1, 30],
+      ['put', 2, -15],
+    ]);
+  });
+
   it('with year=all returns the mode\'s trades from every year, the months in order across them', async () => {
     await closedOption(-10, '2026-04-13T20:00:00Z');
     await closedOption(30, '2025-12-10T20:00:00Z');

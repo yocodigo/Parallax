@@ -10,6 +10,7 @@ import AverageWinLoss from './AverageWinLoss';
 import DrawdownCurve from './DrawdownCurve';
 import EquityCurve from './EquityCurve';
 import ExpectancyByMonth from './ExpectancyByMonth';
+import CallsVsPuts from './CallsVsPuts';
 import FeesVsGross from './FeesVsGross';
 import GraduationTracker from './GraduationTracker';
 import MistakeCostLedger from './MistakeCostLedger';
@@ -219,6 +220,7 @@ export default function PerformanceDashboard() {
               <ExpectancyByMonth months={data.months} />
               <ProfitFactorByMonth months={data.months} />
               <FeesVsGross months={data.months} />
+              <CallsVsPuts sides={data.callsVsPuts} />
             </div>
           </>
         ) : (

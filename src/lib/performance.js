@@ -149,6 +149,17 @@ export function timeOfDay(trades) {
   return outside.length ? [...rows, { start: 'outside', ...summarize(outside) }] : rows;
 }
 
+// summarize() for calls and for puts (dashboard.md section 4, chart 4), calls
+// first. Both rows are always there, a side with no trades having null figures,
+// so the chart keeps its two slots. Stocks and crypto have no option type and
+// are left out.
+export function callsVsPuts(trades) {
+  return ['call', 'put'].map((type) => ({
+    type,
+    ...summarize(trades.filter((trade) => trade.optionType === type)),
+  }));
+}
+
 export const MODES = ['live', 'paper', 'backtest'];
 
 // summarize() per mode (dashboard.md section 4, chart 11). The modes are

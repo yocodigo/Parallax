@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { equityCurve, GRAD_N, graduation, modeComparison, monthlySummary, rollingExpectancy, summarize, timeOfDay } from '../performance';
+import { callsVsPuts, equityCurve, GRAD_N, graduation, modeComparison, monthlySummary, rollingExpectancy, summarize, timeOfDay } from '../performance';
 
 // A closed long option, 1 contract: gross P/L is (exit - entry) * 100.
 function option(gross, fees = 0, closedAt = '2026-04-13T20:00:00Z') {
@@ -208,6 +208,28 @@ describe('timeOfDay', () => {
     const open = { ...enteredAt('2026-04-13T14:00:00Z'), exitPrice: null, closedAt: null };
     const buckets = timeOfDay([enteredAt('2026-04-13T14:05:00Z', 30), enteredAt('2026-04-13T14:10:00Z', -10), open]);
     expect(bucket(buckets, '10:00')).toMatchObject({ trades: 2, wins: 1, losses: 1, winRate: 0.5, netPnl: 20 });
+  });
+});
+
+describe('callsVsPuts', () => {
+  const side = (optionType, gross) => ({ ...option(gross, 0), assetClass: 'option', optionType });
+
+  it('summarizes calls and puts separately, calls first', () => {
+    const rows = callsVsPuts([side('put', -10), side('call', 30), side('call', -10), side('put', 5)]);
+    expect(rows.map((r) => r.type)).toEqual(['call', 'put']);
+    expect(rows[0]).toMatchObject({ trades: 2, wins: 1, losses: 1, netPnl: 20 });
+    expect(rows[1]).toMatchObject({ trades: 2, wins: 1, losses: 1, netPnl: -5 });
+  });
+
+  it('keeps a side with no closed trades, with null figures', () => {
+    const rows = callsVsPuts([side('call', 10)]);
+    expect(rows[1]).toMatchObject({ type: 'put', trades: 0, netPnl: 0, winRate: null });
+  });
+
+  it('leaves out trades that are not options, and trades still open', () => {
+    const stock = { ...option(50, 0), assetClass: 'stock', optionType: null };
+    const open = { ...side('call', 10), exitPrice: null, closedAt: null };
+    expect(callsVsPuts([stock, open]).map((r) => r.trades)).toEqual([0, 0]);
   });
 });
 
