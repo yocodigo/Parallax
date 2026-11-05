@@ -220,6 +220,24 @@ describe('GET /api/insights/performance', () => {
     ]);
   });
 
+  it('returns the average emotional control of the reviews on trades closed in each month', async () => {
+    const march = await closedOption(30, '2026-03-10T20:00:00Z');
+    const april = await closedOption(-10, '2026-04-13T20:00:00Z');
+    await closedOption(5, '2026-05-12T20:00:00Z');
+    await getDb().insert(journalEntries).values([
+      { kind: 'review', notes: 'n', tradeId: march.id, emotionalControl: 8 },
+      { kind: 'review', notes: 'n', tradeId: april.id, emotionalControl: 3 },
+      { kind: 'review', notes: 'n', tradeId: april.id, emotionalControl: 5 },
+    ]);
+
+    const body = await (await get('?year=2026')).json();
+
+    expect(body.emotionalControlByMonth).toEqual([
+      { month: '2026-03', average: 8, reviews: 1 },
+      { month: '2026-04', average: 4, reviews: 2 },
+    ]);
+  });
+
   it('with year=all returns the mode\'s trades from every year, the months in order across them', async () => {
     await closedOption(-10, '2026-04-13T20:00:00Z');
     await closedOption(30, '2025-12-10T20:00:00Z');

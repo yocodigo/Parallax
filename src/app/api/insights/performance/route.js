@@ -3,8 +3,8 @@ import { z } from 'zod';
 import { getDb } from '@/db';
 import { listContextGrades } from '@/db/contexts';
 import { listStrategies } from '@/db/strategies';
-import { listClosedTradesBetween, listPlanFacts } from '@/db/trades';
-import { adherence, disciplineByMonth, violationCosts } from '@/lib/adherence';
+import { listClosedTradesBetween, listPlanFacts, listReviewRatings } from '@/db/trades';
+import { adherence, disciplineByMonth, emotionalControlByMonth, violationCosts } from '@/lib/adherence';
 import { withErrorLogging } from '@/lib/log';
 import { byGrade, byUnderlying, bySetup, callsVsPuts, equityCurve, monthlySummary, rDistribution, rollingExpectancy, summarize, timeOfDay } from '@/lib/performance';
 
@@ -27,7 +27,7 @@ const querySchema = z.object({
 // New York year by default) or ?year=all (every year), ?asset=stock|option|crypto, ?strategyId=<id>|none
 // (the setup), and ?optionType=call|put (which leaves out stocks and crypto); all
 // of the last three by default.
-// Returns { months, yearToDate, adherence, violationCosts, equity, rolling, timeOfDay, callsVsPuts, byUnderlying, bySetup, byGrade, rDistribution, disciplineByMonth } for trades closed in that
+// Returns { months, yearToDate, adherence, violationCosts, equity, rolling, timeOfDay, callsVsPuts, byUnderlying, bySetup, byGrade, rDistribution, disciplineByMonth, emotionalControlByMonth } for trades closed in that
 // New York calendar year (`yearToDate` is then the whole range, and `rolling` runs on through the years) (docs/private/dashboard.md sections 1 to 3).
 export const GET = withErrorLogging('/api/insights/performance', async (request) => {
   const { searchParams } = new URL(request.url);
@@ -71,6 +71,13 @@ export const GET = withErrorLogging('/api/insights/performance', async (request)
   );
   const withGrades = closed.map((trade) => ({ ...trade, grade: grades.get(trade.id) }));
 
+  // The 1-10 emotional-control ratings on each trade's reviews.
+  const ratings = await listReviewRatings(
+    getDb(),
+    closed.map((trade) => trade.id)
+  );
+  const withRatings = closed.map((trade) => ({ ...trade, emotionalControls: ratings.get(trade.id) }));
+
   const names = new Map((await listStrategies(getDb())).map((strategy) => [strategy.id, strategy.name]));
 
   return NextResponse.json({
@@ -78,6 +85,7 @@ export const GET = withErrorLogging('/api/insights/performance', async (request)
     yearToDate: summarize(closed),
     adherence: adherence(withFacts),
     disciplineByMonth: disciplineByMonth(withFacts),
+    emotionalControlByMonth: emotionalControlByMonth(withRatings),
     violationCosts: violationCosts(closed),
     equity: equityCurve(closed),
     rolling: rollingExpectancy(closed),
