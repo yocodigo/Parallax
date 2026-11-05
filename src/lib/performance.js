@@ -102,7 +102,7 @@ export function rollingExpectancy(trades, size = 20) {
 }
 
 // 'YYYY-MM' of a moment in New York, where the trading day is.
-const nyMonth = new Intl.DateTimeFormat('en-CA', {
+export const nyMonth = new Intl.DateTimeFormat('en-CA', {
   timeZone: 'America/New_York',
   year: 'numeric',
   month: '2-digit',

@@ -185,6 +185,21 @@ describe('GET /api/insights/performance', () => {
     ]);
   });
 
+  it('returns the discipline score of each month, from the option trades closed in it', async () => {
+    const strategy = await createStrategy(getDb(), { name: 'Band cross', description: '', rules: [{ text: 'Trend aligned', kind: 'edge' }] });
+    // A planned trade with a strategy: Plan OK met. No stop and no exit reason, so nothing else applies.
+    await closedOption(30, '2026-03-10T20:00:00Z', { planned: true, strategyId: strategy.id });
+    // No plan entry and no strategy: Plan OK missed.
+    await closedOption(-10, '2026-04-13T20:00:00Z');
+
+    const body = await (await get('?year=2026')).json();
+
+    expect(body.disciplineByMonth).toEqual([
+      { month: '2026-03', ok: 1, missed: 0, score: 1 },
+      { month: '2026-04', ok: 0, missed: 1, score: 0 },
+    ]);
+  });
+
   it('with year=all returns the mode\'s trades from every year, the months in order across them', async () => {
     await closedOption(-10, '2026-04-13T20:00:00Z');
     await closedOption(30, '2025-12-10T20:00:00Z');

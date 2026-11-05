@@ -1,3 +1,4 @@
+import { nyMonth } from './performance';
 import { profitLoss } from './tradeMetrics';
 import { DISCOMFORT_EXIT_REASONS } from './tradeFill';
 import { MET, MISSED, UNKNOWN, sizeGate, windowGate } from './setups/gates';
@@ -89,6 +90,30 @@ export function adherence(trades) {
       cost: null,
     },
   };
+}
+
+// The discipline score of each New York month of closing, oldest first (dashboard.md
+// section 4, chart 8): the Plan OK, Stop OK, and Exit OK checks passed over the ones
+// that applied, as `adherence` pools them. `score` is null when none applied that
+// month, which is not the same as 0. Only months with a priced option trade have a row.
+export function disciplineByMonth(trades) {
+  const byMonth = new Map();
+  for (const trade of trades) {
+    if (trade.assetClass !== 'option' || !trade.closedAt) continue;
+    const month = nyMonth.format(new Date(trade.closedAt));
+    byMonth.set(month, [...(byMonth.get(month) ?? []), trade]);
+  }
+  return [...byMonth.keys()]
+    .sort()
+    .map((month) => ({ month, ...adherence(byMonth.get(month)) }))
+    // adherence() drops trades without a P/L, so a month of only those has no row.
+    .filter((row) => row.trades > 0)
+    .map(({ month, discipline: { ok, missed } }) => ({
+      month,
+      ok,
+      missed,
+      score: ok + missed > 0 ? ok / (ok + missed) : null,
+    }));
 }
 
 // Which bucket of `violationCosts` a trade falls in. `window` means the

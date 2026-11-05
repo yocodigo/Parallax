@@ -61,6 +61,7 @@ const body = (extra = {}) => ({
   ],
   byUnderlying: [],
   bySetup: [],
+  disciplineByMonth: [],
   rDistribution: { bins: [], measured: 0, total: 0 },
   ...extra,
 });
@@ -165,6 +166,7 @@ describe('PerformanceDashboard', () => {
       'Equity curve',
       'Drawdown',
       'Net P/L by month',
+      'Discipline score by month',
       'Mistake cost ledger',
       'Results by time of day',
       'Expectancy, last 20 trades',

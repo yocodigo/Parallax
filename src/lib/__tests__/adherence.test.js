@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { adherence, violationCosts } from '../adherence';
+import { adherence, disciplineByMonth, violationCosts } from '../adherence';
 
 // A closed long option with the given contracts, net P/L, and entry time.
 function option(net, { quantity = 1, openedAt = '2026-04-13T14:00:00Z' } = {}) {
@@ -227,5 +227,48 @@ describe('adherence: discipline score', () => {
     expect(result.window.missed).toBe(1);
     expect(result.size.missed).toBe(1);
     expect(result.discipline).toEqual({ ok: 0, missed: 1, cost: null });
+  });
+});
+
+describe('disciplineByMonth', () => {
+  // Plan OK met, Stop OK met, Exit OK met: three checks passed.
+  const clean = (closedAt) => ({
+    ...option(10),
+    strategyId: 'strategy-1',
+    planWrittenAt: new Date('2026-04-13T13:00:00Z'),
+    unmetRuleCount: 0,
+    initialStop: 0.5,
+    exitReason: 'target',
+    closedAt: new Date(closedAt),
+  });
+  const sloppy = (closedAt) => ({ ...clean(closedAt), strategyId: null, exitReason: 'felt_heavy' });
+
+  it('scores each New York month of closing: the checks passed over the ones that applied', () => {
+    const rows = disciplineByMonth([
+      clean('2026-03-10T20:00:00Z'),
+      sloppy('2026-04-13T20:00:00Z'), // plan missed, stop met, exit missed
+      clean('2026-04-14T20:00:00Z'),
+    ]);
+
+    expect(rows).toEqual([
+      { month: '2026-03', ok: 3, missed: 0, score: 1 },
+      { month: '2026-04', ok: 4, missed: 2, score: 4 / 6 },
+    ]);
+  });
+
+  it('files a trade under the New York month it closed in, not the UTC one', () => {
+    // 02:00Z on May 1 is still the evening of April 30 in New York.
+    const rows = disciplineByMonth([clean('2026-05-01T02:00:00Z')]);
+    expect(rows.map((r) => r.month)).toEqual(['2026-04']);
+  });
+
+  it('gives a month where no check applied a null score, not zero', () => {
+    const bare = { ...clean('2026-04-13T20:00:00Z'), openedAt: null, initialStop: null, exitReason: null };
+    expect(disciplineByMonth([bare])).toEqual([{ month: '2026-04', ok: 0, missed: 0, score: null }]);
+  });
+
+  it('leaves out trades that are not options, and has no rows without trades', () => {
+    expect(disciplineByMonth([{ ...clean('2026-04-13T20:00:00Z'), assetClass: 'stock' }])).toEqual([]);
+    expect(disciplineByMonth([])).toEqual([]);
   });
 });
