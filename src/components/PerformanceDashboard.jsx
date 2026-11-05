@@ -17,6 +17,7 @@ import GraduationTracker from './GraduationTracker';
 import MistakeCostLedger from './MistakeCostLedger';
 import ModeComparison from './ModeComparison';
 import MonthlyPnl from './MonthlyPnl';
+import RDistribution from './RDistribution';
 import RollingExpectancy from './RollingExpectancy';
 import PerformanceTables from './PerformanceTables';
 import ProfitFactorByMonth from './ProfitFactorByMonth';
@@ -223,6 +224,7 @@ export default function PerformanceDashboard() {
               <FeesVsGross months={data.months} />
               <CallsVsPuts sides={data.callsVsPuts} />
               <ByUnderlying rows={data.byUnderlying} />
+              <RDistribution distribution={data.rDistribution} />
             </div>
           </>
         ) : (

@@ -162,7 +162,7 @@ Vitest, JavaScript (not TypeScript).
   `PerformanceDashboard.jsx` loads `GET /api/insights/performance` (`?mode`, live by default; `?year`, the
   current New York year, or `all` for every year; `?asset`; `?strategyId`, a strategy id or `none` for trades with no setup;
   `?optionType`, call or put) for the trades closed in that year: `{ months, yearToDate, adherence,
-  violationCosts, equity, rolling, timeOfDay, callsVsPuts, byUnderlying }`, built by the pure functions in `src/lib/performance.js`
+  violationCosts, equity, rolling, timeOfDay, callsVsPuts, byUnderlying, rDistribution }`, built by the pure functions in `src/lib/performance.js`
   (`summarize`, `monthlySummary`, `equityCurve`, `rollingExpectancy`, `timeOfDay`) and `adherence.js`. Wins
   and losses are judged on gross P/L, money is summed in whole cents, and every headline figure is labelled
   net or gross. `rollingExpectancy` is the last 20 trades and has no point until 20 have closed, so it
@@ -170,7 +170,7 @@ Vitest, JavaScript (not TypeScript).
   (9:30 to 15:30, entries outside the session in a last `outside` bucket). The charts (`EquityCurve`,
   `MonthlyPnl`, `MistakeCostLedger`, `TimeOfDay`, `RollingExpectancy`, `WinRateVsBreakeven`: a month's win rate against
   its `breakevenWinRate`, a gap where that is null; `WinsLossesScratches`: wins and scratches up from zero, losses
-  below it as negative counts; `AverageWinLoss`: the month's average win up and average loss down, in gross dollars; `ExpectancyByMonth`: net P/L per trade, gross in the tooltip; `ProfitFactorByMonth`: the month's net profit factor against a dashed 1.0 line, gross in the tooltip, a gap where it is null; `FeesVsGross`: the month's gross P/L up or down from zero beside its fees hanging below it in amber, the share of gross P/L in the tooltip; `DrawdownCurve`: the `equity` points' `drawdown` as an area hanging below zero, under the equity curve; `CallsVsPuts`: net P/L of calls and of puts from `callsVsPuts`, both slots always there; `ByUnderlying`: horizontal bars of net P/L per symbol from `byUnderlying`, best first)
+  below it as negative counts; `AverageWinLoss`: the month's average win up and average loss down, in gross dollars; `ExpectancyByMonth`: net P/L per trade, gross in the tooltip; `ProfitFactorByMonth`: the month's net profit factor against a dashed 1.0 line, gross in the tooltip, a gap where it is null; `FeesVsGross`: the month's gross P/L up or down from zero beside its fees hanging below it in amber, the share of gross P/L in the tooltip; `DrawdownCurve`: the `equity` points' `drawdown` as an area hanging below zero, under the equity curve; `CallsVsPuts`: net P/L of calls and of puts from `callsVsPuts`, both slots always there; `ByUnderlying`: horizontal bars of net P/L per symbol from `byUnderlying`, best first; `RDistribution`: closed trades in 1R bands from `rDistribution`, counting only trades with an initial stop and saying how many that leaves out)
   are presentational Recharts
   components taking route data as props, with round ticks from `chartTicks.js`; `TimeOfDay` shades the
   `LOCKOUTS` windows on a hidden clock axis, which needs `allowDataOverflow` or it drifts off the bars.

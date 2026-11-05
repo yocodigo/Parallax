@@ -1,5 +1,5 @@
 import { minutesOfDay } from './setups/gates';
-import { profitLoss, tradeStatus } from './tradeMetrics';
+import { profitLoss, rMultiple, tradeStatus } from './tradeMetrics';
 
 // Performance metrics over closed trades (docs/private/dashboard.md section 1).
 // Wins, losses, and scratches are judged on gross P/L: fees would make almost
@@ -172,6 +172,33 @@ export function byUnderlying(trades) {
   return [...bySymbol]
     .map(([symbol, list]) => ({ symbol, ...summarize(list) }))
     .sort((a, b) => b.netPnl - a.netPnl || a.symbol.localeCompare(b.symbol));
+}
+
+// How wide a bin of the R-multiple distribution is, in R.
+export const R_BIN = 1;
+
+// The closed trades' R-multiples in bins R_BIN wide (dashboard.md section 4,
+// chart 9), net of fees as rMultiple() is. A trade on an edge goes in the bin
+// above it. Bins run unbroken from the lowest to the highest, empty ones
+// included. Only trades with an initial stop have an R: `measured` of the
+// `total` closed trades, since options without a stop would otherwise vanish
+// without a word.
+export function rDistribution(trades) {
+  const counted = trades.filter(isCounted);
+  const rs = counted.map(rMultiple).filter((r) => r !== null);
+  if (rs.length === 0) return { bins: [], measured: 0, total: counted.length };
+  // Rounded first (nine places, far finer than any R worth telling apart), so
+  // 2.9999999999999956 is 3R and not the bin below.
+  const index = (r) => Math.floor(Number(r.toFixed(9)) / R_BIN);
+  const indexes = rs.map(index);
+  const first = Math.min(...indexes);
+  const last = Math.max(...indexes);
+  const bins = Array.from({ length: last - first + 1 }, (_, i) => ({
+    from: (first + i) * R_BIN,
+    to: (first + i + 1) * R_BIN,
+    count: indexes.filter((n) => n === first + i).length,
+  }));
+  return { bins, measured: rs.length, total: counted.length };
 }
 
 export const MODES = ['live', 'paper', 'backtest'];

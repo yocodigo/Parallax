@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { byUnderlying, callsVsPuts, equityCurve, GRAD_N, graduation, modeComparison, monthlySummary, rollingExpectancy, summarize, timeOfDay } from '../performance';
+import { byUnderlying, callsVsPuts, equityCurve, GRAD_N, graduation, modeComparison, monthlySummary, rDistribution, rollingExpectancy, summarize, timeOfDay } from '../performance';
 
 // A closed long option, 1 contract: gross P/L is (exit - entry) * 100.
 function option(gross, fees = 0, closedAt = '2026-04-13T20:00:00Z') {
@@ -253,6 +253,55 @@ describe('byUnderlying', () => {
     const open = { ...on('SPY', 10), exitPrice: null, closedAt: null };
     expect(byUnderlying([open])).toEqual([]);
     expect(byUnderlying([])).toEqual([]);
+  });
+});
+
+describe('rDistribution', () => {
+  // A long stock trade risking $1 a share on one share, so R is the P/L in dollars.
+  const stock = (net, extra = {}) => ({
+    direction: 'long',
+    quantity: 1,
+    multiplier: 1,
+    entryPrice: 10,
+    initialStop: 9,
+    exitPrice: 10 + net,
+    fees: 0,
+    openedAt: new Date('2026-04-13T14:00:00Z'),
+    closedAt: new Date('2026-04-13T20:00:00Z'),
+    ...extra,
+  });
+
+  it('counts trades in bins one R wide, a trade on an edge going in the bin above it', () => {
+    const { bins } = rDistribution([stock(-1), stock(-0.5), stock(0.5), stock(1), stock(1.5), stock(2.5)]);
+    expect(bins.map((b) => [b.from, b.to, b.count])).toEqual([
+      [-1, 0, 2],
+      [0, 1, 1],
+      [1, 2, 2],
+      [2, 3, 1],
+    ]);
+  });
+
+  it('keeps empty bins between the extremes, so the axis does not skip', () => {
+    const { bins } = rDistribution([stock(-2), stock(2)]);
+    expect(bins.map((b) => b.count)).toEqual([1, 0, 0, 0, 1]);
+  });
+
+  it('is not thrown by floating-point error at an edge', () => {
+    // Risking 1.10 - 1.00 and making 1.40 - 1.10 is 3R, but the division gives 2.9999999999999956.
+    const nearly = stock(0, { entryPrice: 1.1, initialStop: 1, exitPrice: 1.4 });
+    const { bins } = rDistribution([nearly]);
+    expect(bins).toEqual([{ from: 3, to: 4, count: 1 }]);
+  });
+
+  it('counts only trades with an R, and reports how many closed trades there were', () => {
+    const noStop = stock(1, { initialStop: null });
+    const open = stock(1, { exitPrice: null, closedAt: null });
+    const result = rDistribution([stock(1), noStop, open]);
+    expect([result.measured, result.total]).toEqual([1, 2]);
+  });
+
+  it('has no bins when no trade has an R', () => {
+    expect(rDistribution([])).toEqual({ bins: [], measured: 0, total: 0 });
   });
 });
 

@@ -13,7 +13,7 @@ vi.mock('@/db', async () => {
 });
 
 // A closed long option, 1 contract, entered an hour before it closed.
-async function closedOption(net, closedAt, { mode = 'live', fees = 0, strategyId = null, optionType = 'call', planned = false, symbol = 'SPY' } = {}) {
+async function closedOption(net, closedAt, { mode = 'live', fees = 0, strategyId = null, optionType = 'call', planned = false, symbol = 'SPY', initialStop = null } = {}) {
   const closed = new Date(closedAt);
   const day = closedAt.slice(0, 10);
   const [trade] = await getDb()
@@ -30,6 +30,7 @@ async function closedOption(net, closedAt, { mode = 'live', fees = 0, strategyId
       strike: 500,
       expiration: day,
       plannedEntry: 1,
+      initialStop,
       entryPrice: 1,
       exitPrice: 1 + net / 100,
       fees,
@@ -148,6 +149,26 @@ describe('GET /api/insights/performance', () => {
       ['SPY', 2, 35],
       ['QQQ', 1, -10],
     ]);
+  });
+
+  it('returns the R-multiple distribution of the trades that have a stop', async () => {
+    // 1 contract at $1.00 premium with a $0.50 stop risks $50: +$100 is 2R, -$25 is -0.5R.
+    await closedOption(100, '2026-04-13T20:00:00Z', { initialStop: 0.5 });
+    await closedOption(-25, '2026-04-14T20:00:00Z', { initialStop: 0.5 });
+    await closedOption(40, '2026-04-15T20:00:00Z');
+
+    const body = await (await get('?year=2026')).json();
+
+    expect(body.rDistribution).toEqual({
+      bins: [
+        { from: -1, to: 0, count: 1 },
+        { from: 0, to: 1, count: 0 },
+        { from: 1, to: 2, count: 0 },
+        { from: 2, to: 3, count: 1 },
+      ],
+      measured: 2,
+      total: 3,
+    });
   });
 
   it('with year=all returns the mode\'s trades from every year, the months in order across them', async () => {
