@@ -95,6 +95,17 @@ function fourTouchOf(bars1, bars5, bias) {
   return onFive.brokeAt > onMinute.brokeAt ? onFive : onMinute;
 }
 
+// The latest four-touch break in `trade`'s direction on the entry day's 1m
+// and 5m bars that closed before the fill, from `bars` (the underlying's
+// minute bars), or null when there is none. `trade` must have an `openedAt`.
+export function fourTouchAt(trade, bars) {
+  const asOf = trade.openedAt;
+  const day = tradingDay({ t: asOf.toISOString() });
+  const bars1 = sessionOf(resample(bars, 1, { asOf }), day);
+  const bars5 = sessionOf(resample(bars, 5, { asOf }), day);
+  return fourTouchOf(bars1, bars5, tradeBias(trade));
+}
+
 // The review of `trade` (a trades row) from `bars`, the underlying's minute
 // bars around the entry. Returns null for a plan that was never entered;
 // otherwise { bias, setup, chaseR, entryCandle, room, fourTouch, inLockout,
@@ -124,7 +135,7 @@ export function reviewEntry(trade, bars = []) {
     chaseR: chaseInR(setup, price, bias),
     entryCandle: entryCandleOf(bars5),
     room: price === null ? null : roomToBand(bars1, bars1.length - 1, bias, price),
-    fourTouch: fourTouchOf(sessionOf(bars1, day), bars5, bias),
+    fourTouch: fourTouchAt(trade, bars),
     inLockout: windowGate(asOf) === MISSED,
     midRange: price !== null && range ? isMidRange(price, range) : null,
     pressureDate: isPressureDate(day),
