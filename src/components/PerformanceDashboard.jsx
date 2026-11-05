@@ -11,6 +11,7 @@ import ByGrade from './ByGrade';
 import BySetup from './BySetup';
 import ByUnderlying from './ByUnderlying';
 import DisciplineByMonth from './DisciplineByMonth';
+import EmotionalControlByMonth from './EmotionalControlByMonth';
 import DrawdownCurve from './DrawdownCurve';
 import EquityCurve from './EquityCurve';
 import ExpectancyByMonth from './ExpectancyByMonth';
@@ -217,6 +218,7 @@ export default function PerformanceDashboard() {
             <div className="grid gap-6 lg:grid-cols-2">
               <MonthlyPnl months={data.months} />
               <DisciplineByMonth months={data.months} discipline={data.disciplineByMonth} />
+              <EmotionalControlByMonth months={data.months} ratings={data.emotionalControlByMonth} />
               <MistakeCostLedger costs={data.violationCosts} />
               <TimeOfDay buckets={data.timeOfDay} />
               <RollingExpectancy points={data.rolling} />

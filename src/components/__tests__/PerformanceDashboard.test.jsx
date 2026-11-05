@@ -63,6 +63,7 @@ const body = (extra = {}) => ({
   bySetup: [],
   byGrade: { rows: [], unknown: 0 },
   disciplineByMonth: [],
+  emotionalControlByMonth: [],
   rDistribution: { bins: [], measured: 0, total: 0 },
   ...extra,
 });
@@ -168,6 +169,7 @@ describe('PerformanceDashboard', () => {
       'Drawdown',
       'Net P/L by month',
       'Discipline score by month',
+      'Emotional control by month',
       'Mistake cost ledger',
       'Results by time of day',
       'Expectancy, last 20 trades',
