@@ -70,6 +70,7 @@ describe('adherence', () => {
       size: { ok: 0, missed: 0, cost: 0 },
       plan: { ok: 0, missed: 0, cost: 0 },
       stop: { ok: 0, missed: 0, cost: 0 },
+      exit: { ok: 0, missed: 0, cost: 0 },
     });
   });
 });
@@ -172,5 +173,24 @@ describe('adherence: Stop OK', () => {
 
   it('counts a trade with no stop toward neither side, since option stops are optional', () => {
     expect(adherence([option(-40)]).stop).toEqual({ ok: 0, missed: 0, cost: 0 });
+  });
+});
+
+describe('adherence: Exit OK', () => {
+  const exited = (net, exitReason) => ({ ...option(net), exitReason });
+
+  it('is met for a planned exit and missed for a discomfort exit, at the net P/L', () => {
+    const result = adherence([
+      exited(40, 'target'),
+      exited(-10, 'invalidation'),
+      exited(-25, 'felt_heavy'),
+      exited(15, 'sweep_scare'),
+    ]);
+
+    expect(result.exit).toEqual({ ok: 2, missed: 2, cost: -10 });
+  });
+
+  it('counts a trade with no recorded reason toward neither side', () => {
+    expect(adherence([exited(-5, null)]).exit).toEqual({ ok: 0, missed: 0, cost: 0 });
   });
 });

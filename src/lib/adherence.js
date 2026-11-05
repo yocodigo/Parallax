@@ -1,4 +1,5 @@
 import { profitLoss } from './tradeMetrics';
+import { DISCOMFORT_EXIT_REASONS } from './tradeFill';
 import { MET, MISSED, UNKNOWN, sizeGate, windowGate } from './setups/gates';
 
 // Rule adherence over closed trades (docs/private/dashboard.md section 3): how
@@ -11,8 +12,9 @@ import { MET, MISSED, UNKNOWN, sizeGate, windowGate } from './setups/gates';
 // Plan OK, from the facts the route adds to each trade (`listPlanFacts`): a plan
 // entry written before the fill, a strategy picked, and no checklist rule
 // entered unmet. Stop OK: the exit wasn't worse than the stop that was set (an
-// option's stop is optional, so one without a stop isn't judged). Exit OK and a
-// discipline score aren't defined yet.
+// option's stop is optional, so one without a stop isn't judged). Exit OK: the
+// recorded exit reason was a planned one, not a discomfort exit (a trade with no
+// reason isn't judged). A discipline score isn't defined yet.
 
 // Money is summed in whole cents so totals don't drift with floating-point error.
 const toCents = (dollars) => Math.round(dollars * 100);
@@ -32,6 +34,13 @@ export function stopHeldGate(trade) {
   if (trade.initialStop == null || trade.exitPrice == null) return UNKNOWN;
   const held = trade.direction === 'short' ? trade.exitPrice <= trade.initialStop : trade.exitPrice >= trade.initialStop;
   return held ? MET : MISSED;
+}
+
+// Exit OK. The reasons come from the exit ladder in tradeFill.js: all but the
+// discomfort ones are planned exits.
+export function exitGate(trade) {
+  if (!trade.exitReason) return UNKNOWN;
+  return DISCOMFORT_EXIT_REASONS.includes(trade.exitReason) ? MISSED : MET;
 }
 
 function tally(rows, grade) {
@@ -67,6 +76,7 @@ export function adherence(trades) {
     size: tally(rows, (trade) => sizeGate(trade.quantity)),
     plan: tally(rows, planGate),
     stop: tally(rows, stopHeldGate),
+    exit: tally(rows, exitGate),
   };
 }
 
