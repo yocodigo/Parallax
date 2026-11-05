@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bySetup, byUnderlying, callsVsPuts, equityCurve, GRAD_N, graduation, modeComparison, monthlySummary, rDistribution, rollingExpectancy, summarize, timeOfDay } from '../performance';
+import { byGrade, bySetup, byUnderlying, callsVsPuts, equityCurve, GRAD_N, graduation, modeComparison, monthlySummary, rDistribution, rollingExpectancy, summarize, timeOfDay } from '../performance';
 
 // A closed long option, 1 contract: gross P/L is (exit - entry) * 100.
 function option(gross, fees = 0, closedAt = '2026-04-13T20:00:00Z') {
@@ -284,6 +284,30 @@ describe('bySetup', () => {
     const open = { ...under('a', 10), exitPrice: null, closedAt: null };
     expect(bySetup([open])).toEqual([]);
     expect(bySetup([])).toEqual([]);
+  });
+});
+
+describe('byGrade', () => {
+  const graded = (grade, gross) => ({ ...option(gross, 0), grade });
+
+  it('summarizes the trades of each four-touch grade, in the order A, B, no line', () => {
+    const { rows } = byGrade([graded('none', -5), graded('B', 10), graded('A', 30), graded('A', 10)]);
+    expect(rows.map((r) => [r.grade, r.trades, r.netPnl])).toEqual([
+      ['A', 2, 40],
+      ['B', 1, 10],
+      ['none', 1, -5],
+    ]);
+  });
+
+  it('leaves out a grade with no trades, and counts the trades whose grade is unknown apart', () => {
+    const { rows, unknown } = byGrade([graded('A', 10), graded(null, 99), { ...option(5, 0) }]);
+    expect(rows.map((r) => r.grade)).toEqual(['A']);
+    expect(unknown).toBe(2);
+  });
+
+  it('skips trades still open, and has no rows without trades', () => {
+    const open = { ...graded('A', 10), exitPrice: null, closedAt: null };
+    expect(byGrade([open])).toEqual({ rows: [], unknown: 0 });
   });
 });
 

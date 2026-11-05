@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { addContextSetups, getTradeContext, listContextsWithoutSetups, saveTradeContext } from '../contexts';
+import { addContextSetups, getTradeContext, listContextGrades, listContextsWithoutSetups, saveTradeContext } from '../contexts';
 import { trades } from '../schema';
 import { createTestDb, resetDb } from '../testing';
 
@@ -88,5 +88,31 @@ describe('adding setups to older snapshots', () => {
     await addContextSetups(db, trade.id, setups);
 
     expect((await getTradeContext(db, trade.id)).setups).toBeNull();
+  });
+});
+
+describe('listContextGrades', () => {
+  it('gives the four-touch grade each trade went with: A, B, none, or null when unknown', async () => {
+    const ids = [];
+    for (let i = 0; i < 6; i++) ids.push((await insertTrade()).id);
+    const [idA, idB, idNone, idNoBars, idV1, idBare] = ids;
+    await saveTradeContext(db, idA, { version: 2, setups: { fourTouch: { grade: { grade: 'A' } } } });
+    await saveTradeContext(db, idB, { version: 2, setups: { fourTouch: { grade: { grade: 'B' } } } });
+    await saveTradeContext(db, idNone, { version: 2, setups: { fourTouch: null } });
+    await saveTradeContext(db, idNoBars, { version: 2, setups: null });
+    await saveTradeContext(db, idV1, context);
+
+    const grades = await listContextGrades(db, ids);
+
+    expect(grades.get(idA)).toBe('A');
+    expect(grades.get(idB)).toBe('B');
+    expect(grades.get(idNone)).toBe('none');
+    expect(grades.get(idNoBars)).toBeNull();
+    expect(grades.get(idV1)).toBeNull();
+    expect(grades.get(idBare)).toBeNull();
+  });
+
+  it('returns nothing for no trades', async () => {
+    expect((await listContextGrades(db, [])).size).toBe(0);
   });
 });

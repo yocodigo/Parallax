@@ -1,4 +1,4 @@
-import { and, asc, eq, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { tradeContexts, trades } from './schema';
 
 // Saves the snapshot taken at entry. A trade keeps its first snapshot: a
@@ -42,4 +42,22 @@ export async function addContextSetups(db, tradeId, setups) {
       context: sql`${tradeContexts.context} || jsonb_build_object('version', 2, 'setups', ${JSON.stringify(setups)}::jsonb)`,
     })
     .where(and(eq(tradeContexts.tradeId, tradeId), sql`not (${tradeContexts.context} ? 'setups')`));
+}
+
+// The four-touch grade each of these trades went with at entry, as a Map by
+// trade id: 'A' or 'B', or 'none' when the snapshot had the minute bars but
+// found no line. null when it can't say: no snapshot, a version 1 snapshot not
+// yet backfilled, or one taken without the bars (`setups` null).
+export async function listContextGrades(db, tradeIds) {
+  const grades = new Map(tradeIds.map((id) => [id, null]));
+  if (tradeIds.length === 0) return grades;
+  const rows = await db
+    .select({ tradeId: tradeContexts.tradeId, context: tradeContexts.context })
+    .from(tradeContexts)
+    .where(inArray(tradeContexts.tradeId, tradeIds));
+  for (const { tradeId, context } of rows) {
+    if (!context?.setups) continue;
+    grades.set(tradeId, context.setups.fourTouch?.grade?.grade ?? 'none');
+  }
+  return grades;
 }

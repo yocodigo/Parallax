@@ -2,6 +2,7 @@ import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getDb } from '@/db';
 import { journalEntries, trades } from '@/db/schema';
 import { resetDb } from '@/db/testing';
+import { saveTradeContext } from '@/db/contexts';
 import { createStrategy } from '@/db/strategies';
 import { GET } from '../route';
 
@@ -44,6 +45,7 @@ async function closedOption(net, closedAt, { mode = 'live', fees = 0, strategyId
       .insert(journalEntries)
       .values({ kind: 'plan', notes: 'Plan.', tradeId: trade.id, createdAt: new Date(closed.getTime() - 3 * 60 * 60 * 1000) });
   }
+  return trade;
 }
 
 const get = (query = '') => GET(new Request(`http://localhost/api/insights/performance${query}`));
@@ -183,6 +185,24 @@ describe('GET /api/insights/performance', () => {
       ['Band cross', 2, 10],
       [null, 1, 50],
     ]);
+  });
+
+  it('returns results by four-touch grade, counting the trades whose grade is unknown', async () => {
+    const withGrade = async (net, closedAt, setups) => {
+      const trade = await closedOption(net, closedAt);
+      if (setups !== undefined) await saveTradeContext(getDb(), trade.id, { version: 2, setups });
+    };
+    await withGrade(30, '2026-04-13T20:00:00Z', { fourTouch: { grade: { grade: 'A' } } });
+    await withGrade(-20, '2026-04-14T20:00:00Z', { fourTouch: null });
+    await withGrade(50, '2026-04-15T20:00:00Z');
+
+    const body = await (await get('?year=2026')).json();
+
+    expect(body.byGrade.rows.map((r) => [r.grade, r.trades, r.netPnl])).toEqual([
+      ['A', 1, 30],
+      ['none', 1, -20],
+    ]);
+    expect(body.byGrade.unknown).toBe(1);
   });
 
   it('returns the discipline score of each month, from the option trades closed in it', async () => {

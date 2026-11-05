@@ -7,6 +7,7 @@ import { fetchJson } from '@/lib/fetchJson';
 import { formatProfitLoss } from '@/lib/format';
 import { inputClass } from './Field';
 import AverageWinLoss from './AverageWinLoss';
+import ByGrade from './ByGrade';
 import BySetup from './BySetup';
 import ByUnderlying from './ByUnderlying';
 import DisciplineByMonth from './DisciplineByMonth';
@@ -228,6 +229,7 @@ export default function PerformanceDashboard() {
               <CallsVsPuts sides={data.callsVsPuts} />
               <ByUnderlying rows={data.byUnderlying} />
               <BySetup rows={data.bySetup} />
+              <ByGrade grades={data.byGrade} />
               <RDistribution distribution={data.rDistribution} />
             </div>
           </>

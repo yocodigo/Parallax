@@ -192,6 +192,23 @@ export function bySetup(trades) {
   return [...named, ...rows.filter((r) => r.strategyId === null)];
 }
 
+// The grades of the four-touch line a trade's entry went with, in the order
+// shown: A, B, and 'none' (the snapshot had the bars but found no line).
+const GRADES = ['A', 'B', 'none'];
+
+// summarize() per four-touch grade (dashboard.md section 4, chart 7), from the
+// `grade` each trade carries (null when it has no stored context, or the
+// context lacked the minute bars). Those are counted in `unknown`, not made
+// into a row, so a gap in the data never reads as "no line". A grade with no
+// trades has no row.
+export function byGrade(trades) {
+  const counted = trades.filter(isCounted);
+  const rows = GRADES.map((grade) => ({ grade, list: counted.filter((t) => t.grade === grade) }))
+    .filter(({ list }) => list.length > 0)
+    .map(({ grade, list }) => ({ grade, ...summarize(list) }));
+  return { rows, unknown: counted.filter((t) => !GRADES.includes(t.grade)).length };
+}
+
 // How wide a bin of the R-multiple distribution is, in R.
 export const R_BIN = 1;
 

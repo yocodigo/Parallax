@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getDb } from '@/db';
+import { listContextGrades } from '@/db/contexts';
 import { listStrategies } from '@/db/strategies';
 import { listClosedTradesBetween, listPlanFacts } from '@/db/trades';
 import { adherence, disciplineByMonth, violationCosts } from '@/lib/adherence';
 import { withErrorLogging } from '@/lib/log';
-import { byUnderlying, bySetup, callsVsPuts, equityCurve, monthlySummary, rDistribution, rollingExpectancy, summarize, timeOfDay } from '@/lib/performance';
+import { byGrade, byUnderlying, bySetup, callsVsPuts, equityCurve, monthlySummary, rDistribution, rollingExpectancy, summarize, timeOfDay } from '@/lib/performance';
 
 // Read fresh from the database on every request, never prerendered.
 export const dynamic = 'force-dynamic';
@@ -26,7 +27,7 @@ const querySchema = z.object({
 // New York year by default) or ?year=all (every year), ?asset=stock|option|crypto, ?strategyId=<id>|none
 // (the setup), and ?optionType=call|put (which leaves out stocks and crypto); all
 // of the last three by default.
-// Returns { months, yearToDate, adherence, violationCosts, equity, rolling, timeOfDay, callsVsPuts, byUnderlying, bySetup, rDistribution, disciplineByMonth } for trades closed in that
+// Returns { months, yearToDate, adherence, violationCosts, equity, rolling, timeOfDay, callsVsPuts, byUnderlying, bySetup, byGrade, rDistribution, disciplineByMonth } for trades closed in that
 // New York calendar year (`yearToDate` is then the whole range, and `rolling` runs on through the years) (docs/private/dashboard.md sections 1 to 3).
 export const GET = withErrorLogging('/api/insights/performance', async (request) => {
   const { searchParams } = new URL(request.url);
@@ -63,6 +64,13 @@ export const GET = withErrorLogging('/api/insights/performance', async (request)
   );
   const withFacts = closed.map((trade) => ({ ...trade, ...facts.get(trade.id) }));
 
+  // The four-touch grade each trade's stored context recorded at entry.
+  const grades = await listContextGrades(
+    getDb(),
+    closed.map((trade) => trade.id)
+  );
+  const withGrades = closed.map((trade) => ({ ...trade, grade: grades.get(trade.id) }));
+
   const names = new Map((await listStrategies(getDb())).map((strategy) => [strategy.id, strategy.name]));
 
   return NextResponse.json({
@@ -77,6 +85,7 @@ export const GET = withErrorLogging('/api/insights/performance', async (request)
     callsVsPuts: callsVsPuts(closed),
     byUnderlying: byUnderlying(closed),
     bySetup: bySetup(closed).map((setup) => ({ ...setup, name: names.get(setup.strategyId) ?? null })),
+    byGrade: byGrade(withGrades),
     rDistribution: rDistribution(closed),
   });
 });
