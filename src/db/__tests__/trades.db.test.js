@@ -10,6 +10,7 @@ import {
   listClosedTradesWithMistakes,
   listClosedTradesWithRuleChecks,
   listPlanFacts,
+  listReviewRatings,
   listRecentTrades,
   recordEntry,
   recordExit,
@@ -317,5 +318,27 @@ describe('listPlanFacts', () => {
 
   it('returns nothing for no trades', async () => {
     expect((await listPlanFacts(db, [])).size).toBe(0);
+  });
+});
+
+describe('listReviewRatings', () => {
+  it("gives the emotional-control ratings of each trade's review entries, by trade", async () => {
+    const rated = await insertTrade();
+    await db.insert(journalEntries).values([
+      { kind: 'review', notes: 'n', tradeId: rated.id, emotionalControl: 4 },
+      { kind: 'review', notes: 'n', tradeId: rated.id, emotionalControl: 7 },
+      { kind: 'review', notes: 'unrated', tradeId: rated.id },
+      { kind: 'plan', notes: 'n', tradeId: rated.id },
+    ]);
+    const bare = await insertTrade();
+
+    const ratings = await listReviewRatings(db, [rated.id, bare.id]);
+
+    expect([...ratings.get(rated.id)].sort()).toEqual([4, 7]);
+    expect(ratings.get(bare.id)).toEqual([]);
+  });
+
+  it('returns nothing for no trades', async () => {
+    expect((await listReviewRatings(db, [])).size).toBe(0);
   });
 });

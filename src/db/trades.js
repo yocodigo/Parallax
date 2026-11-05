@@ -105,6 +105,28 @@ export async function listPlanFacts(db, tradeIds) {
   return facts;
 }
 
+// The emotional-control ratings (1-10) on each trade's review entries, as a Map by
+// trade id (an empty list for a trade with none). Reviews saved without a rating
+// are left out.
+export async function listReviewRatings(db, tradeIds) {
+  const ratings = new Map(tradeIds.map((id) => [id, []]));
+  if (tradeIds.length === 0) return ratings;
+
+  const rows = await db
+    .select({ tradeId: journalEntries.tradeId, emotionalControl: journalEntries.emotionalControl })
+    .from(journalEntries)
+    .where(
+      and(
+        eq(journalEntries.kind, 'review'),
+        isNotNull(journalEntries.emotionalControl),
+        inArray(journalEntries.tradeId, tradeIds)
+      )
+    );
+  for (const { tradeId, emotionalControl } of rows) ratings.get(tradeId).push(emotionalControl);
+
+  return ratings;
+}
+
 // Every closed trade of any mode, oldest exit first. `assetClass`, `strategyId`
 // (see setupFilter), and `optionType` limit it when given.
 export async function listAllClosedTrades(db, { assetClass, strategyId, optionType } = {}) {
