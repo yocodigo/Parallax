@@ -14,6 +14,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed-demo": "tsx --tsconfig jsconfig.json scripts/seed-demo.js",
     "perf:months": "tsx --tsconfig jsconfig.json scripts/perf-months.js",
+    "db:backfill-setups": "tsx --tsconfig jsconfig.json scripts/backfill-setups.js",
     "test:unit": "vitest run --project unit",
     "test:db": "vitest run --project db"
   },

@@ -77,7 +77,7 @@ function optionContext(trade, option, price, now) {
 // The setups the underlying's minute bars showed at entry, or null without
 // them. For now the four-touch break the trade went with (null when none),
 // kept for its quality grade, which needs the bars to work out.
-function setupsAt(trade, bars) {
+export function setupsAt(trade, bars) {
   if (!bars?.length) return null;
   return { fourTouch: fourTouchAt(trade, bars) };
 }

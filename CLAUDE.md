@@ -17,6 +17,9 @@ Vitest, JavaScript (not TypeScript).
 - `npm run perf:months -- --mode=live --year=2026 --asset=option`: print the monthly performance table
   and year-to-date totals from `DATABASE_URL` (New York closing months; flags optional, live and the
   current year by default), to reconcile imports against the spreadsheet. Read-only.
+- `npm run db:backfill-setups`: add `setups` (the four-touch grade) to context snapshots saved before
+  version 2, in `DATABASE_URL`, from Alpaca's minute bars (one fetch per symbol and New York day).
+  Safe to rerun: it only touches snapshots without `setups`; a failed fetch is retried next run.
 - `npm run test:unit`: unit and component tests (no database needed)
 - `npm run test:db`: database integration tests (needs Postgres running)
 - `npm run test:run`: all tests
