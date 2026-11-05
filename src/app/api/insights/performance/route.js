@@ -4,7 +4,7 @@ import { getDb } from '@/db';
 import { listClosedTradesBetween, listPlanFacts } from '@/db/trades';
 import { adherence, violationCosts } from '@/lib/adherence';
 import { withErrorLogging } from '@/lib/log';
-import { callsVsPuts, equityCurve, monthlySummary, rollingExpectancy, summarize, timeOfDay } from '@/lib/performance';
+import { byUnderlying, callsVsPuts, equityCurve, monthlySummary, rollingExpectancy, summarize, timeOfDay } from '@/lib/performance';
 
 // Read fresh from the database on every request, never prerendered.
 export const dynamic = 'force-dynamic';
@@ -25,7 +25,7 @@ const querySchema = z.object({
 // New York year by default) or ?year=all (every year), ?asset=stock|option|crypto, ?strategyId=<id>|none
 // (the setup), and ?optionType=call|put (which leaves out stocks and crypto); all
 // of the last three by default.
-// Returns { months, yearToDate, adherence, violationCosts, equity, rolling, timeOfDay, callsVsPuts } for trades closed in that
+// Returns { months, yearToDate, adherence, violationCosts, equity, rolling, timeOfDay, callsVsPuts, byUnderlying } for trades closed in that
 // New York calendar year (`yearToDate` is then the whole range, and `rolling` runs on through the years) (docs/private/dashboard.md sections 1 to 3).
 export const GET = withErrorLogging('/api/insights/performance', async (request) => {
   const { searchParams } = new URL(request.url);
@@ -71,5 +71,6 @@ export const GET = withErrorLogging('/api/insights/performance', async (request)
     rolling: rollingExpectancy(closed),
     timeOfDay: timeOfDay(closed),
     callsVsPuts: callsVsPuts(closed),
+    byUnderlying: byUnderlying(closed),
   });
 });

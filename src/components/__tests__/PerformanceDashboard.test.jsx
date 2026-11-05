@@ -59,6 +59,7 @@ const body = (extra = {}) => ({
     { type: 'call', trades: 0, netPnl: 0 },
     { type: 'put', trades: 0, netPnl: 0 },
   ],
+  byUnderlying: [],
   ...extra,
 });
 
@@ -172,6 +173,7 @@ describe('PerformanceDashboard', () => {
       'Profit factor by month',
       'Fees vs gross P/L',
       'Calls vs puts',
+      'Results by underlying',
       'Mode comparison',
       'Graduation tracker',
     ]);

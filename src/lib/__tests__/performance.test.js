@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { callsVsPuts, equityCurve, GRAD_N, graduation, modeComparison, monthlySummary, rollingExpectancy, summarize, timeOfDay } from '../performance';
+import { byUnderlying, callsVsPuts, equityCurve, GRAD_N, graduation, modeComparison, monthlySummary, rollingExpectancy, summarize, timeOfDay } from '../performance';
 
 // A closed long option, 1 contract: gross P/L is (exit - entry) * 100.
 function option(gross, fees = 0, closedAt = '2026-04-13T20:00:00Z') {
@@ -230,6 +230,29 @@ describe('callsVsPuts', () => {
     const stock = { ...option(50, 0), assetClass: 'stock', optionType: null };
     const open = { ...side('call', 10), exitPrice: null, closedAt: null };
     expect(callsVsPuts([stock, open]).map((r) => r.trades)).toEqual([0, 0]);
+  });
+});
+
+describe('byUnderlying', () => {
+  const on = (symbol, gross) => ({ ...option(gross, 0), symbol });
+
+  it('summarizes each symbol, the best net P/L first', () => {
+    const rows = byUnderlying([on('QQQ', -20), on('SPY', 30), on('SPY', 10), on('NVDA', 5)]);
+    expect(rows.map((r) => [r.symbol, r.trades, r.netPnl])).toEqual([
+      ['SPY', 2, 40],
+      ['NVDA', 1, 5],
+      ['QQQ', 1, -20],
+    ]);
+  });
+
+  it('breaks a tie in net P/L by symbol, so the order is stable', () => {
+    expect(byUnderlying([on('SPY', 10), on('AAPL', 10)]).map((r) => r.symbol)).toEqual(['AAPL', 'SPY']);
+  });
+
+  it('skips trades still open, and has no rows without trades', () => {
+    const open = { ...on('SPY', 10), exitPrice: null, closedAt: null };
+    expect(byUnderlying([open])).toEqual([]);
+    expect(byUnderlying([])).toEqual([]);
   });
 });
 

@@ -13,7 +13,7 @@ vi.mock('@/db', async () => {
 });
 
 // A closed long option, 1 contract, entered an hour before it closed.
-async function closedOption(net, closedAt, { mode = 'live', fees = 0, strategyId = null, optionType = 'call', planned = false } = {}) {
+async function closedOption(net, closedAt, { mode = 'live', fees = 0, strategyId = null, optionType = 'call', planned = false, symbol = 'SPY' } = {}) {
   const closed = new Date(closedAt);
   const day = closedAt.slice(0, 10);
   const [trade] = await getDb()
@@ -21,7 +21,7 @@ async function closedOption(net, closedAt, { mode = 'live', fees = 0, strategyId
     .values({
       mode,
       strategyId,
-      symbol: 'SPY',
+      symbol,
       assetClass: 'option',
       direction: 'long',
       quantity: 1,
@@ -134,6 +134,19 @@ describe('GET /api/insights/performance', () => {
     expect(body.callsVsPuts.map((r) => [r.type, r.trades, r.netPnl])).toEqual([
       ['call', 1, 30],
       ['put', 2, -15],
+    ]);
+  });
+
+  it('returns results by underlying, the best first', async () => {
+    await closedOption(-10, '2026-04-13T20:00:00Z', { symbol: 'QQQ' });
+    await closedOption(30, '2026-04-14T20:00:00Z');
+    await closedOption(5, '2026-04-15T20:00:00Z');
+
+    const body = await (await get('?year=2026')).json();
+
+    expect(body.byUnderlying.map((r) => [r.symbol, r.trades, r.netPnl])).toEqual([
+      ['SPY', 2, 35],
+      ['QQQ', 1, -10],
     ]);
   });
 

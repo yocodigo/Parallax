@@ -160,6 +160,20 @@ export function callsVsPuts(trades) {
   }));
 }
 
+// summarize() per underlying symbol (dashboard.md section 4, chart 4), the best
+// net P/L first and ties by symbol, so the order is stable. A symbol with no
+// closed trade has no row.
+export function byUnderlying(trades) {
+  const bySymbol = new Map();
+  for (const trade of trades) {
+    if (!isCounted(trade)) continue;
+    bySymbol.set(trade.symbol, [...(bySymbol.get(trade.symbol) ?? []), trade]);
+  }
+  return [...bySymbol]
+    .map(([symbol, list]) => ({ symbol, ...summarize(list) }))
+    .sort((a, b) => b.netPnl - a.netPnl || a.symbol.localeCompare(b.symbol));
+}
+
 export const MODES = ['live', 'paper', 'backtest'];
 
 // summarize() per mode (dashboard.md section 4, chart 11). The modes are
