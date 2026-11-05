@@ -57,6 +57,8 @@ export async function listContextGrades(db, tradeIds) {
     .where(inArray(tradeContexts.tradeId, tradeIds));
   for (const { tradeId, context } of rows) {
     if (!context?.setups) continue;
+    // fourTouch.grade is fourTouchGrade's { grade, compression, spacing }; the inner grade is the letter.
+    // A trap or weak break is graded too: the grade is the line's quality, not how the trade went.
     grades.set(tradeId, context.setups.fourTouch?.grade?.grade ?? 'none');
   }
   return grades;
