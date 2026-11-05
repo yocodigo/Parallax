@@ -17,7 +17,7 @@ import { monthTick } from './MonthlyPnl';
 const theme = (name) => `rgb(var(--color-${name}))`;
 const LINE = theme('blue-500');
 
-// The rating runs 1 to 10; ticks at 1 and every other step keep the scale fixed.
+// The rating runs 1 to 10: fixed ticks across the scale, whatever the data.
 const Y_TICKS = [1, 3, 5, 7, 10];
 
 const fullMonth = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
@@ -92,8 +92,8 @@ export default function EmotionalControlByMonth({ months, ratings }) {
       <div>
         <h2 className="text-sm font-semibold text-gray-700">Emotional control by month</h2>
         <p className="text-xs text-gray-500">
-          The average 1 to 10 rating on the reviews of trades closed in each New York month, any asset. The
-          month&apos;s net P/L is in the tooltip.
+          The average 1 to 10 rating on the reviews of trades closed in each New York month, for the trades
+          in the filters above. The month&apos;s net P/L is in the tooltip.
         </p>
       </div>
 
@@ -106,6 +106,7 @@ export default function EmotionalControlByMonth({ months, ratings }) {
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={columns} margin={{ top: 4, right: 12, bottom: 0, left: 0 }} accessibilityLayer>
+                {/* horizontalValues puts a gridline at each y tick. */}
                 <CartesianGrid vertical={false} horizontalValues={Y_TICKS} stroke={theme('gray-200')} />
                 <XAxis
                   dataKey="month"

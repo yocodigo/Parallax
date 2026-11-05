@@ -119,8 +119,8 @@ export function disciplineByMonth(trades) {
 // The average emotional-control rating (1-10) of the reviews on trades closed in each
 // New York month, oldest first (dashboard.md section 4, chart 8). A trade's
 // `emotionalControls` are the ratings on its review entries; every review counts once,
-// so a trade with two weighs twice. All asset classes, since the rating is about the
-// trader, not the instrument. Months with no rating have no row.
+// so a trade with two weighs twice. Any asset class, since the rating is about the
+// trader, not the instrument (the route's filters decide which trades come in). Months with no rating have no row.
 export function emotionalControlByMonth(trades) {
   const byMonth = new Map();
   for (const trade of trades) {
