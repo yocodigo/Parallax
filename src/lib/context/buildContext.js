@@ -1,4 +1,5 @@
 import { daysToExpiration, sessionPart } from '../historyWarnings';
+import { fourTouchAt } from '../setups/entryReview';
 import { gapPercent, minutesSinceOpen, relativeStrength, relativeVolume, sma, trendOf } from './indicators';
 import { macroEvents } from './macroCalendar';
 import { expectedMove, occSymbol, spreadPercent, yearsToExpiration } from './options';
@@ -73,6 +74,14 @@ function optionContext(trade, option, price, now) {
   };
 }
 
+// The setups the underlying's minute bars showed at entry, or null without
+// them. For now the four-touch break the trade went with (null when none),
+// kept for its quality grade, which needs the bars to work out.
+function setupsAt(trade, bars) {
+  if (!bars?.length) return null;
+  return { fourTouch: fourTouchAt(trade, bars) };
+}
+
 // The market context of a trade at entry, built from what was fetched; a
 // piece that couldn't be fetched is null rather than guessed. `daily` and
 // `intraday` map symbols (SPY, QQQ, the trade's symbol or underlying) to bars,
@@ -86,7 +95,7 @@ export function buildContext({ trade, now, daily, intraday, vixRows, option }) {
   const entryDate = nyDate.format(at);
 
   return {
-    version: 1,
+    version: 2,
     capturedAt: now.toISOString(),
     timeOfDay: { sessionPart: sessionPart(at), minutesSinceOpen: minutesSinceOpen(at) },
     market: {
@@ -104,6 +113,7 @@ export function buildContext({ trade, now, daily, intraday, vixRows, option }) {
       relativeStrength: strengthAgainst(stock, spy),
     },
     option: trade.assetClass === 'option' ? optionContext(trade, option, stock.price, now) : null,
+    setups: setupsAt(trade, intraday[trade.symbol]),
     unavailable: UNAVAILABLE,
   };
 }

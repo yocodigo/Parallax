@@ -135,6 +135,7 @@ export function reviewEntry(trade, bars = []) {
     chaseR: chaseInR(setup, price, bias),
     entryCandle: entryCandleOf(bars5),
     room: price === null ? null : roomToBand(bars1, bars1.length - 1, bias, price),
+    // Resamples on its own, since the context snapshot calls it alone.
     fourTouch: fourTouchAt(trade, bars),
     inLockout: windowGate(asOf) === MISSED,
     midRange: price !== null && range ? isMidRange(price, range) : null,

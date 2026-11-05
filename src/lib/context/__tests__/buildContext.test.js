@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { breakout } from '../../setups/__tests__/fixtures/fourTouch';
 import { buildContext } from '../buildContext';
 
 // Entered at 10:30 AM New York time on Tuesday, Oct 20, 2026.
@@ -37,7 +38,7 @@ describe('buildContext', () => {
     const context = buildContext({ trade: stockTrade, now: openedAt, ...raw });
 
     expect(context).toMatchObject({
-      version: 1,
+      version: 2,
       capturedAt: openedAt.toISOString(),
       timeOfDay: { sessionPart: 'midday', minutesSinceOpen: 60 },
       market: {
@@ -105,6 +106,45 @@ describe('buildContext', () => {
       'exDividend',
       'ivRank',
     ]);
+  });
+
+  describe('setups', () => {
+    // The four-touch example as 1m bars from the 9:30 open on Oct 27, 2026.
+    const asMinutes = (ohlc) =>
+      ohlc.map((bar, k) => ({ t: new Date(Date.parse('2026-10-27T13:30:00Z') + k * 60_000).toISOString(), v: 100, ...bar }));
+    const putAt956 = {
+      symbol: 'NVDA',
+      assetClass: 'option',
+      direction: 'long',
+      optionType: 'put',
+      strike: 180,
+      expiration: '2026-10-30',
+      openedAt: new Date('2026-10-27T09:56:00-04:00'),
+    };
+    const withBars = (trade, bars) =>
+      buildContext({ trade, now: trade.openedAt, ...raw, intraday: { ...raw.intraday, NVDA: bars } });
+
+    it('keeps the four-touch break the trade went with and its grade, from the underlying’s bars', () => {
+      const bars = asMinutes(breakout);
+      const context = withBars(putAt956, bars);
+
+      expect(context.version).toBe(2);
+      expect(context.setups.fourTouch).toMatchObject({
+        timeframe: '1m',
+        kind: '4xBD',
+        status: 'valid',
+        grade: { grade: 'A' },
+        brokeAt: bars[22].t,
+      });
+    });
+
+    it('has no four-touch break when the line broke against the trade', () => {
+      expect(withBars({ ...putAt956, optionType: 'call' }, asMinutes(breakout)).setups).toEqual({ fourTouch: null });
+    });
+
+    it('leaves the setups out when the underlying’s minute bars could not be fetched', () => {
+      expect(buildContext({ trade: putAt956, now: putAt956.openedAt, ...raw, intraday: {} }).setups).toBeNull();
+    });
   });
 
   describe('for an option', () => {

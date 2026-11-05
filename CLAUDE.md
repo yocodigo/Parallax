@@ -203,7 +203,9 @@ Vitest, JavaScript (not TypeScript).
 - Context snapshot: after `POST /api/trades/[id]/entry` responds, `after()` runs `captureContext`
   (Alpaca daily and minute bars for SPY, QQQ, and the symbol, split-adjusted and only bars that ended
   before the fill; Cboe's daily VIX file; for options Alpaca's contract open interest and indicative
-  snapshot) and saves it in `trade_contexts` (JSON with a `version`; first snapshot wins). A failing
+  snapshot) and saves it in `trade_contexts` (JSON with a `version`; first snapshot wins). Version 2
+  adds `setups.fourTouch`: the entry review's four-touch break in the trade's direction (`fourTouchAt`),
+  kept for its grade; `setups` is null without the symbol's minute bars, and missing from version 1. A failing
   source is logged and left null. Live option values are kept only within 15 minutes of the fill.
   `TradeContext.jsx` shows it on demand via `GET /api/trades/[id]/context`. Entry route tests mock
   `after` and `captureContext`. Macro dates in `src/lib/context/macroCalendar.js` cover 2026-10-22
