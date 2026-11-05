@@ -9,6 +9,7 @@ import { inputClass } from './Field';
 import AverageWinLoss from './AverageWinLoss';
 import EquityCurve from './EquityCurve';
 import ExpectancyByMonth from './ExpectancyByMonth';
+import FeesVsGross from './FeesVsGross';
 import GraduationTracker from './GraduationTracker';
 import MistakeCostLedger from './MistakeCostLedger';
 import ModeComparison from './ModeComparison';
@@ -215,6 +216,7 @@ export default function PerformanceDashboard() {
               <AverageWinLoss months={data.months} />
               <ExpectancyByMonth months={data.months} />
               <ProfitFactorByMonth months={data.months} />
+              <FeesVsGross months={data.months} />
             </div>
           </>
         ) : (

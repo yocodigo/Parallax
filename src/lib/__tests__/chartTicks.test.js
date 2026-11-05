@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   averageTicks,
   expectancyTicks,
+  feeColumns,
+  feeTicks,
   monthColumns,
   outcomeColumns,
   outcomeTicks,
@@ -215,5 +217,40 @@ describe('profitFactorTicks', () => {
 
   it('skips a month with no value', () => {
     expect(profitFactorTicks([{ netProfitFactor: null }, {}])).toEqual([0, 1, 2]);
+  });
+});
+
+describe('feeColumns', () => {
+  it('turns each month\'s fees into a negative amount to hang below zero, keeping an empty month empty', () => {
+    const months = [
+      { month: '2026-01', grossPnl: 300, fees: 20, trades: 9 },
+      { month: '2026-03', grossPnl: 50, fees: 0, trades: 2 },
+    ];
+
+    expect(feeColumns(months).map((c) => [c.month, c.grossPnl, c.feesBelow])).toEqual([
+      ['2026-01', 300, -20],
+      ['2026-02', undefined, null],
+      ['2026-03', 50, 0],
+    ]);
+  });
+});
+
+describe('feeTicks', () => {
+  it('runs from the lowest gross P/L or fees below zero to the highest gross P/L', () => {
+    const months = [
+      { grossPnl: 300, fees: 20 },
+      { grossPnl: -150, fees: 10 },
+    ];
+
+    expect(feeTicks(months)).toEqual([-200, -100, 0, 100, 200, 300]);
+  });
+
+  it('takes in the fees when they reach below every loss', () => {
+    expect(feeTicks([{ grossPnl: 40, fees: 60 }])).toEqual([-60, -40, -20, 0, 20, 40]);
+  });
+
+  it('skips a month with no value, and a scale with nothing to plot', () => {
+    expect(feeTicks([{ grossPnl: 30, fees: 5 }, {}])).toEqual([-5, 0, 5, 10, 15, 20, 25, 30]);
+    expect(feeTicks([{ grossPnl: null, fees: null }])).toEqual([0, 1]);
   });
 });

@@ -150,3 +150,21 @@ export function profitFactorTicks(months) {
   const values = months.map((m) => m.netProfitFactor).filter(Number.isFinite);
   return valueTicks(0, Math.max(2, ...values));
 }
+
+// monthColumns for the fees vs gross chart: each month's fees also as a negative
+// amount (`feesBelow`), so the bar hangs below zero like a cost. The `|| 0` keeps
+// a month with no fees at 0 rather than -0.
+export function feeColumns(months) {
+  return monthColumns(months).map((c) => ({
+    ...c,
+    feesBelow: c.fees == null ? null : -c.fees || 0,
+  }));
+}
+
+// Dollar ticks for the fees vs gross chart: from the lowest gross P/L or fees
+// (below zero) to the highest gross P/L. A month with no value is left out.
+export function feeTicks(months) {
+  const gross = months.map((m) => m.grossPnl).filter(Number.isFinite);
+  const fees = months.map((m) => -m.fees).filter(Number.isFinite);
+  return valueTicks(Math.min(0, ...gross, ...fees), Math.max(0, ...gross));
+}
