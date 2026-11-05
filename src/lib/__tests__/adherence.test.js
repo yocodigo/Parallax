@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { adherence, disciplineByMonth, violationCosts } from '../adherence';
+import { adherence, disciplineByMonth, emotionalControlByMonth, violationCosts } from '../adherence';
 
 // A closed long option with the given contracts, net P/L, and entry time.
 function option(net, { quantity = 1, openedAt = '2026-04-13T14:00:00Z' } = {}) {
@@ -270,5 +270,36 @@ describe('disciplineByMonth', () => {
   it('leaves out trades that are not options, and has no rows without trades', () => {
     expect(disciplineByMonth([{ ...clean('2026-04-13T20:00:00Z'), assetClass: 'stock' }])).toEqual([]);
     expect(disciplineByMonth([])).toEqual([]);
+  });
+});
+
+describe('emotionalControlByMonth', () => {
+  const closedOn = (closedAt, emotionalControls) => ({
+    assetClass: 'option',
+    closedAt: new Date(closedAt),
+    emotionalControls,
+  });
+
+  it('averages the ratings of the reviews of trades closed in each New York month', () => {
+    const rows = emotionalControlByMonth([
+      closedOn('2026-03-10T20:00:00Z', [8]),
+      closedOn('2026-04-13T20:00:00Z', [4, 6]),
+      closedOn('2026-04-14T20:00:00Z', [9]),
+    ]);
+
+    expect(rows).toEqual([
+      { month: '2026-03', average: 8, reviews: 1 },
+      { month: '2026-04', average: 19 / 3, reviews: 3 },
+    ]);
+  });
+
+  it('counts every asset class, files by New York month, and skips trades with no rating', () => {
+    const rows = emotionalControlByMonth([
+      { ...closedOn('2026-05-01T02:00:00Z', [5]), assetClass: 'stock' }, // evening of April 30 in New York
+      closedOn('2026-06-02T20:00:00Z', []),
+    ]);
+
+    expect(rows).toEqual([{ month: '2026-04', average: 5, reviews: 1 }]);
+    expect(emotionalControlByMonth([])).toEqual([]);
   });
 });

@@ -116,6 +116,24 @@ export function disciplineByMonth(trades) {
     }));
 }
 
+// The average emotional-control rating (1-10) of the reviews on trades closed in each
+// New York month, oldest first (dashboard.md section 4, chart 8). A trade's
+// `emotionalControls` are the ratings on its review entries; every review counts once,
+// so a trade with two weighs twice. All asset classes, since the rating is about the
+// trader, not the instrument. Months with no rating have no row.
+export function emotionalControlByMonth(trades) {
+  const byMonth = new Map();
+  for (const trade of trades) {
+    if (!trade.closedAt || !trade.emotionalControls?.length) continue;
+    const month = nyMonth.format(new Date(trade.closedAt));
+    byMonth.set(month, [...(byMonth.get(month) ?? []), ...trade.emotionalControls]);
+  }
+  return [...byMonth.keys()].sort().map((month) => {
+    const ratings = byMonth.get(month);
+    return { month, average: ratings.reduce((a, b) => a + b, 0) / ratings.length, reviews: ratings.length };
+  });
+}
+
 // Which bucket of `violationCosts` a trade falls in. `window` means the
 // lockout gate (Window OK) was missed.
 function violationBucket(windowMissed, sizeMissed) {
