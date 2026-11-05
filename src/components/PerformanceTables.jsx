@@ -140,12 +140,14 @@ export default function PerformanceTables({ months, yearToDate, adherence, viola
           { key: 'window', name: 'Window OK', values: adherence.window },
           { key: 'size', name: 'Size OK', values: adherence.size },
           { key: 'plan', name: 'Plan OK', values: adherence.plan },
+          { key: 'stop', name: 'Stop OK', values: adherence.stop },
         ]}
       >
         <p className="text-xs text-gray-500">
           Option trades only ({adherence.trades} closed with a P/L). The cost is the net P/L of the trades that broke
-          the rule. Plan OK: a plan written before the fill, a strategy picked, and every checklist rule met. Stop OK,
-          Exit OK, and the discipline score aren&apos;t built yet.
+          the rule. Plan OK: a plan written before the fill, a strategy picked, and every checklist rule met. Stop OK: the
+          exit was no worse than the stop; trades with no stop aren&apos;t judged. Exit OK and the discipline score
+          aren&apos;t built yet.
         </p>
       </Table>
       <Table

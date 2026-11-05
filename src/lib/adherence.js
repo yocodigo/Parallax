@@ -10,7 +10,9 @@ import { MET, MISSED, UNKNOWN, sizeGate, windowGate } from './setups/gates';
 // would read as an oversized entry.
 // Plan OK, from the facts the route adds to each trade (`listPlanFacts`): a plan
 // entry written before the fill, a strategy picked, and no checklist rule
-// entered unmet. Stop OK, Exit OK, and a discipline score aren't defined yet.
+// entered unmet. Stop OK: the exit wasn't worse than the stop that was set (an
+// option's stop is optional, so one without a stop isn't judged). Exit OK and a
+// discipline score aren't defined yet.
 
 // Money is summed in whole cents so totals don't drift with floating-point error.
 const toCents = (dollars) => Math.round(dollars * 100);
@@ -22,6 +24,14 @@ export function planGate(trade) {
   if (!trade.openedAt) return UNKNOWN;
   const planned = trade.planWrittenAt && new Date(trade.planWrittenAt) < new Date(trade.openedAt);
   return planned && trade.strategyId && !trade.unmetRuleCount ? MET : MISSED;
+}
+
+// Stop OK. A stop is respected when the exit was no worse than it: at or above
+// a long's stop, at or below a short's. No stop, or no exit price, can't be judged.
+export function stopHeldGate(trade) {
+  if (trade.initialStop == null || trade.exitPrice == null) return UNKNOWN;
+  const held = trade.direction === 'short' ? trade.exitPrice <= trade.initialStop : trade.exitPrice >= trade.initialStop;
+  return held ? MET : MISSED;
 }
 
 function tally(rows, grade) {
@@ -56,6 +66,7 @@ export function adherence(trades) {
     window: tally(rows, (trade) => windowGate(trade.openedAt && new Date(trade.openedAt))),
     size: tally(rows, (trade) => sizeGate(trade.quantity)),
     plan: tally(rows, planGate),
+    stop: tally(rows, stopHeldGate),
   };
 }
 

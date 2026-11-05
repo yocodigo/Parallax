@@ -69,6 +69,7 @@ describe('adherence', () => {
       window: { ok: 0, missed: 0, cost: 0 },
       size: { ok: 0, missed: 0, cost: 0 },
       plan: { ok: 0, missed: 0, cost: 0 },
+      stop: { ok: 0, missed: 0, cost: 0 },
     });
   });
 });
@@ -145,5 +146,31 @@ describe('adherence: Plan OK', () => {
 
   it('counts a trade with no entry time toward neither side', () => {
     expect(adherence([planned(-15, { openedAt: null })]).plan).toEqual({ ok: 0, missed: 0, cost: 0 });
+  });
+});
+
+describe('adherence: Stop OK', () => {
+  // A long option bought at 1 with its stop at 0.8; exitPrice sets where it was sold.
+  const stopped = (exitPrice, extra = {}) => ({
+    ...option(0),
+    initialStop: 0.8,
+    exitPrice,
+    ...extra,
+  });
+
+  it('is met when the exit was no worse than the stop, and missed when it was, at the net P/L', () => {
+    const result = adherence([stopped(0.8), stopped(1.5), stopped(0.7)]);
+
+    expect(result.stop).toEqual({ ok: 2, missed: 1, cost: -30 });
+  });
+
+  it('judges a short by the other side of the stop', () => {
+    const short = (exitPrice) => stopped(exitPrice, { direction: 'short', entryPrice: 1, initialStop: 1.2 });
+
+    expect(adherence([short(1.2), short(1.3)]).stop).toEqual({ ok: 1, missed: 1, cost: -30 });
+  });
+
+  it('counts a trade with no stop toward neither side, since option stops are optional', () => {
+    expect(adherence([option(-40)]).stop).toEqual({ ok: 0, missed: 0, cost: 0 });
   });
 });

@@ -34,6 +34,7 @@ const body = (extra = {}) => ({
     window: { ok: 0, missed: 0, cost: 0 },
     size: { ok: 0, missed: 0, cost: 0 },
     plan: { ok: 0, missed: 0, cost: 0 },
+    stop: { ok: 0, missed: 0, cost: 0 },
   },
   violationCosts: {
     followed: { trades: 0, net: 0 },
