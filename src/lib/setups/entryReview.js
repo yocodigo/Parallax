@@ -19,7 +19,7 @@ import { MISSED, windowGate } from './gates';
 import { tradeBias } from './replayTrades';
 import { resample } from './resample';
 import { roomToBand } from './room';
-import { tradingDay } from './session';
+import { sessionBars, tradingDay } from './session';
 import { dealingRange, isMidRange, swings } from './swings';
 import { crossIndex, sessionOf } from './tradeGates';
 
@@ -98,11 +98,14 @@ function fourTouchOf(bars1, bars5, bias) {
 // The latest four-touch break in `trade`'s direction on the entry day's 1m
 // and 5m bars that closed before the fill, from `bars` (the underlying's
 // minute bars), or null when there is none. `trade` must have an `openedAt`.
+// It keeps the regular session itself, since the context snapshot's bars
+// include extended hours.
 export function fourTouchAt(trade, bars) {
   const asOf = trade.openedAt;
   const day = tradingDay({ t: asOf.toISOString() });
-  const bars1 = sessionOf(resample(bars, 1, { asOf }), day);
-  const bars5 = sessionOf(resample(bars, 5, { asOf }), day);
+  const regular = sessionBars(bars);
+  const bars1 = sessionOf(resample(regular, 1, { asOf }), day);
+  const bars5 = sessionOf(resample(regular, 5, { asOf }), day);
   return fourTouchOf(bars1, bars5, tradeBias(trade));
 }
 

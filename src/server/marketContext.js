@@ -14,7 +14,9 @@ const tradingHost = () => process.env.ALPACA_TRADING_HOST || 'https://paper-api.
 const DAY_MS = 24 * 60 * 60 * 1000;
 // Enough calendar days for 50 sessions of daily closes.
 const DAILY_LOOKBACK_DAYS = 100;
-// Reaches back past the 9:30 open from any time in the session.
+// Reaches back past the 9:30 open from any time in the session. A fill after
+// 17:30 (after-hours stock) misses the open, so its four-touch lookup sees part
+// of the session only.
 const INTRADAY_LOOKBACK_MS = 8 * 60 * 60 * 1000;
 
 const nyDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' });

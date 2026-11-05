@@ -138,6 +138,19 @@ describe('buildContext', () => {
       });
     });
 
+    it('looks at the regular session only, as the entry review does', () => {
+      // The breakdown happens in the pre-market, from 8:00; the session is
+      // flat from the open to the fill.
+      const preMarket = breakout.map((bar, k) => ({
+        t: new Date(Date.parse('2026-10-27T12:00:00Z') + k * 60_000).toISOString(),
+        v: 100,
+        ...bar,
+      }));
+      const flatSession = asMinutes(Array.from({ length: 26 }, () => ({ o: 280, h: 281, l: 279, c: 280 })));
+
+      expect(withBars(putAt956, [...preMarket, ...flatSession]).setups).toEqual({ fourTouch: null });
+    });
+
     it('has no four-touch break when the line broke against the trade', () => {
       expect(withBars({ ...putAt956, optionType: 'call' }, asMinutes(breakout)).setups).toEqual({ fourTouch: null });
     });
