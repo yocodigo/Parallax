@@ -32,7 +32,7 @@ const compactMoney = new Intl.NumberFormat('en-US', {
 });
 
 const nyFormat = (options) => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', ...options });
-const closeTime = nyFormat({ weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+export const closeTime = nyFormat({ weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 const monthDay = nyFormat({ month: 'short', day: 'numeric' });
 const fullDate = nyFormat({ month: 'short', day: 'numeric', year: 'numeric' });
 const year = nyFormat({ year: 'numeric' });

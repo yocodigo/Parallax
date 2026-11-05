@@ -170,7 +170,7 @@ Vitest, JavaScript (not TypeScript).
   (9:30 to 15:30, entries outside the session in a last `outside` bucket). The charts (`EquityCurve`,
   `MonthlyPnl`, `MistakeCostLedger`, `TimeOfDay`, `RollingExpectancy`, `WinRateVsBreakeven`: a month's win rate against
   its `breakevenWinRate`, a gap where that is null; `WinsLossesScratches`: wins and scratches up from zero, losses
-  below it as negative counts; `AverageWinLoss`: the month's average win up and average loss down, in gross dollars; `ExpectancyByMonth`: net P/L per trade, gross in the tooltip; `ProfitFactorByMonth`: the month's net profit factor against a dashed 1.0 line, gross in the tooltip, a gap where it is null; `FeesVsGross`: the month's gross P/L up or down from zero beside its fees hanging below it in amber, the share of gross profit in the tooltip)
+  below it as negative counts; `AverageWinLoss`: the month's average win up and average loss down, in gross dollars; `ExpectancyByMonth`: net P/L per trade, gross in the tooltip; `ProfitFactorByMonth`: the month's net profit factor against a dashed 1.0 line, gross in the tooltip, a gap where it is null; `FeesVsGross`: the month's gross P/L up or down from zero beside its fees hanging below it in amber, the share of gross P/L in the tooltip; `DrawdownCurve`: the `equity` points' `drawdown` as an area hanging below zero, under the equity curve)
   are presentational Recharts
   components taking route data as props, with round ticks from `chartTicks.js`; `TimeOfDay` shades the
   `LOCKOUTS` windows on a hidden clock axis, which needs `allowDataOverflow` or it drifts off the bars.

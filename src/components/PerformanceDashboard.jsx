@@ -7,6 +7,7 @@ import { fetchJson } from '@/lib/fetchJson';
 import { formatProfitLoss } from '@/lib/format';
 import { inputClass } from './Field';
 import AverageWinLoss from './AverageWinLoss';
+import DrawdownCurve from './DrawdownCurve';
 import EquityCurve from './EquityCurve';
 import ExpectancyByMonth from './ExpectancyByMonth';
 import FeesVsGross from './FeesVsGross';
@@ -206,6 +207,7 @@ export default function PerformanceDashboard() {
         {tab === 'charts' ? (
           <>
             <EquityCurve points={data.equity} />
+            <DrawdownCurve points={data.equity} />
             <div className="grid gap-6 lg:grid-cols-2">
               <MonthlyPnl months={data.months} />
               <MistakeCostLedger costs={data.violationCosts} />

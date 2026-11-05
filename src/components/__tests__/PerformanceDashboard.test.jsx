@@ -156,6 +156,7 @@ describe('PerformanceDashboard', () => {
     const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
     expect(headings).toEqual([
       'Equity curve',
+      'Drawdown',
       'Net P/L by month',
       'Mistake cost ledger',
       'Results by time of day',
