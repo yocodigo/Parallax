@@ -30,7 +30,7 @@ export async function applyImport(db, actions, { source } = {}) {
         const [trade] = await tx.insert(trades).values(values).returning();
         await tx
           .insert(journalEntries)
-          .values({ kind: 'plan', tradeId: trade.id, notes: `Imported from ${source}.` });
+          .values({ kind: 'plan', tradeId: trade.id, mode: trade.mode, notes: `Imported from ${source}.` });
         created.push(trade);
       } else if (action === 'fill') {
         const [trade] = await tx.update(trades).set(values).where(eq(trades.id, tradeId)).returning();

@@ -296,7 +296,9 @@ Vitest, JavaScript (not TypeScript).
 - Journal entry kinds: `plan`, `review`, `thesis`. A thesis needs a symbol. Emotions and mistakes
   come from the fixed lists in `src/lib/journalEntry.js`.
 - Deleting a trade never deletes its journal entries; the link is set to null.
-- Every trade has a `mode`: `live`, `paper`, or `backtest`.
+- Every trade has a `mode`: `live`, `paper`, or `backtest`. So does every journal entry: one linked to
+  a trade is saved with the trade's mode (and keeps it if the trade is deleted); one with no trade
+  names its own, live by default (the review form asks only when no trade is picked).
 
 ## Roadmap
 

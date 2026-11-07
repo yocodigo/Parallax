@@ -65,6 +65,11 @@ describe('parseJournalEntry', () => {
     );
   });
 
+  it('accepts only the trade modes', () => {
+    expect(parseJournalEntry({ ...review, mode: 'backtest' }).data.mode).toBe('backtest');
+    expect(errorPaths(parseJournalEntry({ ...review, mode: 'demo' }))).toEqual(['mode']);
+  });
+
   it('rejects a trade link that is not a valid id', () => {
     expect(errorPaths(parseJournalEntry({ ...review, tradeId: 'abc' }))).toContain('tradeId');
   });

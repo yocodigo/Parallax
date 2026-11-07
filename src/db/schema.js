@@ -133,6 +133,9 @@ export const journalEntries = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     tradeId: uuid('trade_id').references(() => trades.id, { onDelete: 'set null' }),
     kind: journalKind('kind').notNull(),
+    // An entry linked to a trade is saved with the trade's mode, and keeps it
+    // if the trade is deleted; one with no trade says its own (live unless set).
+    mode: tradeMode('mode').notNull().default('live'),
     symbol: text('symbol'),
     notes: text('notes').notNull(),
     emotion: text('emotion'),

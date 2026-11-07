@@ -39,6 +39,22 @@ describe('addJournalEntry', () => {
     expect(saved.id).toBeTruthy();
     expect(saved).toMatchObject({ kind: 'review', mistakes: ['exited_early'] });
   });
+
+  it('saves an entry with no trade as live unless it names a mode', async () => {
+    const plain = await addJournalEntry(db, { kind: 'review', notes: 'Choppy week.' });
+    const paper = await addJournalEntry(db, { kind: 'review', notes: 'Paper week.', mode: 'paper' });
+
+    expect(plain.mode).toBe('live');
+    expect(paper.mode).toBe('paper');
+  });
+
+  it("gives an entry linked to a trade the trade's mode, whatever it was sent with", async () => {
+    const { trade } = await savePlan(db, { plan, entry: { notes: 'Plan.' } });
+
+    const review = await addJournalEntry(db, { kind: 'review', notes: 'Review.', tradeId: trade.id, mode: 'live' });
+
+    expect(review.mode).toBe('paper');
+  });
 });
 
 describe('listJournalEntries', () => {
@@ -109,6 +125,12 @@ describe('savePlan', () => {
 
     expect(trade).toMatchObject({ symbol: 'SPY', plannedEntry: 100, initialStop: 98 });
     expect(entry).toMatchObject({ kind: 'plan', tradeId: trade.id, emotion: 'calm' });
+  });
+
+  it("gives the plan entry the trade's mode", async () => {
+    const { entry } = await savePlan(db, { plan, entry: { notes: 'Plan.', mode: 'live' } });
+
+    expect(entry.mode).toBe('paper');
   });
 
   it('saves nothing if the entry cannot be saved', async () => {

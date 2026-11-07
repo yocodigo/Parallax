@@ -89,6 +89,17 @@ describe('applyImport', () => {
     expect(entries).toEqual([expect.objectContaining({ notes: 'Imported from Fidelity.' })]);
   });
 
+  it("gives the plan entry the created trade's mode", async () => {
+    const { created } = await applyImport(
+      db,
+      [{ action: 'create', values: { mode: 'paper', ...CONTRACT, ...facts } }],
+      { source: 'thinkorswim' }
+    );
+
+    const entries = await db.select().from(journalEntries).where(eq(journalEntries.tradeId, created[0].id));
+    expect(entries).toEqual([expect.objectContaining({ mode: 'paper' })]);
+  });
+
   it("fills in matched trades with the broker's fills, keeping the rest", async () => {
     const plan = await insertTrade({ target: 2 });
 

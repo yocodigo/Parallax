@@ -132,9 +132,30 @@ describe('ReviewForm', () => {
     await waitFor(() => expect(bodies).toHaveLength(1));
     expect(bodies[0]).toEqual({
       kind: 'review',
+      mode: 'live',
       notes: 'Choppy week, sat on my hands.',
       mistakes: [],
     });
+  });
+
+  it('asks for the mode only when the review is not linked to a trade', async () => {
+    serveJournal(journalWithTrades());
+    const bodies = captureReviews();
+    renderForm();
+
+    await userEvent.selectOptions(screen.getByLabelText('Mode'), 'paper');
+    await userEvent.type(screen.getByLabelText('Notes'), 'Paper week.');
+    await save();
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0].mode).toBe('paper');
+
+    // A linked review takes its trade's mode, so the form doesn't ask or send one.
+    await userEvent.selectOptions(await screen.findByLabelText('Trade'), aapl.id);
+    expect(screen.queryByLabelText('Mode')).not.toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('Notes'), 'AAPL review.');
+    await save();
+    await waitFor(() => expect(bodies).toHaveLength(2));
+    expect(bodies[1]).not.toHaveProperty('mode');
   });
 
   it('shows the field errors the server sends back', async () => {

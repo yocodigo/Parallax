@@ -99,6 +99,13 @@
       "when": 1793680628399,
       "tag": "0013_sign_in_failures",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1794079121665,
+      "tag": "0014_journal_entry_mode",
+      "breakpoints": true
     }
   ]
 }

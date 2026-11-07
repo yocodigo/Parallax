@@ -9,6 +9,7 @@ import { capitalize, describeTrade } from './JournalEntries';
 
 const EMPTY_FORM = {
   tradeId: '',
+  mode: 'live',
   symbol: '',
   notes: '',
   emotion: '',
@@ -88,6 +89,8 @@ export default function ReviewForm({ draft, draftErrors, onSaved }) {
     const body = {
       kind: 'review',
       tradeId: orUndefined(form.tradeId),
+      // A linked review takes its trade's mode on the server.
+      mode: form.tradeId ? undefined : form.mode,
       symbol: orUndefined(form.symbol),
       notes: form.notes,
       emotion: orUndefined(form.emotion),
@@ -135,6 +138,16 @@ export default function ReviewForm({ draft, draftErrors, onSaved }) {
           ))}
         </select>
       </Field>
+
+      {!form.tradeId && (
+        <Field id="review-mode" label="Mode" error={errorFor('mode')} className="w-48">
+          <select {...fieldProps('mode')} className={inputClass}>
+            <option value="live">Live</option>
+            <option value="paper">Paper</option>
+            <option value="backtest">Backtest</option>
+          </select>
+        </Field>
+      )}
 
       <Field id="review-symbol" label="Symbol" error={errorFor('symbol')} className="w-48">
         <input {...fieldProps('symbol')} placeholder="Optional" className={inputClass} />

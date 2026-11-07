@@ -58,6 +58,8 @@ const schema = z
   .object({
     kind: z.enum(['plan', 'review', 'thesis']),
     tradeId: z.uuid().optional(),
+    // For an entry with no trade; a linked one takes its trade's mode.
+    mode: z.enum(['live', 'paper', 'backtest']).optional(),
     symbol: symbolSchema.optional(),
     notes: z.string().trim().min(1, 'Notes cannot be empty').max(10000),
     emotion: z.enum(EMOTIONS).optional(),

@@ -4,8 +4,14 @@ import { journalEntries, trades } from './schema';
 // Repository functions take the database as their first argument, so tests
 // can pass the test database and the app can pass its own.
 
+// An entry linked to a trade gets the trade's mode, whatever it was sent with.
 export async function addJournalEntry(db, entry) {
-  const [saved] = await db.insert(journalEntries).values(entry).returning();
+  const values = { ...entry };
+  if (entry.tradeId) {
+    const [trade] = await db.select({ mode: trades.mode }).from(trades).where(eq(trades.id, entry.tradeId));
+    if (trade) values.mode = trade.mode;
+  }
+  const [saved] = await db.insert(journalEntries).values(values).returning();
   return saved;
 }
 
@@ -67,7 +73,7 @@ export async function savePlan(db, { plan, entry }) {
     const [trade] = await tx.insert(trades).values(plan).returning();
     const [savedEntry] = await tx
       .insert(journalEntries)
-      .values({ ...entry, kind: 'plan', tradeId: trade.id })
+      .values({ ...entry, kind: 'plan', tradeId: trade.id, mode: trade.mode })
       .returning();
 
     return { trade, entry: savedEntry };
