@@ -201,3 +201,52 @@ describe('PriceChart relative strength', () => {
     expect(screen.getByLabelText('Benchmark')).toHaveValue('MSFT');
   });
 });
+
+describe('PriceChart SMT divergence', () => {
+  const serve = (symbols, series) =>
+    server.use(http.get('*/api/bars', () => HttpResponse.json({ ...barsResponse(), symbols, series })));
+
+  it('lists where SPY and QQQ disagree about a new window high', async () => {
+    serve(['SPY', 'QQQ'], [
+      { date: '2026-01-05', SPY: 100, QQQ: 100 },
+      { date: '2026-01-06', SPY: 101, QQQ: 102 },
+      { date: '2026-01-07', SPY: 102, QQQ: 101.5 },
+    ]);
+    renderChart();
+
+    expect(await screen.findByText(/2026-01-07: SPY made a new window high, QQQ did not/)).toBeInTheDocument();
+  });
+
+  it('lists only the latest five and says how many there were', async () => {
+    // SPY rising while QQQ falls: each bar is a new SPY high and a new QQQ low.
+    serve(['SPY', 'QQQ'], [
+      { date: '2026-01-05', SPY: 100, QQQ: 100 },
+      { date: '2026-01-06', SPY: 101, QQQ: 99 },
+      { date: '2026-01-07', SPY: 102, QQQ: 98 },
+      { date: '2026-01-08', SPY: 103, QQQ: 97 },
+    ]);
+    renderChart();
+
+    expect(await screen.findByText(/\(6, circled on the lines; latest 5\)/)).toBeInTheDocument();
+    expect(screen.getAllByText(/made a new window/)).toHaveLength(5);
+    expect(screen.queryByText(/2026-01-06: SPY made a new window high/)).not.toBeInTheDocument();
+  });
+
+  it('says so when they never disagree', async () => {
+    serve(['SPY', 'QQQ'], [
+      { date: '2026-01-05', SPY: 100, QQQ: 100 },
+      { date: '2026-01-06', SPY: 101, QQQ: 101 },
+    ]);
+    renderChart();
+
+    expect(await screen.findByText(/No SMT divergence/)).toBeInTheDocument();
+  });
+
+  it('is left out when SPY and QQQ are not both loaded', async () => {
+    captureBarsRequests();
+    renderChart();
+
+    await screen.findByRole('button', { name: 'AAPL' });
+    expect(screen.queryByText(/SMT divergence/)).not.toBeInTheDocument();
+  });
+});

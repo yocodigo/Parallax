@@ -10,11 +10,13 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  ReferenceDot,
   ReferenceLine,
   ResponsiveContainer,
 } from 'recharts';
 import CorrelationHeatmap from './CorrelationHeatmap';
 import RollingCorrelation from './RollingCorrelation';
+import { smtDivergences } from '@/lib/smt';
 import { rebaseSeries, rebasedLabel, relativeLabel, relativeStrength } from '@/lib/bars';
 import { TIMEFRAMES, windowsFor, clampWindow} from '@/lib/timeframes';
 
@@ -79,6 +81,10 @@ export default function PriceChart() {
     [data, rebased, benchmark]
   );
   const showRelative = view === 'relative';
+
+  // SPY against QQQ, when both are loaded (the pair is fixed for now).
+  const hasSmtPair = data?.symbols?.includes('SPY') && data.symbols.includes('QQQ');
+  const smt = useMemo(() => (hasSmtPair ? smtDivergences(rebased, 'SPY', 'QQQ') : []), [hasSmtPair, rebased]);
 
   const apply = () => setSymbols(input);
 
@@ -282,9 +288,44 @@ export default function PriceChart() {
                     hide={hidden.has(symbol)}
                   />
                 ))}
+                {/* After the lines so the dots draw on top of them. Markers sit on the
+                    percent view's lines; the relative view has other values. */}
+                {!showRelative &&
+                  smt
+                    .filter((d) => !hidden.has(d.made))
+                    .map((d) => (
+                      <ReferenceDot
+                        key={`${d.date}-${d.kind}`}
+                        x={d.date}
+                        y={d.value}
+                        r={5}
+                        fill={theme('white')}
+                        stroke={COLORS[data.symbols.indexOf(d.made) % COLORS.length]}
+                        strokeWidth={2}
+                      />
+                    ))}
               </LineChart>
             </ResponsiveContainer>
           </div>
+          {/* The markers in words: a dot alone doesn't say which way or who missed. */}
+          {hasSmtPair && (
+            <div className="mt-3 text-xs text-gray-700">
+              {smt.length === 0 ? (
+                <p>No SMT divergence between SPY and QQQ in this window.</p>
+              ) : (
+                <>
+                  <p className="font-medium">{`SMT divergence, SPY and QQQ (${smt.length}, circled on the lines${smt.length > 5 ? '; latest 5' : ''}):`}</p>
+                  <ul className="mt-1 space-y-0.5">
+                    {smt.slice(-5).map((d) => (
+                      <li key={`${d.date}-${d.kind}`}>
+                        {`${d.date}: ${d.made} made a new window ${d.kind}, ${d.missed} did not`}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
 
