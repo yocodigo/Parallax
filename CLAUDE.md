@@ -121,6 +121,9 @@ Vitest, JavaScript (not TypeScript).
 - `src/components/`: client components. They load data with SWR using `fetchJson` from `src/lib/`.
   Forms post to the API and leave validation to the server, showing its `fieldErrors` under each
   input (`Field.jsx`); after saving they call `mutate('/api/journal')` to reload the list.
+  On `/journal` the entry forms sit in the `NewEntry.jsx` drawer, one tab each (voice note, daily plan,
+  plan, review), kept mounted while hidden so a draft survives switching tabs or closing; saving a plan
+  or review closes it. Put `hidden` on an element without a display class: Tailwind's `flex` beats it.
 - Theme and dark mode: colors come from CSS variables, so components need no `dark:` classes.
   `src/lib/palette.cjs` (CommonJS, for `tailwind.config.js`) points the gray, red, green, amber, and
   blue classes and white at variables. Light values are Tailwind's own; dark swaps each shade with its

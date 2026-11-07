@@ -3,19 +3,17 @@ import { render, screen } from '@testing-library/react';
 import JournalPage from '../page';
 
 // Stand-ins, so this checks only which parts the page shows.
-vi.mock('@/components/DailyPlanForm', () => ({ default: () => <p>daily plan form</p> }));
 vi.mock('@/components/JournalEntries', () => ({ default: () => <p>journal entries</p> }));
-vi.mock('@/components/PlanForm', () => ({ default: () => <p>plan form</p> }));
-vi.mock('@/components/ReviewForm', () => ({ default: () => <p>review form</p> }));
-vi.mock('@/components/VoiceNote', () => ({ default: () => <p>voice note</p> }));
+vi.mock('@/components/NewEntry', () => ({ default: () => <p>new entry</p> }));
 vi.mock('@/components/WeeklyReview', () => ({ default: () => <p>weekly review</p> }));
 
 afterEach(() => vi.unstubAllEnvs());
 
-const FORMS = ['weekly review', 'voice note', 'daily plan form', 'plan form', 'review form'];
+// The entry forms live in the New entry drawer, not on the page.
+const FORMS = ['new entry', 'weekly review'];
 
 describe('JournalPage', () => {
-  it('shows the forms and the entries', () => {
+  it('shows the new-entry button, the weekly review, and the entries', () => {
     render(<JournalPage />);
 
     for (const text of [...FORMS, 'journal entries']) expect(screen.getByText(text)).toBeInTheDocument();

@@ -11,6 +11,8 @@ test('a trade from plan to result', async ({ page }) => {
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page).toHaveURL(/\/journal$/);
 
+  await page.getByRole('button', { name: 'New entry' }).click();
+  await page.getByRole('tab', { name: 'Log a plan' }).click();
   const plan = page.locator('form', { has: page.getByRole('heading', { name: 'Log a plan' }) });
   await plan.getByLabel('Mode').selectOption('paper');
   await plan.getByLabel('Symbol').fill('SPY');
@@ -21,6 +23,8 @@ test('a trade from plan to result', async ({ page }) => {
   await plan.getByLabel('Notes').fill('E2E breakout over 500.');
   await plan.getByRole('button', { name: 'Save plan' }).click();
 
+  // Saving closes the drawer, back to the list.
+  await expect(page.getByRole('dialog', { name: 'New entry' })).toBeHidden();
   const entry = page.locator('li', { hasText: 'E2E breakout over 500.' });
   await expect(entry.getByText('Planned')).toBeVisible();
 
