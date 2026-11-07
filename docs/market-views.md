@@ -16,6 +16,12 @@ Two different jobs, two different charts:
 - **Analyze one ticker → price scale.** Keep the existing single-ticker price chart with its
   dollar axis, since levels, fib extensions, and Bollinger Bands are all in dollars.
 
+The single-ticker view keeps the price scale **on purpose**. That is by design, not a conflict
+with the percentage rule above: the rule is about comparing several tickers on one axis. Once
+the question is about one ticker's levels (support and resistance, fib extensions, Bollinger
+Bands), those levels are prices, and a percent axis would hide the numbers they are read
+against. So a view with one ticker uses dollars, and a view with several uses percent.
+
 ## 2. Multi-ticker comparison chart (rebased)
 
 - Each series = `(price / price_at_window_start − 1) × 100`, plotted on one axis in percent.
