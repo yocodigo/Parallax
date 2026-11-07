@@ -7,7 +7,7 @@ import { matchImport } from '@/lib/import/matchImport';
 import { pairFills } from '@/lib/import/pairFills';
 import { parseThinkorswimStatement } from '@/lib/import/thinkorswim';
 import { logError, requestId, withErrorLogging } from '@/lib/log';
-import { profitLoss } from '@/lib/tradeMetrics';
+import { holdMinutes, profitLoss } from '@/lib/tradeMetrics';
 import { captureContext } from '@/server/marketContext';
 
 const ROUTE = '/api/imports/thinkorswim';
@@ -36,7 +36,13 @@ const formSchema = z.object({
 const fieldError = (error, fieldErrors) => NextResponse.json({ error, fieldErrors }, { status: 400 });
 
 // What the preview shows of each imported trade.
-const previewOf = ({ action, tradeId, imported }) => ({ action, tradeId, ...imported, profitLoss: profitLoss(imported) });
+const previewOf = ({ action, tradeId, imported }) => ({
+  action,
+  tradeId,
+  ...imported,
+  profitLoss: profitLoss(imported),
+  holdMinutes: holdMinutes(imported),
+});
 
 // Body: multipart form with `file` (the account statement CSV), `timeZone`
 // (the one thinkorswim is set to), `mode`, and `confirm` ("true" to save).

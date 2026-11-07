@@ -31,6 +31,7 @@ const trade = (overrides) => ({
   refs: ['1', '2', '3'],
   fillCount: 3,
   profitLoss: 189.75,
+  holdMinutes: 7 * 24 * 60,
   action: 'create',
   ...overrides,
 });
@@ -99,6 +100,7 @@ describe('FidelityImport', () => {
       'WDGTaveraged from 3 fills',
       '40',
       '20.25 → 25',
+      '7d',
       '+$189.75',
       'New trade',
     ]);

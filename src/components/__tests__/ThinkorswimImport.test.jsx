@@ -32,6 +32,7 @@ const trade = (overrides) => ({
   refs: ['1', '2'],
   fillCount: 2,
   profitLoss: -14.32,
+  holdMinutes: 1.8,
   action: 'create',
   ...overrides,
 });
@@ -100,6 +101,7 @@ describe('ThinkorswimImport', () => {
       'SPY 761P exp Oct 23',
       '1',
       '1.3 → 1.17',
+      '2m',
       '-$14.32',
       'New trade',
     ]);

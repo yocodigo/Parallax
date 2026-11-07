@@ -10,6 +10,14 @@ export function tradeStatus(trade) {
   return 'planned';
 }
 
+// Minutes from the entry fill to the exit fill (fractional: a scalp can last
+// under a minute), or null until the trade has closed. Times may be dates or
+// the ISO strings an API response carries.
+export function holdMinutes(trade) {
+  if (tradeStatus(trade) !== 'closed' || !trade.openedAt) return null;
+  return (new Date(trade.closedAt) - new Date(trade.openedAt)) / 60000;
+}
+
 // Net of fees, in dollars. For options, prices are premiums per share, so the
 // multiplier (usually 100) turns them into dollars per contract.
 export function profitLoss(trade) {

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { mutate } from 'swr';
 import { apiErrorMessage } from '@/lib/fetchJson';
-import { formatContract, formatProfitLoss } from '@/lib/format';
+import { formatContract, formatHold, formatProfitLoss } from '@/lib/format';
 import Field, { inputClass } from './Field';
 
 // thinkorswim writes times in the zone the platform is set to.
@@ -53,6 +53,7 @@ function PreviewTable({ trades, timeZone }) {
           <th className="py-1 font-medium">Contract</th>
           <th className="py-1 text-right font-medium">Qty</th>
           <th className="py-1 text-right font-medium">Entry → exit</th>
+          <th className="py-1 text-right font-medium">Held</th>
           <th className="py-1 text-right font-medium">P/L</th>
           <th className="py-1 pl-4 font-medium">Import</th>
         </tr>
@@ -70,6 +71,7 @@ function PreviewTable({ trades, timeZone }) {
             </td>
             <td className="py-1.5 text-right">{trade.quantity}</td>
             <td className="py-1.5 text-right">{`${trade.entryPrice} → ${trade.exitPrice ?? 'open'}`}</td>
+            <td className="py-1.5 text-right">{formatHold(trade.holdMinutes)}</td>
             <td
               className={`py-1.5 text-right ${
                 trade.action === 'skip' || trade.profitLoss === null

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { initialRisk, profitLoss, rMultiple, tradeStatus } from '../tradeMetrics';
+import { holdMinutes, initialRisk, profitLoss, rMultiple, tradeStatus } from '../tradeMetrics';
 
 // A closed long: bought 100 at 50 with a stop at 48 (2.00 of risk a share),
 // sold at 54.
@@ -27,6 +27,20 @@ describe('tradeStatus', () => {
     expect(tradeStatus(trade(planned))).toBe('planned');
     expect(tradeStatus(trade(open))).toBe('open');
     expect(tradeStatus(trade())).toBe('closed');
+  });
+});
+
+describe('holdMinutes', () => {
+  it('is the time from the entry fill to the exit fill, in minutes', () => {
+    expect(holdMinutes(trade())).toBe(25 * 60);
+    expect(
+      holdMinutes(trade({ openedAt: '2026-10-23T18:41:05.000Z', closedAt: '2026-10-23T18:42:53.000Z' }))
+    ).toBeCloseTo(1.8);
+  });
+
+  it('is null until the trade has closed', () => {
+    expect(holdMinutes(trade(planned))).toBeNull();
+    expect(holdMinutes(trade(open))).toBeNull();
   });
 });
 

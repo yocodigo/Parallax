@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { mutate } from 'swr';
 import { apiErrorMessage } from '@/lib/fetchJson';
-import { formatProfitLoss } from '@/lib/format';
+import { formatHold, formatProfitLoss } from '@/lib/format';
 import Field, { inputClass } from './Field';
 
 const MODES = [
@@ -40,6 +40,7 @@ function PreviewTable({ trades }) {
           <th className="py-1 font-medium">Symbol</th>
           <th className="py-1 text-right font-medium">Qty</th>
           <th className="py-1 text-right font-medium">Entry → exit</th>
+          <th className="py-1 text-right font-medium">Held</th>
           <th className="py-1 text-right font-medium">P/L</th>
           <th className="py-1 pl-4 font-medium">Import</th>
         </tr>
@@ -57,6 +58,7 @@ function PreviewTable({ trades }) {
             </td>
             <td className="py-1.5 text-right">{trade.quantity}</td>
             <td className="py-1.5 text-right">{`${trade.entryPrice} → ${trade.exitPrice ?? 'open'}`}</td>
+            <td className="py-1.5 text-right">{formatHold(trade.holdMinutes)}</td>
             <td
               className={`py-1.5 text-right ${
                 trade.action === 'skip' || trade.profitLoss === null

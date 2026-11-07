@@ -82,6 +82,8 @@ describe('POST /api/imports/thinkorswim', () => {
     });
     // (1.17 - 1.30) x 100 - 1.32 in fees.
     expect(body.trades[0].profitLoss).toBeCloseTo(-14.32);
+    // 18:41:05 to 18:42:53.
+    expect(body.trades[0].holdMinutes).toBeCloseTo(1.8);
     expect(body.unreadRows).toEqual([{ ref: '1000000000005', description: 'BOT +10 AAPL @250.00' }]);
     expect(body.unpaired).toEqual([]);
     expect(await getDb().select().from(trades)).toEqual([]);

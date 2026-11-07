@@ -152,7 +152,8 @@ Vitest, JavaScript (not TypeScript).
   result; the plan's own entry records the next step through `POST /api/trades/[id]/entry` and
   `/exit` (409 when the trade is in the wrong state). `recordEntry`/`recordExit` only update a trade
   in the right state, so a double submit can't overwrite a fill. `tradeMetrics.js` computes P/L (net
-  of fees, times the multiplier) and R; 1R is measured from the entry fill once there is one.
+  of fees, times the multiplier), R (1R is measured from the entry fill once there is one), and
+  `holdMinutes` (exit fill minus entry fill; never stored, so imports show it in their preview's Held column).
 - MAE/MFE: `GET /api/trades/[id]/excursions` fetches Alpaca bars (IEX feed, `adjustment: raw` to
   match fill prices) from the start of the bar holding the fill to the exit, or to now while open;
   `barWindow` picks minute, hourly, or daily bars by holding time. Stocks only so far. Computed on

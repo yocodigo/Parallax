@@ -1,5 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { formatContract, formatProfitLoss, formatR } from '../format';
+import { formatContract, formatHold, formatProfitLoss, formatR } from '../format';
+
+describe('formatHold', () => {
+  it('shows minutes, then hours and minutes, then days and hours', () => {
+    expect(formatHold(0.4)).toBe('<1m');
+    expect(formatHold(1.8)).toBe('2m');
+    expect(formatHold(59)).toBe('59m');
+    expect(formatHold(135)).toBe('2h 15m');
+    expect(formatHold(120)).toBe('2h');
+    expect(formatHold(26 * 60)).toBe('1d 2h');
+  });
+
+  it('is a dash when there is no hold time', () => {
+    expect(formatHold(null)).toBe('—');
+  });
+});
 
 describe('formatProfitLoss', () => {
   it('signs dollars', () => {

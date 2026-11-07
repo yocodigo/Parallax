@@ -9,6 +9,18 @@ const money = new Intl.NumberFormat('en-US', {
 // "+$998.00", "-$500.00".
 export const formatProfitLoss = (amount) => money.format(amount);
 
+// "<1m", "45m", "2h 15m", "1d 2h": a hold time given in minutes, to the
+// precision a person reads it at. A dash when there isn't one.
+export function formatHold(minutes) {
+  if (minutes === null || minutes === undefined) return '—';
+  if (minutes < 1) return '<1m';
+  const total = Math.round(minutes);
+  const [days, hours, mins] = [Math.floor(total / 1440), Math.floor((total % 1440) / 60), total % 60];
+  if (days > 0) return hours ? `${days}d ${hours}h` : `${days}d`;
+  if (hours > 0) return mins ? `${hours}h ${mins}m` : `${hours}h`;
+  return `${mins}m`;
+}
+
 // "+2.0R", "-1.0R".
 export const formatR = (r) => `${r > 0 ? '+' : ''}${r.toFixed(1)}R`;
 
