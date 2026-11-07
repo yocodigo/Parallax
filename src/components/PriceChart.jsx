@@ -14,6 +14,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import CorrelationHeatmap from './CorrelationHeatmap';
+import RollingCorrelation from './RollingCorrelation';
 import { rebaseSeries, rebasedLabel, relativeLabel, relativeStrength } from '@/lib/bars';
 import { TIMEFRAMES, windowsFor, clampWindow} from '@/lib/timeframes';
 
@@ -170,6 +171,8 @@ export default function PriceChart() {
       {data?.correlation && Object.keys(data.correlation).length > 1 && (
         <CorrelationHeatmap matrix={data.correlation} timeframe={data.timeframe} />
       )}
+
+      {data?.series?.length > 0 && <RollingCorrelation series={data.series} symbols={data.symbols} />}
 
       {data?.series?.length > 0 && (
         <div className="rounded-lg border border-gray-200 bg-white p-4">

@@ -9,6 +9,10 @@ export function periodReturns(closes) {
   return out;
 }
 
+// Bars in the rolling correlation's trailing window (market-views.md
+// section 4, marked (confirm)).
+export const ROLL = 20;
+
 function pearson(a, b) {
   const n = Math.min(a.length, b.length);
   if (n === 0) return 0;
@@ -41,4 +45,21 @@ export function correlationMatrix(closesBySymbol) {
     }
   }
   return matrix;
+}
+
+// Correlation of the returns of `a` and `b` over the trailing `window`
+// returns, at each date: [{ date, correlation }], with a null correlation
+// until a full window of returns exists. `rows` are date-keyed prices; only
+// the bars where both symbols have a price are used.
+export function rollingCorrelation(rows, a, b, window = ROLL) {
+  const both = rows.filter((row) => row[a] != null && row[b] != null);
+  const returnsA = periodReturns(both.map((row) => row[a]));
+  const returnsB = periodReturns(both.map((row) => row[b]));
+
+  return both.map((row, i) => ({
+    date: row.date,
+    // Return k ends at close k + 1, so the window ending at close i is the
+    // returns i - window to i - 1.
+    correlation: i < window ? null : pearson(returnsA.slice(i - window, i), returnsB.slice(i - window, i)),
+  }));
 }

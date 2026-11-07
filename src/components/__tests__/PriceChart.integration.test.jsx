@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
@@ -175,7 +175,7 @@ describe('PriceChart relative strength', () => {
 
     expect(relative).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByLabelText('Benchmark')).toHaveValue('SPY');
-    expect(screen.getAllByRole('option', { name: /^(AAPL|MSFT|SPY)$/ }).map((o) => o.textContent)).toEqual([
+    expect(within(screen.getByLabelText('Benchmark')).getAllByRole('option').map((o) => o.textContent)).toEqual([
       'AAPL',
       'MSFT',
       'SPY',
