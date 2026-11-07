@@ -13,6 +13,10 @@ export default function StrategiesPage() {
           The setups you trade and the rules each one requires. A plan that follows a strategy gets its
           rules as a checklist when you record the entry.
         </p>
+        <p className="mt-1 text-sm text-gray-500">
+          Example: 15m band cross — 15-minute candle closes past the middle Bollinger Band, enter on the
+          next low-overlap 5m candle.
+        </p>
       </header>
 
       <Strategies />
