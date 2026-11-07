@@ -181,7 +181,8 @@ Vitest, JavaScript (not TypeScript).
   are presentational Recharts
   components taking route data as props, with round ticks from `chartTicks.js`; `TimeOfDay` shades the
   `LOCKOUTS` windows on a hidden clock axis, which needs `allowDataOverflow` or it drifts off the bars.
-  Below the grid, `AllModes` loads `GET /api/insights/modes` (`?asset`, `?strategyId`, `?optionType`, as above; every closed trade, all years
+  The Charts tab groups them under Overview (headline strip, equity, drawdown, monthly and rolling stats), Breakdowns (time of day, setup, grade, calls vs puts, underlying, fees vs gross, R distribution), and Discipline (mistake cost, discipline and emotional control by month); the entry checklist report stays on `/insights`.
+  Below them, in a Modes section, `AllModes` loads `GET /api/insights/modes` (`?asset`, `?strategyId`, `?optionType`, as above; every closed trade, all years
   and modes, since modes are compared with each other and graduation counts build up): `ModeComparison`
   (`modeComparison`) and `GraduationTracker` (`graduation`). A setup is a strategy (trades with none are
   the last row). Each gate (backtest to paper, paper to live, live to a bigger size) is met when the last

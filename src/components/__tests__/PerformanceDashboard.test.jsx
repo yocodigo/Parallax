@@ -158,32 +158,36 @@ describe('PerformanceDashboard', () => {
     expect(screen.getByText('-$11.30')).toBeInTheDocument();
   });
 
-  it('puts the equity curve first, then the grid of charts', async () => {
+  it('groups the charts under Overview, Breakdowns, Discipline, and Modes', async () => {
     servePerformance();
     renderDashboard();
 
     await screen.findByRole('heading', { name: 'Graduation tracker' });
     const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
     expect(headings).toEqual([
+      'Overview',
       'Equity curve',
       'Drawdown',
       'Net P/L by month',
-      'Discipline score by month',
-      'Emotional control by month',
-      'Mistake cost ledger',
-      'Results by time of day',
       'Expectancy, last 20 trades',
       'Win rate vs breakeven',
       'Wins, losses, scratches by month',
       'Average win vs average loss',
       'Expectancy by month',
       'Profit factor by month',
-      'Fees vs gross P/L',
-      'Calls vs puts',
-      'Results by underlying',
+      'Breakdowns',
+      'Results by time of day',
       'Results by setup',
       'Results by four-touch grade',
+      'Calls vs puts',
+      'Results by underlying',
+      'Fees vs gross P/L',
       'R-multiple distribution',
+      'Discipline',
+      'Mistake cost ledger',
+      'Discipline score by month',
+      'Emotional control by month',
+      'Modes',
       'Mode comparison',
       'Graduation tracker',
     ]);

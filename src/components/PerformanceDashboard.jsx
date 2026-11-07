@@ -128,6 +128,16 @@ function HeadlineStrip({ yearToDate, equity }) {
   );
 }
 
+// A titled group of charts, set off from the one above by a divider.
+function Section({ title, first = false, children }) {
+  return (
+    <section className={`space-y-6 ${first ? '' : 'border-t border-gray-200 pt-6'}`}>
+      <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
 // The modes side by side and each setup's progress through the promotion gates
 // (dashboard.md sections 4 and 8). They compare the modes with each other, so
 // the page's Mode and Year filters don't apply: the others do. Left out while
@@ -148,11 +158,11 @@ function AllModes({ filters }) {
   }
   if (!data || Object.values(data.modes).every((mode) => mode.trades === 0)) return null;
   return (
-    <div className="space-y-6">
+    <Section title="Modes">
       <p className="text-xs text-gray-500">Across all modes and years; the Mode and Year filters don&apos;t apply.</p>
       <ModeComparison modes={data.modes} />
       <GraduationTracker setups={data.setups} gradN={data.gradN} />
-    </div>
+    </Section>
   );
 }
 
@@ -210,39 +220,52 @@ export default function PerformanceDashboard() {
   } else {
     body = (
       <div className="space-y-6">
-        <HeadlineStrip yearToDate={data.yearToDate} equity={data.equity} />
         {tab === 'charts' ? (
           <>
-            <EquityCurve points={data.equity} />
-            <DrawdownCurve points={data.equity} />
-            <div className="grid gap-6 lg:grid-cols-2">
-              <MonthlyPnl months={data.months} />
-              <DisciplineByMonth months={data.months} discipline={data.disciplineByMonth} />
-              <EmotionalControlByMonth months={data.months} ratings={data.emotionalControlByMonth} />
-              <MistakeCostLedger costs={data.violationCosts} />
-              <TimeOfDay buckets={data.timeOfDay} />
-              <RollingExpectancy points={data.rolling} />
-              <WinRateVsBreakeven months={data.months} />
-              <WinsLossesScratches months={data.months} />
-              <AverageWinLoss months={data.months} />
-              <ExpectancyByMonth months={data.months} />
-              <ProfitFactorByMonth months={data.months} />
-              <FeesVsGross months={data.months} />
-              <CallsVsPuts sides={data.callsVsPuts} />
-              <ByUnderlying rows={data.byUnderlying} />
-              <BySetup rows={data.bySetup} />
-              <ByGrade grades={data.byGrade} />
-              <RDistribution distribution={data.rDistribution} />
-            </div>
+            <Section title="Overview" first>
+              <HeadlineStrip yearToDate={data.yearToDate} equity={data.equity} />
+              <EquityCurve points={data.equity} />
+              <DrawdownCurve points={data.equity} />
+              <div className="grid gap-6 lg:grid-cols-2">
+                <MonthlyPnl months={data.months} />
+                <RollingExpectancy points={data.rolling} />
+                <WinRateVsBreakeven months={data.months} />
+                <WinsLossesScratches months={data.months} />
+                <AverageWinLoss months={data.months} />
+                <ExpectancyByMonth months={data.months} />
+                <ProfitFactorByMonth months={data.months} />
+              </div>
+            </Section>
+            <Section title="Breakdowns">
+              <div className="grid gap-6 lg:grid-cols-2">
+                <TimeOfDay buckets={data.timeOfDay} />
+                <BySetup rows={data.bySetup} />
+                <ByGrade grades={data.byGrade} />
+                <CallsVsPuts sides={data.callsVsPuts} />
+                <ByUnderlying rows={data.byUnderlying} />
+                <FeesVsGross months={data.months} />
+                <RDistribution distribution={data.rDistribution} />
+              </div>
+            </Section>
+            <Section title="Discipline">
+              <div className="grid gap-6 lg:grid-cols-2">
+                <MistakeCostLedger costs={data.violationCosts} />
+                <DisciplineByMonth months={data.months} discipline={data.disciplineByMonth} />
+                <EmotionalControlByMonth months={data.months} ratings={data.emotionalControlByMonth} />
+              </div>
+            </Section>
           </>
         ) : (
-          <PerformanceTables
-            months={data.months}
-            yearToDate={data.yearToDate}
-            adherence={data.adherence}
-            violationCosts={data.violationCosts}
-            rangeLabel={year === 'all' ? 'All years' : year}
-          />
+          <>
+            <HeadlineStrip yearToDate={data.yearToDate} equity={data.equity} />
+            <PerformanceTables
+              months={data.months}
+              yearToDate={data.yearToDate}
+              adherence={data.adherence}
+              violationCosts={data.violationCosts}
+              rangeLabel={year === 'all' ? 'All years' : year}
+            />
+          </>
         )}
       </div>
     );
