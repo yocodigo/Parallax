@@ -36,11 +36,11 @@ export default function PriceChart() {
   const [symbols, setSymbols] = useState('AAPL,MSFT,SPY');
   const [timeframe, setTimeframe] = useState('1Day');
   const [days, setDays] = useState(90);
-  // Symbols whose line is switched off. Hiding a line only hides it: the
-  // others stay rebased to the same window.
   // 'percent' (each line's own change) or 'relative' (minus the benchmark's).
   const [view, setView] = useState('percent');
   const [benchmarkChoice, setBenchmarkChoice] = useState('SPY');
+  // Symbols whose line is switched off. Hiding a line only hides it: the
+  // others stay rebased to the same window.
   const [hidden, setHidden] = useState(() => new Set());
 
   const toggleLine = (symbol) =>
@@ -250,6 +250,7 @@ export default function PriceChart() {
                   tick={{ fontSize: 11, fill: theme('gray-500') }}
                   domain={['auto', 'auto']}
                   stroke={theme('gray-400')}
+                  // Percentage points in the relative view are still measured in percent.
                   tickFormatter={(v) => `${v}%`}
                 />
                 <Tooltip
