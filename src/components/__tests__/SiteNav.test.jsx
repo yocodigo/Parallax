@@ -21,7 +21,7 @@ describe('SiteNav', () => {
     usePathname.mockReturnValue('/');
     render(<SiteNav />);
 
-    expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('href', '/dashboard');
     expect(screen.getByRole('link', { name: 'Journal' })).toHaveAttribute('href', '/journal');
     expect(screen.getByRole('link', { name: 'Strategies' })).toHaveAttribute('href', '/strategies');
     expect(screen.getByRole('link', { name: 'Performance' })).toHaveAttribute('href', '/performance');
