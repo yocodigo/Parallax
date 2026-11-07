@@ -118,3 +118,32 @@ describe('PriceChart request parameters', () => {
     expect(minuteDays).toEqual(['5']);
   });
 });
+describe('PriceChart legend', () => {
+  it('toggles a line off and on when its legend entry is clicked', async () => {
+    captureBarsRequests();
+    renderChart();
+
+    const aapl = await screen.findByRole('button', { name: 'AAPL' });
+    const msft = screen.getByRole('button', { name: 'MSFT' });
+    expect(aapl).toHaveAttribute('aria-pressed', 'true');
+
+    await userEvent.click(aapl);
+    expect(aapl).toHaveAttribute('aria-pressed', 'false');
+    // Only the clicked line is affected.
+    expect(msft).toHaveAttribute('aria-pressed', 'true');
+
+    await userEvent.click(aapl);
+    expect(aapl).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('keeps a line off across a reload', async () => {
+    captureBarsRequests();
+    renderChart();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'AAPL' }));
+    await userEvent.selectOptions(screen.getByLabelText('Timeframe'), '1Week');
+
+    await waitFor(() => expect(screen.getByText(/1Week bars from Alpaca IEX feed/)).toBeInTheDocument());
+    expect(screen.getByRole('button', { name: 'AAPL' })).toHaveAttribute('aria-pressed', 'false');
+  });
+});

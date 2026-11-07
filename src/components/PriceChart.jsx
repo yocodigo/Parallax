@@ -10,7 +10,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ReferenceLine,
   ResponsiveContainer,
 } from 'recharts';
@@ -37,6 +36,16 @@ export default function PriceChart() {
   const [symbols, setSymbols] = useState('AAPL,MSFT,SPY');
   const [timeframe, setTimeframe] = useState('1Day');
   const [days, setDays] = useState(90);
+  // Symbols whose line is switched off. Hiding a line only hides it: the
+  // others stay rebased to the same window.
+  const [hidden, setHidden] = useState(() => new Set());
+
+  const toggleLine = (symbol) =>
+    setHidden((current) => {
+      const next = new Set(current);
+      if (!next.delete(symbol)) next.add(symbol);
+      return next;
+    });
 
   const validWindows = windowsFor(timeframe);
 
@@ -151,48 +160,72 @@ export default function PriceChart() {
       )}
 
       {data?.series?.length > 0 && (
-        <div className="h-96 rounded-lg border border-gray-200 bg-white p-4">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={rebased} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={theme('gray-200')} />
-              <XAxis
-                dataKey="date"
-                tick={{ fontSize: 11, fill: theme('gray-500') }}
-                minTickGap={40}
-                stroke={theme('gray-400')}
-              />
-              <YAxis
-                tick={{ fontSize: 11, fill: theme('gray-500') }}
-                domain={['auto', 'auto']}
-                stroke={theme('gray-400')}
-                tickFormatter={(v) => `${v}%`}
-              />
-              <Tooltip
-                // item.payload is the rebased row, which carries the actual prices.
-                formatter={(v, name, item) => rebasedLabel(Number(v), item.payload.prices[name])}
-                contentStyle={{
-                  fontSize: 12,
-                  borderRadius: 6,
-                  backgroundColor: theme('white'),
-                  borderColor: theme('gray-200'),
-                }}
-                labelStyle={{ color: theme('gray-900') }}
-              />
-              <ReferenceLine y={0} stroke={theme('gray-400')} />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-              {data.symbols.map((symbol, i) => (
-                <Line
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          {/* Not Recharts' Legend: its entries can't be buttons. */}
+          <div className="mb-2 flex flex-wrap justify-center gap-x-4 gap-y-1">
+            {data.symbols.map((symbol, i) => {
+              const on = !hidden.has(symbol);
+              return (
+                <button
                   key={symbol}
-                  type="monotone"
-                  dataKey={symbol}
-                  stroke={COLORS[i % COLORS.length]}
-                  dot={false}
-                  strokeWidth={2}
-                  connectNulls
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => toggleLine(symbol)}
+                  className={`flex items-center gap-1.5 text-xs ${on ? 'text-gray-700' : 'text-gray-400 line-through'}`}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="inline-block h-2.5 w-2.5 rounded-sm"
+                    style={{ backgroundColor: on ? COLORS[i % COLORS.length] : theme('gray-400') }}
+                  />
+                  {symbol}
+                </button>
+              );
+            })}
+          </div>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={rebased} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={theme('gray-200')} />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 11, fill: theme('gray-500') }}
+                  minTickGap={40}
+                  stroke={theme('gray-400')}
                 />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
+                <YAxis
+                  tick={{ fontSize: 11, fill: theme('gray-500') }}
+                  domain={['auto', 'auto']}
+                  stroke={theme('gray-400')}
+                  tickFormatter={(v) => `${v}%`}
+                />
+                <Tooltip
+                  // item.payload is the rebased row, which carries the actual prices.
+                  formatter={(v, name, item) => rebasedLabel(Number(v), item.payload.prices[name])}
+                  contentStyle={{
+                    fontSize: 12,
+                    borderRadius: 6,
+                    backgroundColor: theme('white'),
+                    borderColor: theme('gray-200'),
+                  }}
+                  labelStyle={{ color: theme('gray-900') }}
+                />
+                <ReferenceLine y={0} stroke={theme('gray-400')} />
+                {data.symbols.map((symbol, i) => (
+                  <Line
+                    key={symbol}
+                    type="monotone"
+                    dataKey={symbol}
+                    stroke={COLORS[i % COLORS.length]}
+                    dot={false}
+                    strokeWidth={2}
+                    connectNulls
+                    hide={hidden.has(symbol)}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       )}
 
