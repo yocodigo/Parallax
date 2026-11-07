@@ -45,37 +45,37 @@ export default function JournalEntries() {
   }
 
   return (
-    <ul className="space-y-3">
+    <ul className="space-y-4">
       {entries.map((entry) => (
-        <li key={entry.id} className="rounded-lg border border-gray-200 bg-white p-4">
-          <div className="flex flex-wrap items-baseline gap-2 text-xs text-gray-500">
-            <span className="font-semibold text-gray-700">{capitalize(entry.kind)}</span>
-            {entry.symbol && <span className="font-medium text-gray-800">{entry.symbol}</span>}
+        <li key={entry.id} className="rounded-lg border border-gray-200 bg-white p-5 sm:p-6">
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-gray-500">
+            <span className="font-semibold text-gray-800">{capitalize(entry.kind)}</span>
+            {entry.symbol && <span className="font-semibold text-gray-900">{entry.symbol}</span>}
             <time dateTime={entry.createdAt}>{new Date(entry.createdAt).toLocaleString()}</time>
           </div>
 
           {entry.trade && (
-            <div className="mt-2 space-y-1.5">
-              <div className="flex gap-2 text-xs tabular-nums text-gray-600">
+            <div className="mt-4 space-y-3">
+              <div className="flex flex-wrap items-center gap-2 text-sm font-medium tabular-nums text-gray-800">
                 <span>{describeTrade(entry.trade)}</span>
-                <span className="rounded bg-gray-100 px-1.5">{capitalize(entry.trade.mode)}</span>
+                <span className="rounded bg-gray-100 px-2 py-0.5 text-xs font-normal text-gray-600">{capitalize(entry.trade.mode)}</span>
               </div>
               {/* Fills are recorded on the plan; reviews of the trade just show where it stands. */}
               <TradeProgress trade={entry.trade} canRecord={entry.kind === 'plan' && !isDemo()} />
             </div>
           )}
 
-          <p className="mt-2 whitespace-pre-wrap text-sm text-gray-800">{entry.notes}</p>
+          <p className="mt-4 whitespace-pre-wrap text-[15px] leading-relaxed text-gray-800">{entry.notes}</p>
 
           {(entry.emotion || entry.mistakes.length > 0) && (
-            <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
+            <div className="mt-3 flex flex-wrap gap-2 text-xs">
               {entry.emotion && (
-                <span className="rounded bg-blue-50 px-1.5 text-blue-700">
+                <span className="rounded bg-blue-50 px-2 py-0.5 text-blue-700">
                   {EMOTION_LABELS[entry.emotion]}
                 </span>
               )}
               {entry.mistakes.map((mistake) => (
-                <span key={mistake} className="rounded bg-red-50 px-1.5 text-red-700">
+                <span key={mistake} className="rounded bg-red-50 px-2 py-0.5 text-red-700">
                   {MISTAKE_LABELS[mistake]}
                 </span>
               ))}

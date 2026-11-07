@@ -17,7 +17,7 @@ import TradeScreenshots from './TradeScreenshots';
 const buttonClass =
   'rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50';
 const secondaryButtonClass =
-  'rounded-md border border-gray-300 px-3 py-1 text-xs text-gray-700 hover:bg-gray-50';
+  'rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50';
 
 const STATUS_STYLES = {
   planned: 'bg-gray-100 text-gray-700',
@@ -354,17 +354,20 @@ export default function TradeProgress({ trade, canRecord }) {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-2 text-xs tabular-nums text-gray-600">
-        <span className={`rounded px-1.5 ${STATUS_STYLES[status]}`}>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm tabular-nums text-gray-700">
+        <span className={`rounded px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[status]}`}>
           {status.charAt(0).toUpperCase() + status.slice(1)}
         </span>
         <Summary trade={trade} status={status} />
         <Excursions trade={trade} status={status} />
         {trade.overriddenBreakers?.length > 0 && (
-          <span className="rounded bg-amber-100 px-1.5 text-amber-900">
+          <span className="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-900">
             {`Overrode: ${trade.overriddenBreakers.map((b) => BREAKER_LABELS[b] ?? b).join(', ')}`}
           </span>
         )}
+      </div>
+      {/* What can be opened or recorded, on its own row so the facts above stay readable. */}
+      <div className="mt-3 flex flex-wrap gap-2">
         {status !== 'planned' && (
           <button
             type="button"
