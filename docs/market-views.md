@@ -13,14 +13,17 @@ Two different jobs, two different charts:
   the start of the visible window. One shared axis answers "which moved more, and did they
   move together." Never one dollar axis for many tickers (a $40 name is invisible next to
   SPY), and not per-ticker axes (unreadable past two or three lines).
-- **Analyze one ticker → price scale.** Keep the existing single-ticker price chart with its
-  dollar axis, since levels, fib extensions, and Bollinger Bands are all in dollars.
+- **Analyze one ticker → price scale.** A single-ticker price chart keeps a dollar axis, since
+  levels, fib extensions, and Bollinger Bands are all in dollars.
 
-The single-ticker view keeps the price scale **on purpose**. That is by design, not a conflict
-with the percentage rule above: the rule is about comparing several tickers on one axis. Once
-the question is about one ticker's levels (support and resistance, fib extensions, Bollinger
-Bands), those levels are prices, and a percent axis would hide the numbers they are read
-against. So a view with one ticker uses dollars, and a view with several uses percent.
+That is **by design, not a conflict** with the percentage rule above: the percent rule is for
+comparing several tickers on one axis, and a single ticker's levels are prices, which a percent
+axis would hide the numbers for. So a view with one ticker uses dollars and a view with several
+uses percent.
+
+**Not built yet.** The only chart today (`PriceChart.jsx`) is the rebased comparison, and it
+stays in percent even when one symbol is loaded. The dollar-axis single-ticker chart, with its
+levels, is still to build.
 
 ## 2. Multi-ticker comparison chart (rebased)
 
