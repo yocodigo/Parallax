@@ -6,7 +6,7 @@ import { themeScript } from '@/lib/theme';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
-  title: 'Financial Dashboard',
+  title: 'Parallax',
   description: 'Market data and portfolio tracking built on the Alpaca API',
 };
 
