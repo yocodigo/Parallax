@@ -78,6 +78,23 @@ describe('NewEntry', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
+  it('closes on a click outside, keeping a draft for when it reopens', async () => {
+    const user = userEvent.setup();
+    render(<NewEntry />);
+
+    const dialog = await open(user);
+    await user.click(screen.getByRole('tab', { name: 'Log a plan' }));
+    await user.type(screen.getByRole('textbox', { name: 'plan notes' }), 'QQQ puts');
+    // The backdrop is the dialog's sibling, hidden from assistive tech.
+    await user.click(dialog.previousElementSibling);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New entry' })).toHaveFocus();
+
+    await open(user);
+    expect(screen.getByRole('tab', { name: 'Log a plan' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('textbox', { name: 'plan notes' })).toHaveValue('QQQ puts');
+  });
+
   it('closes once a plan or a review is saved, so the list shows it', async () => {
     const user = userEvent.setup();
     render(<NewEntry />);
