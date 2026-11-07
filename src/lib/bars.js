@@ -44,8 +44,14 @@ export function rebaseSeries(series, symbols) {
       if (price == null) continue;
       if (base[symbol] === undefined) base[symbol] = price;
       out.prices[symbol] = price;
+      // A first price of 0 can't be a base; leave the line flat at 0%.
       out[symbol] = base[symbol] ? ((price - base[symbol]) / base[symbol]) * 100 : 0;
     }
     return out;
   });
+}
+
+// Tooltip text for a rebased point: signed percent change and the actual price.
+export function rebasedLabel(pct, price) {
+  return `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}% ($${price.toFixed(2)})`;
 }

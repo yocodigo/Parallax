@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { reshapeBars, summarize, rebaseSeries } from '../bars';
+import { reshapeBars, summarize, rebaseSeries, rebasedLabel } from '../bars';
 
 const sampleBars = {
   AAPL: [
@@ -68,5 +68,13 @@ describe('rebaseSeries', () => {
     const rows = rebaseSeries(late, ['AAPL', 'MSFT']);
     expect(rows[0].MSFT).toBeUndefined();
     expect(rows[1].MSFT).toBe(0);
+  });
+});
+
+describe('rebasedLabel', () => {
+  it('shows signed percent change with the actual price', () => {
+    expect(rebasedLabel(5, 210)).toBe('+5.00% ($210.00)');
+    expect(rebasedLabel(-1.234, 396)).toBe('-1.23% ($396.00)');
+    expect(rebasedLabel(0, 200)).toBe('+0.00% ($200.00)');
   });
 });

@@ -15,7 +15,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import CorrelationHeatmap from './CorrelationHeatmap';
-import { rebaseSeries } from '@/lib/bars';
+import { rebaseSeries, rebasedLabel } from '@/lib/bars';
 import { TIMEFRAMES, windowsFor, clampWindow} from '@/lib/timeframes';
 
 const COLORS = ['#2563eb', '#dc2626', '#059669', '#d97706', '#7c3aed'];
@@ -168,11 +168,8 @@ export default function PriceChart() {
                 tickFormatter={(v) => `${v}%`}
               />
               <Tooltip
-                formatter={(v, name, item) => {
-                  const pct = Number(v);
-                  const price = item.payload.prices?.[name];
-                  return `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}% ($${Number(price).toFixed(2)})`;
-                }}
+                // item.payload is the rebased row, which carries the actual prices.
+                formatter={(v, name, item) => rebasedLabel(Number(v), item.payload.prices[name])}
                 contentStyle={{
                   fontSize: 12,
                   borderRadius: 6,
