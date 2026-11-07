@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
   title: 'Parallax',
-  description: 'Market data and portfolio tracking built on the Alpaca API',
+  description: 'A trading journal and performance dashboard: trade plans, reviews, and market data from Alpaca',
 };
 
 export default function RootLayout({ children }) {
