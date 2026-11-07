@@ -49,3 +49,6 @@ docs/private/
 
 # Written by `next dev` for AI agents; not ours
 /AGENTS.md
+.neon
+.env*
+!.env.example
