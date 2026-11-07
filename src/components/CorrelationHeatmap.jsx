@@ -1,19 +1,18 @@
 'use client';
 
-// Renders a correlation matrix as a colored grid. Green = positive,
-// red = negative, faint = uncorrelated. Purely presentational: it
-// receives the matrix from a parent and renders it.
-// The theme's green or red at an opacity that grows with the correlation's
-// strength (value in [-1, 1]). Capped at 0.45 so the number on the cell stays
-// readable in light and dark mode.
+// Renders a correlation matrix as a grid shaded in one blue: no tint at -1,
+// deepest at +1. Correlation isn't good or bad, so no green or red. Purely
+// presentational: it receives the matrix from a parent and renders it.
+// The theme's blue at an opacity that grows with the correlation (value in
+// [-1, 1]). Capped at 0.45 so the number on the cell stays readable in light
+// and dark mode.
 const MAX_OPACITY = 0.45;
 
 export function cellColor(value) {
-  const magnitude = Math.min(Math.abs(value), 1);
-  const color = value >= 0 ? 'green' : 'red';
+  const position = (Math.min(Math.max(value, -1), 1) + 1) / 2;
   // Rounded to 3 decimals so float noise (0.22500000000000003) stays out of the CSS.
-  const opacity = Math.round(magnitude * MAX_OPACITY * 1000) / 1000;
-  return `rgb(var(--color-${color}-600) / ${opacity})`;
+  const opacity = Math.round(position * MAX_OPACITY * 1000) / 1000;
+  return `rgb(var(--color-blue-600) / ${opacity})`;
 }
 
 export default function CorrelationHeatmap({ matrix }) {
