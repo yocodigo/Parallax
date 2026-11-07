@@ -56,6 +56,7 @@ const preview = {
       fills: [{ symbol: 'WDGT', ref: '9', side: 'sell', quantity: 10, price: 24, executedAt: '2026-09-28T13:30:00.000Z' }],
     },
   ],
+  fillsRead: 7,
   unreadRows: [{ description: 'DIVIDEND RECEIVED WIDGET CO COM (WDGT)' }],
   applied: false,
 };
@@ -93,6 +94,7 @@ describe('FidelityImport', () => {
 
     await choosePreview();
 
+    expect(await screen.findByText('Read 7 fills from the history.')).toBeInTheDocument();
     const table = await screen.findByRole('table');
     const rows = within(table).getAllByRole('row');
     expect(within(rows[1]).getAllByRole('cell').map((c) => c.textContent)).toEqual([

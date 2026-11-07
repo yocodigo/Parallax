@@ -228,6 +228,7 @@ export default function ThinkorswimImport() {
 
       {preview && (
         <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-sm text-gray-500">{`Read ${plural(preview.fillsRead, 'fill')} from the statement.`}</p>
           {preview.trades.length > 0 ? (
             <PreviewTable trades={preview.trades} timeZone={timeZone} />
           ) : (

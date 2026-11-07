@@ -56,6 +56,7 @@ const preview = {
       fills: [{ ...PUT, ref: '9', side: 'sell', quantity: 1, price: 2.5, executedAt: '2026-10-23T16:40:00.000Z' }],
     },
   ],
+  fillsRead: 7,
   unreadRows: [{ ref: '5', description: 'BOT +10 AAPL @250.00' }],
   applied: false,
 };
@@ -94,6 +95,7 @@ describe('ThinkorswimImport', () => {
 
     await choosePreview();
 
+    expect(await screen.findByText('Read 7 fills from the statement.')).toBeInTheDocument();
     const table = await screen.findByRole('table');
     const rows = within(table).getAllByRole('row');
     expect(within(rows[1]).getAllByRole('cell').map((c) => c.textContent)).toEqual([

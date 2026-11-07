@@ -84,6 +84,8 @@ describe('POST /api/imports/thinkorswim', () => {
     expect(body.trades[0].profitLoss).toBeCloseTo(-14.32);
     // 18:41:05 to 18:42:53.
     expect(body.trades[0].holdMinutes).toBeCloseTo(1.8);
+    // The four option fills; the AAPL stock row was not understood, so it isn't one.
+    expect(body.fillsRead).toBe(4);
     expect(body.unreadRows).toEqual([{ ref: '1000000000005', description: 'BOT +10 AAPL @250.00' }]);
     expect(body.unpaired).toEqual([]);
     expect(await getDb().select().from(trades)).toEqual([]);

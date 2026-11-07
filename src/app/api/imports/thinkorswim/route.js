@@ -46,7 +46,7 @@ const previewOf = ({ action, tradeId, imported }) => ({
 
 // Body: multipart form with `file` (the account statement CSV), `timeZone`
 // (the one thinkorswim is set to), `mode`, and `confirm` ("true" to save).
-// Returns { trades, unpaired, unreadRows, applied } and, once applied, how
+// Returns { trades, fillsRead, unpaired, unreadRows, applied } and, once applied, how
 // many trades were `created` and `filled`. Each trade has its `action`:
 // create, fill (with the `tradeId` filled in), or skip (imported before).
 export const POST = withErrorLogging(ROUTE, async (request) => {
@@ -79,6 +79,7 @@ export const POST = withErrorLogging(ROUTE, async (request) => {
 
   const body = {
     trades: actions.map(previewOf),
+    fillsRead: statement.fills.length,
     unpaired,
     unreadRows: statement.skipped,
     applied: false,

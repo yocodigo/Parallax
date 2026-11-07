@@ -81,6 +81,8 @@ describe('POST /api/imports/fidelity', () => {
       // Seven days from entry to exit.
       holdMinutes: 7 * 24 * 60,
     });
+    // The three buys and sells; the dividend row was not a fill.
+    expect(body.fillsRead).toBe(3);
     expect(body.unreadRows).toEqual([{ description: 'DIVIDEND RECEIVED WIDGET CO COM (WDGT)' }]);
     expect(body.unpaired).toEqual([]);
     expect(await getDb().select().from(trades)).toEqual([]);

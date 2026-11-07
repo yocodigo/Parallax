@@ -35,10 +35,10 @@ const previewOf = ({ action, tradeId, imported }) => ({
 });
 
 // Body: multipart form with `file` (the account history CSV), `mode`, and
-// `confirm` ("true" to save). Returns { trades, unpaired, unreadRows,
-// applied } and, once applied, how many trades were `created` and `filled`.
-// Each trade has its `action`: create, fill (with the `tradeId` filled in),
-// or skip (imported before).
+// `confirm` ("true" to save). Returns { trades, fillsRead, unpaired,
+// unreadRows, applied } and, once applied, how many trades were `created`
+// and `filled`. Each trade has its `action`: create, fill (with the `tradeId`
+// filled in), or skip (imported before).
 export const POST = withErrorLogging(ROUTE, async (request) => {
   const formData = await request.formData().catch(() => null);
   if (!formData) return fieldError('Expected a form with the history', {});
@@ -68,6 +68,7 @@ export const POST = withErrorLogging(ROUTE, async (request) => {
 
   const body = {
     trades: actions.map(previewOf),
+    fillsRead: history.fills.length,
     unpaired,
     unreadRows: history.skipped,
     applied: false,
