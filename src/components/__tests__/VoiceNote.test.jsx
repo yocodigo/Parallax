@@ -1,6 +1,6 @@
 import { Blob as NodeBlob } from 'node:buffer';
 import { afterEach, beforeAll, beforeEach, describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { SWRConfig } from 'swr';
@@ -74,9 +74,12 @@ function serveVoiceApis({
   transcribe = () => HttpResponse.json({ text: 'Moved my stop on NVDA, frustrated.' }),
   draft = () => HttpResponse.json(reviewDraft),
 } = {}) {
-  const sent = { transcribe: [], draft: [], journal: [] };
+  const sent = { transcribe: [], draft: [], journal: [], journalReads: 0 };
   server.use(
-    http.get('*/api/journal', () => HttpResponse.json({ entries })),
+    http.get('*/api/journal', () => {
+      sent.journalReads += 1;
+      return HttpResponse.json({ entries });
+    }),
     http.get('*/api/recording-prompts', () => HttpResponse.json(prompts)),
     // A drafted plan opens the plan form, which asks for history warnings.
     http.get('*/api/insights/warnings', () => HttpResponse.json({ warnings: [] })),
@@ -137,6 +140,14 @@ describe('VoiceNote', () => {
     expect(screen.queryByLabelText('Notes')).not.toBeInTheDocument();
   });
 
+  it('says what to record, whether or not the journal has tickers', async () => {
+    renderVoiceNote();
+
+    expect(
+      await screen.findByText('Record a voice note for today’s plan or end-of-day review.')
+    ).toBeInTheDocument();
+  });
+
   it('listens for the tickers already in the journal', async () => {
     const sent = serveVoiceApis({
       entries: [
@@ -146,7 +157,9 @@ describe('VoiceNote', () => {
       ],
     });
     renderVoiceNote();
-    expect(await screen.findByText(/listening for 2 tickers/i)).toBeInTheDocument();
+    // Nothing on screen says the journal has loaded, so wait for the read, then let SWR store it.
+    await waitFor(() => expect(sent.journalReads).toBe(1));
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
 
     await recordNote();
 

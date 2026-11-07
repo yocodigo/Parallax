@@ -130,11 +130,9 @@ export default function VoiceNote() {
     <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold text-gray-700">Voice note</h2>
-        {tickers.length > 0 && (
-          <span className="text-xs text-gray-500">
-            Listening for {tickers.length} tickers from your journal
-          </span>
-        )}
+        <span className="text-xs text-gray-500">
+          Record a voice note for today’s plan or end-of-day review.
+        </span>
       </div>
 
       {(step === 'idle' || step === 'recording') && (
