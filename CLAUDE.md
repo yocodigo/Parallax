@@ -130,7 +130,7 @@ Vitest, JavaScript (not TypeScript).
   blue classes and white at variables. Light values are Tailwind's own; dark swaps each shade with its
   opposite (gray-50 and gray-950, red-800 and red-200), white becomes gray-900 (the card color), and
   gray-500 is lightened to keep secondary text readable. Dark applies when the system is dark unless
-  `<html>` has `light`, or when it has `dark`. `ThemePicker.jsx` in the nav saves the choice
+  `<html>` has `light`, or when it has `dark`. `ThemePicker.jsx`, in the menu behind the nav's settings gear (with Sign out), saves the choice
   (`src/lib/theme.js`), and `themeScript` in the layout's `<head>` applies it before the page draws.
   Components use only those five hues (a test checks); charts read `rgb(var(--color-…))`.
 - Tests live in `__tests__` folders next to the code they test.

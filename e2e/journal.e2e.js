@@ -44,6 +44,7 @@ test('a trade from plan to result', async ({ page }) => {
   await expect(entry.getByText('+$40.00')).toBeVisible();
   await expect(entry.getByText('+2.0R')).toBeVisible();
 
+  await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page).toHaveURL(/\/login$/);
   await page.goto('/journal');
