@@ -147,3 +147,57 @@ describe('PriceChart legend', () => {
     expect(screen.getByRole('button', { name: 'AAPL' })).toHaveAttribute('aria-pressed', 'false');
   });
 });
+
+describe('PriceChart relative strength', () => {
+  const withSpy = () =>
+    server.use(
+      http.get('*/api/bars', () =>
+        HttpResponse.json({
+          ...barsResponse(),
+          symbols: ['AAPL', 'MSFT', 'SPY'],
+          series: [
+            { date: '2026-01-05', AAPL: 200, MSFT: 404, SPY: 600 },
+            { date: '2026-01-12', AAPL: 210.5, MSFT: 400.25, SPY: 606 },
+          ],
+        })
+      )
+    );
+
+  it('starts on percent change and offers a benchmark only in the relative view', async () => {
+    withSpy();
+    renderChart();
+
+    const relative = await screen.findByRole('button', { name: 'Relative strength' });
+    expect(relative).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByLabelText('Benchmark')).not.toBeInTheDocument();
+
+    await userEvent.click(relative);
+
+    expect(relative).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByLabelText('Benchmark')).toHaveValue('SPY');
+    expect(screen.getAllByRole('option', { name: /^(AAPL|MSFT|SPY)$/ }).map((o) => o.textContent)).toEqual([
+      'AAPL',
+      'MSFT',
+      'SPY',
+    ]);
+  });
+
+  it('falls back to the first symbol when SPY was not loaded', async () => {
+    captureBarsRequests();
+    renderChart();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Relative strength' }));
+
+    expect(screen.getByLabelText('Benchmark')).toHaveValue('AAPL');
+  });
+
+  it('lets the benchmark be changed', async () => {
+    withSpy();
+    renderChart();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Relative strength' }));
+    await userEvent.selectOptions(screen.getByLabelText('Benchmark'), 'MSFT');
+
+    expect(screen.getByLabelText('Benchmark')).toHaveValue('MSFT');
+  });
+});

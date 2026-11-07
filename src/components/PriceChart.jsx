@@ -14,7 +14,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import CorrelationHeatmap from './CorrelationHeatmap';
-import { rebaseSeries, rebasedLabel } from '@/lib/bars';
+import { rebaseSeries, rebasedLabel, relativeLabel, relativeStrength } from '@/lib/bars';
 import { TIMEFRAMES, windowsFor, clampWindow} from '@/lib/timeframes';
 
 const COLORS = ['#2563eb', '#dc2626', '#059669', '#d97706', '#7c3aed'];
@@ -38,6 +38,9 @@ export default function PriceChart() {
   const [days, setDays] = useState(90);
   // Symbols whose line is switched off. Hiding a line only hides it: the
   // others stay rebased to the same window.
+  // 'percent' (each line's own change) or 'relative' (minus the benchmark's).
+  const [view, setView] = useState('percent');
+  const [benchmarkChoice, setBenchmarkChoice] = useState('SPY');
   const [hidden, setHidden] = useState(() => new Set());
 
   const toggleLine = (symbol) =>
@@ -66,6 +69,15 @@ export default function PriceChart() {
     () => (data?.series ? rebaseSeries(data.series, data.symbols) : []),
     [data]
   );
+
+  // SPY unless it isn't loaded or the choice dropped out, then the first symbol.
+  const benchmark = data?.symbols?.includes(benchmarkChoice) ? benchmarkChoice : data?.symbols?.[0];
+
+  const relative = useMemo(
+    () => (data?.symbols ? relativeStrength(rebased, data.symbols, benchmark) : []),
+    [data, rebased, benchmark]
+  );
+  const showRelative = view === 'relative';
 
   const apply = () => setSymbols(input);
 
@@ -161,6 +173,47 @@ export default function PriceChart() {
 
       {data?.series?.length > 0 && (
         <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <div className="mb-3 flex flex-wrap items-end gap-3">
+            <div className="flex gap-1" role="group" aria-label="Chart view">
+              {[
+                ['percent', 'Percent change'],
+                ['relative', 'Relative strength'],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={view === value}
+                  onClick={() => setView(value)}
+                  className={`rounded-md border px-3 py-1 text-xs font-medium ${
+                    view === value
+                      ? 'border-blue-600 bg-blue-600 text-white'
+                      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {showRelative && (
+              <div className="flex items-center gap-2">
+                <label htmlFor="benchmark" className="text-xs font-medium text-gray-500">
+                  Benchmark
+                </label>
+                <select
+                  id="benchmark"
+                  value={benchmark}
+                  onChange={(e) => setBenchmarkChoice(e.target.value)}
+                  className="rounded-md border border-gray-300 px-2 py-1 text-xs focus:border-blue-500 focus:outline-none"
+                >
+                  {data.symbols.map((symbol) => (
+                    <option key={symbol} value={symbol}>
+                      {symbol}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
           {/* Not Recharts' Legend: its entries can't be buttons. */}
           <div className="mb-2 flex flex-wrap justify-center gap-x-4 gap-y-1">
             {data.symbols.map((symbol, i) => {
@@ -185,7 +238,7 @@ export default function PriceChart() {
           </div>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={rebased} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
+              <LineChart data={showRelative ? relative : rebased} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={theme('gray-200')} />
                 <XAxis
                   dataKey="date"
@@ -201,7 +254,9 @@ export default function PriceChart() {
                 />
                 <Tooltip
                   // item.payload is the rebased row, which carries the actual prices.
-                  formatter={(v, name, item) => rebasedLabel(Number(v), item.payload.prices[name])}
+                  formatter={(v, name, item) =>
+                    (showRelative ? relativeLabel : rebasedLabel)(Number(v), item.payload.prices[name])
+                  }
                   contentStyle={{
                     fontSize: 12,
                     borderRadius: 6,

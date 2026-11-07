@@ -55,3 +55,23 @@ export function rebaseSeries(series, symbols) {
 export function rebasedLabel(pct, price) {
   return `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}% ($${price.toFixed(2)})`;
 }
+
+// Rebased rows with the benchmark's percent change taken off every line, so
+// the benchmark itself is flat at 0 and above 0 means outperforming it. A
+// point is left out where the line or the benchmark has no price that day.
+// The input rows (and their `prices`, for the tooltip) are not changed.
+export function relativeStrength(rebased, symbols, benchmark) {
+  return rebased.map((row) => {
+    const out = { date: row.date, prices: row.prices };
+    for (const symbol of symbols) {
+      if (row[symbol] === undefined || row[benchmark] === undefined) continue;
+      out[symbol] = row[symbol] - row[benchmark];
+    }
+    return out;
+  });
+}
+
+// Tooltip text for a relative point: signed percentage points and the price.
+export function relativeLabel(points, price) {
+  return `${points >= 0 ? '+' : ''}${points.toFixed(2)} pts ($${price.toFixed(2)})`;
+}
