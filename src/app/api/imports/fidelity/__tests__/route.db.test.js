@@ -78,6 +78,8 @@ describe('POST /api/imports/fidelity', () => {
       closedAt: '2026-10-16T13:30:00.000Z',
       fees: 0.05,
       fillCount: 3,
+      // Seven days from entry to exit.
+      holdMinutes: 7 * 24 * 60,
     });
     expect(body.unreadRows).toEqual([{ description: 'DIVIDEND RECEIVED WIDGET CO COM (WDGT)' }]);
     expect(body.unpaired).toEqual([]);

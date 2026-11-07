@@ -14,6 +14,7 @@ export const formatProfitLoss = (amount) => money.format(amount);
 export function formatHold(minutes) {
   if (minutes === null || minutes === undefined) return '—';
   if (minutes < 1) return '<1m';
+  // Rounded first, so 59.6 minutes reads "1h" and never "60m".
   const total = Math.round(minutes);
   const [days, hours, mins] = [Math.floor(total / 1440), Math.floor((total % 1440) / 60), total % 60];
   if (days > 0) return hours ? `${days}d ${hours}h` : `${days}d`;
