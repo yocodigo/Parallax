@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { reshapeBars, summarize } from '../bars';
+import { reshapeBars, summarize, rebaseSeries } from '../bars';
 
 const sampleBars = {
   AAPL: [
@@ -47,5 +47,26 @@ describe('summarize', () => {
 
   it('skips symbols with no bars', () => {
     expect(summarize({}, ['AAPL'])).toEqual([]);
+  });
+});
+
+describe('rebaseSeries', () => {
+  const series = [
+    { date: '2026-01-02', AAPL: 200, MSFT: 400 },
+    { date: '2026-01-03', AAPL: 210, MSFT: 396 },
+  ];
+
+  it('turns each symbol into percent change from its first price, keeping the prices', () => {
+    expect(rebaseSeries(series, ['AAPL', 'MSFT'])).toEqual([
+      { date: '2026-01-02', AAPL: 0, MSFT: 0, prices: { AAPL: 200, MSFT: 400 } },
+      { date: '2026-01-03', AAPL: 5, MSFT: -1, prices: { AAPL: 210, MSFT: 396 } },
+    ]);
+  });
+
+  it('starts a symbol at 0 on its first price when it has no earlier bars', () => {
+    const late = [{ date: '2026-01-02', AAPL: 200 }, { date: '2026-01-03', AAPL: 210, MSFT: 50 }];
+    const rows = rebaseSeries(late, ['AAPL', 'MSFT']);
+    expect(rows[0].MSFT).toBeUndefined();
+    expect(rows[1].MSFT).toBe(0);
   });
 });

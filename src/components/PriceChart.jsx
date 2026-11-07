@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import useSWR from 'swr';
 import { fetchJson } from '@/lib/fetchJson';
 import {
@@ -11,9 +11,11 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
+  ReferenceLine,
   ResponsiveContainer,
 } from 'recharts';
 import CorrelationHeatmap from './CorrelationHeatmap';
+import { rebaseSeries } from '@/lib/bars';
 import { TIMEFRAMES, windowsFor, clampWindow} from '@/lib/timeframes';
 
 const COLORS = ['#2563eb', '#dc2626', '#059669', '#d97706', '#7c3aed'];
@@ -49,6 +51,11 @@ export default function PriceChart() {
     `/api/bars?symbols=${encodeURIComponent(symbols)}&days=${days}&timeframe=${timeframe}`,
     fetchJson,
     { revalidateOnFocus: false }
+  );
+
+  const rebased = useMemo(
+    () => (data?.series ? rebaseSeries(data.series, data.symbols) : []),
+    [data]
   );
 
   const apply = () => setSymbols(input);
@@ -146,7 +153,7 @@ export default function PriceChart() {
       {data?.series?.length > 0 && (
         <div className="h-96 rounded-lg border border-gray-200 bg-white p-4">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data.series} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
+            <LineChart data={rebased} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={theme('gray-200')} />
               <XAxis
                 dataKey="date"
@@ -158,10 +165,14 @@ export default function PriceChart() {
                 tick={{ fontSize: 11, fill: theme('gray-500') }}
                 domain={['auto', 'auto']}
                 stroke={theme('gray-400')}
-                tickFormatter={(v) => `$${v}`}
+                tickFormatter={(v) => `${v}%`}
               />
               <Tooltip
-                formatter={(v) => `$${Number(v).toFixed(2)}`}
+                formatter={(v, name, item) => {
+                  const pct = Number(v);
+                  const price = item.payload.prices?.[name];
+                  return `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}% ($${Number(price).toFixed(2)})`;
+                }}
                 contentStyle={{
                   fontSize: 12,
                   borderRadius: 6,
@@ -170,6 +181,7 @@ export default function PriceChart() {
                 }}
                 labelStyle={{ color: theme('gray-900') }}
               />
+              <ReferenceLine y={0} stroke={theme('gray-400')} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
               {data.symbols.map((symbol, i) => (
                 <Line

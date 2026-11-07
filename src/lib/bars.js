@@ -31,3 +31,21 @@ export function summarize(bars, symbols) {
       };
     });
 }
+
+// Rebase date-keyed rows to percent change from each symbol's first price in
+// the rows, so tickers of any price level share one scale. The prices stay
+// under `prices` for the tooltip. Recomputed whenever the window changes.
+export function rebaseSeries(series, symbols) {
+  const base = {};
+  return series.map((row) => {
+    const out = { date: row.date, prices: {} };
+    for (const symbol of symbols) {
+      const price = row[symbol];
+      if (price == null) continue;
+      if (base[symbol] === undefined) base[symbol] = price;
+      out.prices[symbol] = price;
+      out[symbol] = base[symbol] ? ((price - base[symbol]) / base[symbol]) * 100 : 0;
+    }
+    return out;
+  });
+}
