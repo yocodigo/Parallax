@@ -274,7 +274,8 @@ Vitest, JavaScript (not TypeScript).
   trades of the first trade coached's mode (what's working, stop adherence, the mistake ledger). It
   recomputes everything per call from Alpaca bars (one fetch per symbol and day) and stores no
   snapshot; a failed fetch fails the whole call. `formatCoachingInput` and `COACHING_SYSTEM_PROMPT`
-  (`src/lib/coaching.js`) turn the facts into the prompt; Claude never sees raw bars or works out
+  (`src/lib/coaching.js`) turn the facts into the prompt (each trade states its direction, contract, bet on the
+  underlying through `tradeBias`, and fill times in New York time); Claude never sees raw bars or works out
   figures. Pure pieces: `giveback.js` (best open profit of 1R or more, closed at 0R or worse, stocks
   with a stop only), `stopAdherence.js` (S1-S3 replayed against the exit), `whatsWorking.js` (R where a
   trade has a stop, dollar P/L where it has none, never mixed). A day with no trades returns a null

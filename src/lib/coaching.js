@@ -1,5 +1,6 @@
-import { formatProfitLoss, formatR } from './format';
+import { formatProfitLoss, formatR, formatTradeTime } from './format';
 import { EMOTION_LABELS, MISTAKE_LABELS } from './journalEntry';
+import { tradeBias } from './setups/replayTrades';
 import { EXIT_REASON_LABELS } from './tradeFill';
 import { describeResult, describeTrade } from './weeklyReview';
 
@@ -28,6 +29,8 @@ Every suggestion must be grounded in one of three things, and must name it:
 Give no generic trading advice that isn't tied to one of these, and no market commentary or trade ideas.
 
 Prices in the entry and exit reviews (the setup's ideal entry and stop, T1, T2, room to the band) are the underlying's. For an option, the fill and exit prices on its Trade line are premiums, so never compare the two. Chase is measured in multiples of the setup's own entry-to-stop distance on the underlying; it is not a trade result.
+
+Each trade states its direction, its contract (for an option), and what it bet on for the underlying: use those, and never assume a direction. A bought put is long the contract but a bearish bet.
 
 Quote the figures you're given and don't work out any other figures yourself. Some results are in R and some in dollars (trades without a stop have no R); keep them apart and never combine or convert them. Where a fact says there aren't enough trades yet, don't draw conclusions from it. If the day is thin, keep the coaching short rather than padding it.
 
@@ -154,10 +157,33 @@ const ADHERENCE_TEXT = {
   no_exit_reason: 'no exit reason recorded',
 };
 
+const DIRECTION_TEXT = {
+  option: { long: 'the contract was bought', short: 'the contract was sold' },
+  other: { long: 'bought', short: 'sold short' },
+};
+
+// What the trade bet on, stated so the coach never has to infer it from "long"
+// or a C/P letter: a bought put is a bearish bet, though its direction is long.
+function directionLines(trade) {
+  const option = trade.assetClass === 'option';
+  const lines = [`Direction: ${trade.direction} (${DIRECTION_TEXT[option ? 'option' : 'other'][trade.direction]})`];
+  if (option) lines.push(`Contract: ${trade.optionType}, strike ${trade.strike}, expires ${trade.expiration}`);
+  lines.push(`Bet on the underlying: ${tradeBias(trade) === 'long' ? 'bullish' : 'bearish'}`);
+  return lines;
+}
+
+function fillTimesLine({ openedAt, closedAt }) {
+  if (!openedAt) return null;
+  const out = closedAt ? `out at ${formatTradeTime(closedAt)}` : 'still open';
+  return `Fills (New York time): in at ${formatTradeTime(openedAt)}, ${out}`;
+}
+
 function tradeBlock({ trade, entries = [], entryReview, exitReview, giveback, stopAdherence }, n) {
   const result = describeResult(trade);
   const lines = [
     `Trade: ${describeTrade(trade)}`,
+    ...directionLines(trade),
+    fillTimesLine(trade),
     result && `Result: ${result}`,
     ...entries.map(reviewLine),
     ...entryReviewLines(entryReview),

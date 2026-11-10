@@ -106,6 +106,11 @@ describe('COACHING_SYSTEM_PROMPT', () => {
     expect(COACHING_SYSTEM_PROMPT).toMatch(/not a trade result/);
   });
 
+  it('tells Claude to use the stated direction and bet instead of assuming one', () => {
+    expect(COACHING_SYSTEM_PROMPT).toContain('never assume a direction');
+    expect(COACHING_SYSTEM_PROMPT).toContain('A bought put is long the contract but a bearish bet');
+  });
+
   it('ties playbook steps 4 and 5 to the end-of-day review this pass follows', () => {
     expect(COACHING_SYSTEM_PROMPT).toMatch(/follows their end-of-day review, which is steps 4 and 5/);
   });
@@ -121,6 +126,41 @@ describe('formatCoachingInput', () => {
   it('describes each trade with its computed result, in dollars when it has no R', () => {
     expect(text).toContain('Trade: live long 2 SPY option');
     expect(text).toContain('Result: -$50.00');
+  });
+
+  it('states the direction, contract, and bet on the underlying instead of leaving them to be guessed', () => {
+    expect(text).toContain('Direction: long (the contract was bought)');
+    expect(text).toContain('Contract: call, strike 680, expires 2026-10-27');
+    expect(text).toContain('Bet on the underlying: bullish');
+  });
+
+  it('reads a bought put as a bearish bet, and a sold one as bullish', () => {
+    const withTrade = (overrides) =>
+      formatCoachingInput(facts({ trades: [{ ...facts().trades[0], trade: { ...optionTrade, ...overrides } }] }));
+
+    const put = withTrade({ optionType: 'put', strike: 675 });
+    expect(put).toContain('Contract: put, strike 675, expires 2026-10-27');
+    expect(put).toContain('Bet on the underlying: bearish');
+    const soldPut = withTrade({ optionType: 'put', direction: 'short' });
+    expect(soldPut).toContain('Direction: short (the contract was sold)');
+    expect(soldPut).toContain('Bet on the underlying: bullish');
+  });
+
+  it('states a stock trade’s direction with no contract', () => {
+    const stock = { ...optionTrade, assetClass: 'stock', optionType: null, strike: null, expiration: null, direction: 'short' };
+    const stockText = formatCoachingInput(facts({ trades: [{ ...facts().trades[0], trade: stock }] }));
+
+    expect(stockText).toContain('Direction: short (sold short)');
+    expect(stockText).toContain('Bet on the underlying: bearish');
+    expect(stockText).not.toContain('Contract:');
+  });
+
+  it('gives the fill times in New York time, and only the entry while the trade is open', () => {
+    expect(text).toContain('Fills (New York time): in at 10:53 AM, out at 11:10 AM');
+    const open = formatCoachingInput(
+      facts({ trades: [{ ...facts().trades[0], trade: { ...optionTrade, exitPrice: null, closedAt: null } }] })
+    );
+    expect(open).toContain('Fills (New York time): in at 10:53 AM, still open');
   });
 
   it("gives the trader's own review of it", () => {
