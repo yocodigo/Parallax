@@ -34,3 +34,20 @@ export function formatContract({ optionType, strike, expiration }) {
   const [, month, day] = expiration.split('-').map(Number);
   return `${strike}${optionType === 'call' ? 'C' : 'P'} exp ${MONTHS[month - 1]} ${day}`;
 }
+
+const tradeTime = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/New_York',
+  hour: 'numeric',
+  minute: '2-digit',
+});
+
+// "10:43 AM": when a trade was filled, in New York time. Empty for a plan
+// with no fill yet.
+export const formatTradeTime = (openedAt) => (openedAt ? tradeTime.format(new Date(openedAt)) : '');
+
+// Sort comparator: latest fill first. Trades with no fill sort last, and the
+// sort is stable, so they keep their order.
+export const byOpenedAtDesc = (a, b) => {
+  if (!a.openedAt || !b.openedAt) return Boolean(b.openedAt) - Boolean(a.openedAt);
+  return new Date(b.openedAt) - new Date(a.openedAt);
+};

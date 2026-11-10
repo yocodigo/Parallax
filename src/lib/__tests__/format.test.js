@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatContract, formatHold, formatProfitLoss, formatR } from '../format';
+import { formatContract, formatHold, formatTradeTime, byOpenedAtDesc, formatProfitLoss, formatR } from '../format';
 
 describe('formatHold', () => {
   it('shows minutes, then hours and minutes, then days and hours', () => {
@@ -43,5 +43,28 @@ describe('formatContract', () => {
 
   it('is empty without a contract', () => {
     expect(formatContract({ optionType: null, strike: null, expiration: null })).toBe('');
+  });
+});
+
+describe('formatTradeTime', () => {
+  it('shows the fill time in New York', () => {
+    expect(formatTradeTime('2026-11-10T15:43:00.000Z')).toBe('10:43 AM');
+    expect(formatTradeTime('2026-07-10T18:05:00.000Z')).toBe('2:05 PM');
+  });
+
+  it('is empty for a trade with no fill', () => {
+    expect(formatTradeTime(null)).toBe('');
+  });
+});
+
+describe('byOpenedAtDesc', () => {
+  it('puts the latest fill first and unfilled trades last, keeping their order', () => {
+    const trades = [
+      { id: 1, openedAt: null },
+      { id: 2, openedAt: '2026-11-10T15:00:00.000Z' },
+      { id: 3, openedAt: null },
+      { id: 4, openedAt: '2026-11-10T16:30:00.000Z' },
+    ];
+    expect([...trades].sort(byOpenedAtDesc).map((t) => t.id)).toEqual([4, 2, 1, 3]);
   });
 });

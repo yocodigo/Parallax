@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { apiErrorMessage, fetchJson } from '@/lib/fetchJson';
+import { byOpenedAtDesc, formatTradeTime } from '@/lib/format';
 import { EMOTION_LABELS, EMOTIONS, MISTAKE_LABELS, MISTAKES } from '@/lib/journalEntry';
 import Field, { inputClass } from './Field';
 import { capitalize, describeTrade } from './JournalEntries';
@@ -19,14 +20,14 @@ const EMPTY_FORM = {
 
 const orUndefined = (value) => (value === '' ? undefined : value);
 
-// The trades linked to journal entries, each once, in the journal's order
-// (newest first). There's no trades API yet, so this is what can be reviewed.
+// The trades linked to journal entries, each once, latest fill first (plans
+// with no fill last). There's no trades API yet, so this is what can be reviewed.
 function tradesIn(entries = []) {
   const byId = new Map();
   for (const { trade } of entries) {
     if (trade && !byId.has(trade.id)) byId.set(trade.id, trade);
   }
-  return [...byId.values()];
+  return [...byId.values()].sort(byOpenedAtDesc);
 }
 
 // A draft (from a voice note) holds parsed values; the inputs want strings.
@@ -133,7 +134,9 @@ export default function ReviewForm({ draft, draftErrors, onSaved }) {
           <option value="">Not linked to a trade</option>
           {trades.map((trade) => (
             <option key={trade.id} value={trade.id}>
-              {describeTrade(trade)} · {capitalize(trade.mode)}
+              {[describeTrade(trade), formatTradeTime(trade.openedAt), capitalize(trade.mode)]
+                .filter(Boolean)
+                .join(' · ')}
             </option>
           ))}
         </select>

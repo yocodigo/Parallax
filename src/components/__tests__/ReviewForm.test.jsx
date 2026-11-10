@@ -85,6 +85,22 @@ describe('ReviewForm', () => {
     ]);
   });
 
+  it('tells same-contract trades apart by fill time, latest first', async () => {
+    const spy = { symbol: 'SPY', assetClass: 'option', optionType: 'put', strike: 748, expiration: '2026-11-10', direction: 'long', quantity: 1, mode: 'live' };
+    const early = { ...spy, id: 'a', openedAt: '2026-11-10T14:43:00.000Z' };
+    const late = { ...spy, id: 'b', openedAt: '2026-11-10T17:10:00.000Z' };
+    serveJournal([entry({ tradeId: 'a', trade: early }), entry({ tradeId: 'b', trade: late })]);
+    renderForm();
+
+    await screen.findByRole('option', { name: /9:43 AM/ });
+    const options = within(screen.getByLabelText('Trade')).getAllByRole('option');
+    expect(options.map((option) => option.textContent)).toEqual([
+      'Not linked to a trade',
+      'Long 1 SPY 748P exp Nov 10 · 12:10 PM · Live',
+      'Long 1 SPY 748P exp Nov 10 · 9:43 AM · Live',
+    ]);
+  });
+
   it('sends the review with its trade, emotion, and mistakes', async () => {
     serveJournal(journalWithTrades());
     const bodies = captureReviews();
