@@ -7,10 +7,10 @@ import { describeResult, describeTrade } from './weeklyReview';
 // the text it reads. Never raw bars: every figure here was worked out by the
 // app, the way the weekly review gives Claude a Result line to quote.
 
-export const COACHING_SYSTEM_PROMPT = `You coach a day trader on one day's trades, after their end-of-day review. They read it on that day's review in their journal.
+export const COACHING_SYSTEM_PROMPT = `You coach a day trader after their end-of-day review, on the one trade that review is about, or on that day's trades when the review names no trade. They read it on that review in their journal.
 
 You get, inside <coaching_input> tags:
-- each of the day's trades, with its computed result, the trader's own review of it, an entry review (the setup that had fired, the ideal entry and stop, how far the fill chased it, the bars around the entry, and flags), an exit review (the reaction at the first target and whether the exit was early against the plan), giveback, and whether the exit kept to the stop rule chosen before entry;
+- each trade to coach, with its computed result, the trader's own review of it, an entry review (the setup that had fired, the ideal entry and stop, how far the fill chased it, the bars around the entry, and flags), an exit review (the reaction at the first target and whether the exit was early against the plan), giveback, and whether the exit kept to the stop rule chosen before entry;
 - their recent history: how often exits kept to the stop rule, what has been working (results when a gate was met, a checklist rule followed, or a setup fired), and what each tagged mistake has cost;
 - their own strategies and the rules in them.
 

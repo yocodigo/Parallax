@@ -57,7 +57,7 @@ const post = (id) =>
 const reviewEntry = (overrides) =>
   addJournalEntry(getDb(), { kind: 'review', notes: 'Exited early.', createdAt: new Date('2026-10-29T22:00:00Z'), ...overrides });
 
-const addTrade = () =>
+const addTrade = (overrides) =>
   getDb()
     .insert(trades)
     .values({
@@ -72,6 +72,7 @@ const addTrade = () =>
       openedAt: new Date('2026-10-29T14:00:00Z'),
       exitPrice: 101,
       closedAt: new Date('2026-10-29T15:00:00Z'),
+      ...overrides,
     })
     .returning();
 
@@ -109,6 +110,40 @@ describe('POST /api/journal/[id]/coaching', () => {
     expect(requests[0].system).toContain('You coach a day trader');
     expect(requests[0].messages[0].content).toMatch(/^<coaching_input>[\s\S]*<day date=[\s\S]*<\/coaching_input>$/);
     expect((await getJournalEntry(getDb(), review.id)).coaching).toBe(COACHING);
+  });
+
+  it('coaches only the trade a review is linked to', async () => {
+    await addTrade({ symbol: 'QQQ' });
+    const [linked] = await addTrade({ symbol: 'IWM', openedAt: new Date('2026-10-29T16:00:00Z'), closedAt: new Date('2026-10-29T17:00:00Z') });
+    const review = await reviewEntry({ tradeId: linked.id });
+    const requests = captureMessages(() => HttpResponse.json(message()));
+
+    expect((await post(review.id)).status).toBe(200);
+
+    const input = requests[0].messages[0].content;
+    expect(input).toContain('IWM');
+    expect(input).not.toContain('QQQ');
+  });
+
+  it("coaches the linked trade's own day, not the day the review was written", async () => {
+    const [linked] = await addTrade();
+    const review = await reviewEntry({ tradeId: linked.id, createdAt: new Date('2026-10-30T22:00:00Z') });
+    const requests = captureMessages(() => HttpResponse.json(message()));
+
+    expect((await post(review.id)).status).toBe(200);
+
+    expect(requests[0].messages[0].content).toContain('<day date="Thu, Oct 29">');
+  });
+
+  it('does not call Claude for a review linked to a trade with no fill', async () => {
+    const [planned] = await addTrade({ entryPrice: null, openedAt: null, exitPrice: null, closedAt: null });
+    const review = await reviewEntry({ tradeId: planned.id });
+    const requests = captureMessages(() => HttpResponse.json(message()));
+
+    const response = await post(review.id);
+
+    expect(await response.json()).toMatchObject({ coaching: null, reason: 'The linked trade has no fill yet' });
+    expect(requests).toHaveLength(0);
   });
 
   it('answers 404 for an unknown or malformed id', async () => {

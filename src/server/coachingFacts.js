@@ -26,16 +26,19 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const MINUTE_MS = 60 * 1000;
 const newestFirst = (a, b) => b.closedAt - a.closedAt;
 
-// `day` is a New York date ('YYYY-MM-DD'). Returns null when no trade was
-// opened that day; otherwise { day, trades, stopAdherence, whatsWorking,
+// `day` is a New York date ('YYYY-MM-DD'). With a `tradeId`, only that trade is
+// coached (a review linked to a trade is about it, not the rest of the day);
+// without one, the whole day is. Returns null when no such trade was opened
+// that day; otherwise { day, trades, stopAdherence, whatsWorking,
 // mistakeLedger, strategies }. The history (the mistake ledger, what's working,
-// stop adherence) is of closed trades in the mode of the day's first trade, so
-// a paper day isn't coached against live results. `fetchBars(symbol, end)`
+// stop adherence) is of closed trades in the mode of the first trade coached,
+// so a paper day isn't coached against live results. `fetchBars(symbol, end)`
 // returns the underlying's minute bars, oldest first; it runs once per symbol
 // and day. A failed fetch rejects the whole call, history included: a coaching
 // pass built on part of the history would read as if it were the whole.
-export async function gatherCoachingFacts(db, { day, fetchBars = fetchMinuteBars, now = new Date() }) {
-  const dayTrades = await listTradesOpenedOn(db, day);
+export async function gatherCoachingFacts(db, { day, tradeId = null, fetchBars = fetchMinuteBars, now = new Date() }) {
+  const openedThatDay = await listTradesOpenedOn(db, day);
+  const dayTrades = tradeId ? openedThatDay.filter((trade) => trade.id === tradeId) : openedThatDay;
   if (dayTrades.length === 0) return null;
   const mode = dayTrades[0].mode;
 

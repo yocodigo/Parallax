@@ -70,6 +70,34 @@ describe('gatherCoachingFacts', () => {
     expect(facts.stopAdherence).toBeNull();
   });
 
+  it('keeps only the named trade of the day, and the history of its mode', async () => {
+    const [other] = await db.insert(trades).values(trade({ mode: 'paper' })).returning();
+    const [linked] = await db
+      .insert(trades)
+      .values(trade({ openedAt: new Date('2026-10-29T16:00:00Z'), closedAt: new Date('2026-10-29T17:00:00Z') }))
+      .returning();
+    await addJournalEntry(db, { kind: 'plan', tradeId: other.id, notes: 'Plan for the other.' });
+    await addJournalEntry(db, { kind: 'plan', tradeId: linked.id, notes: 'Plan for the linked.' });
+    const fetchBars = vi.fn(async () => []);
+
+    const facts = await gatherCoachingFacts(db, { day: '2026-10-29', tradeId: linked.id, fetchBars });
+
+    expect(facts.trades.map((t) => t.trade.id)).toEqual([linked.id]);
+    expect(facts.trades[0].entries.map((e) => e.notes)).toEqual(['Plan for the linked.']);
+    // The history is still of the linked trade's mode (live), though the day's first trade was paper.
+    expect(facts.whatsWorking.all.trades).toBe(1);
+  });
+
+  it('returns null when the named trade was not opened that day', async () => {
+    const [yesterday] = await db
+      .insert(trades)
+      .values(trade({ openedAt: new Date('2026-10-28T14:00:00Z'), closedAt: new Date('2026-10-28T15:00:00Z') }))
+      .returning();
+    await db.insert(trades).values(trade({}));
+
+    expect(await gatherCoachingFacts(db, { day: '2026-10-29', tradeId: yesterday.id, fetchBars: async () => [] })).toBeNull();
+  });
+
   it('reads the history of the first trade’s mode only', async () => {
     await db.insert(trades).values([trade({}), trade({ mode: 'paper', openedAt: new Date('2026-10-28T14:00:00Z'), closedAt: new Date('2026-10-28T15:00:00Z') })]);
 

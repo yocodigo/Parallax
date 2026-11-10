@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getDb } from '@/db';
 import { getJournalEntry, saveCoaching } from '@/db/journal';
+import { getTrade } from '@/db/trades';
 import { COACHING_SYSTEM_PROMPT, formatCoachingInput } from '@/lib/coaching';
 import { logError, requestId, withErrorLogging } from '@/lib/log';
 import { clientKey, rateLimit } from '@/lib/rateLimit';
@@ -21,10 +22,11 @@ const failed = (request, details) => {
   return NextResponse.json({ error: "Couldn't write the coaching. Try again.", requestId: id }, { status: 502 });
 };
 
-// Writes the coaching pass for the New York day a review entry was written on
-// and stores it on that review, replacing any earlier pass (the re-run button).
-// Returns { coaching, coachedAt }, or a null coaching, without calling Claude,
-// when no trade was opened that day.
+// Writes the coaching pass for a review and stores it on that review, replacing
+// any earlier pass (the re-run button). A review linked to a trade coaches that
+// trade alone, on the day it was filled; one with no trade coaches the New York
+// day it was written on. Returns { coaching, coachedAt }, or a null coaching,
+// without calling Claude, when there is no filled trade to coach.
 export const POST = withErrorLogging(ROUTE, async (request, { params }) => {
   const { id } = await params;
   // Postgres rejects a malformed uuid with an error; to the client it's just not found.
@@ -50,8 +52,15 @@ export const POST = withErrorLogging(ROUTE, async (request, { params }) => {
     return NextResponse.json({ error: 'Missing ALPACA_KEY_ID or ALPACA_SECRET_KEY in environment.' }, { status: 500 });
   }
 
-  const facts = await gatherCoachingFacts(getDb(), { day: nyDay(entry.createdAt) });
-  // Nothing to coach, so there's no reason to pay for a call.
+  let scope = { day: nyDay(entry.createdAt) };
+  if (entry.tradeId) {
+    const trade = await getTrade(getDb(), entry.tradeId);
+    // Nothing to coach, so there's no reason to pay for a call.
+    if (!trade?.openedAt) return NextResponse.json({ coaching: null, reason: 'The linked trade has no fill yet' });
+    scope = { day: nyDay(trade.openedAt), tradeId: trade.id };
+  }
+
+  const facts = await gatherCoachingFacts(getDb(), scope);
   if (!facts) return NextResponse.json({ coaching: null, reason: 'No trade was opened that day' });
 
   const client = new Anthropic({ apiKey });
