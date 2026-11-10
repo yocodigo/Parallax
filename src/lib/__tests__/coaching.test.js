@@ -111,6 +111,11 @@ describe('COACHING_SYSTEM_PROMPT', () => {
     expect(COACHING_SYSTEM_PROMPT).toContain('A bought put is long the contract but a bearish bet');
   });
 
+  it("tells Claude the day's fib plan and the strategy are the trader's own plan", () => {
+    expect(COACHING_SYSTEM_PROMPT).toContain("the day's fib plan");
+    expect(COACHING_SYSTEM_PROMPT).toContain("don't say there was no plan unless the input says none was recorded");
+  });
+
   it('ties playbook steps 4 and 5 to the end-of-day review this pass follows', () => {
     expect(COACHING_SYSTEM_PROMPT).toMatch(/follows their end-of-day review, which is steps 4 and 5/);
   });
@@ -161,6 +166,36 @@ describe('formatCoachingInput', () => {
       facts({ trades: [{ ...facts().trades[0], trade: { ...optionTrade, exitPrice: null, closedAt: null } }] })
     );
     expect(open).toContain('Fills (New York time): in at 10:53 AM, still open');
+  });
+
+  it('names the strategy the trade was planned under, or says it had none', () => {
+    const withFacts = (extra) => formatCoachingInput(facts({ trades: [{ ...facts().trades[0], ...extra }] }));
+
+    expect(withFacts({ strategyName: 'Band cross' })).toContain('Strategy: Band cross');
+    expect(withFacts({ strategyName: null })).toContain('Strategy: none picked');
+  });
+
+  it("gives the day's fib plan and its notes, or says none was recorded", () => {
+    const withPlan = (dailyPlan) =>
+      formatCoachingInput(facts({ trades: [{ ...facts().trades[0], dailyPlan }] }));
+    const plan = {
+      ltfDirection: 'bullish',
+      ltfFib50: 101,
+      ltfFib100: 103.5,
+      htfDirection: 'bearish',
+      htfFib50: 98,
+      htfFib100: 95,
+      notes: 'Wait for the 15m cross.',
+    };
+
+    const full = withPlan(plan);
+    expect(full).toContain('Daily plan: lower-timeframe fib bullish, 50% 101.00 and 100% 103.50; higher-timeframe fib bearish, 50% 98.00 and 100% 95.00');
+    expect(full).toContain('Daily plan notes: Wait for the 15m cross.');
+    const partial = withPlan({ ...plan, htfDirection: null, htfFib50: null, htfFib100: null, notes: null });
+    expect(partial).toContain('Daily plan: lower-timeframe fib bullish, 50% 101.00 and 100% 103.50.');
+    expect(partial).not.toContain('higher-timeframe');
+    expect(partial).not.toContain('Daily plan notes');
+    expect(withPlan(null)).toContain('Daily plan: none recorded for this day');
   });
 
   it("gives the trader's own review of it", () => {

@@ -107,6 +107,8 @@ export async function gatherCoachingFacts(db, { day, tradeId = null, fetchBars =
     const analysis = analyses.get(trade.id) ?? (await analyze(trade));
     tradeFacts.push({
       trade,
+      strategyName: strategies.find((strategy) => strategy.id === trade.strategyId)?.name ?? null,
+      dailyPlan: await planFor(trade),
       entries: entries.filter((entry) => entry.tradeId === trade.id),
       entryReview: analysis.entryReview,
       exitReview: analysis.exitReview,

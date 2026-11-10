@@ -1,4 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { saveDailyPlan } from '@/db/dailyPlans';
 import { addJournalEntry } from '@/db/journal';
 import { trades } from '@/db/schema';
 import { createStrategy } from '@/db/strategies';
@@ -96,6 +97,37 @@ describe('gatherCoachingFacts', () => {
     await db.insert(trades).values(trade({}));
 
     expect(await gatherCoachingFacts(db, { day: '2026-10-29', tradeId: yesterday.id, fetchBars: async () => [] })).toBeNull();
+  });
+
+  it("gives each trade the strategy it was planned under and its day's fib plan", async () => {
+    const strategy = await createStrategy(db, { name: 'Band cross', description: '', rules: [{ kind: 'edge', text: 'Cross on 15m' }] });
+    const [planned] = await db.insert(trades).values(trade({ strategyId: strategy.id })).returning();
+    await db.insert(trades).values(trade({ openedAt: new Date('2026-10-29T16:00:00Z'), closedAt: new Date('2026-10-29T17:00:00Z') }));
+    const plan = {
+      tradeDate: '2026-10-29',
+      ltfDirection: 'bullish',
+      ltfFib50: 101,
+      ltfFib100: 103,
+      htfDirection: null,
+      htfFib50: null,
+      htfFib100: null,
+      notes: 'Wait for the 15m cross.',
+    };
+    await saveDailyPlan(db, plan);
+
+    const facts = await gatherCoachingFacts(db, { day: '2026-10-29', fetchBars: async () => [] });
+
+    expect(facts.trades.map((t) => t.trade.id)[0]).toBe(planned.id);
+    expect(facts.trades[0]).toMatchObject({ strategyName: 'Band cross', dailyPlan: plan });
+    expect(facts.trades[1]).toMatchObject({ strategyName: null, dailyPlan: plan });
+  });
+
+  it('gives a null plan for a day with none recorded', async () => {
+    await db.insert(trades).values(trade({}));
+
+    const facts = await gatherCoachingFacts(db, { day: '2026-10-29', fetchBars: async () => [] });
+
+    expect(facts.trades[0].dailyPlan).toBeNull();
   });
 
   it('reads the history of the first trade’s mode only', async () => {
