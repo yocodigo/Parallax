@@ -243,7 +243,7 @@ Vitest, JavaScript (not TypeScript).
   with a reason for crypto. Stocks and options only.
 - thinkorswim import (`/import`, `ThinkorswimImport.jsx`, `POST /api/imports/thinkorswim`): the
   account statement CSV is read from its Cash Balance section (`src/lib/import/thinkorswim.js`; it
-  lists every fill with fees and a ref and ignores the statement's symbol filter). Times are in the
+  lists every fill with fees and a ref and ignores the statement's symbol filter; a paper-money statement leaves it empty, so the fills then come from its Account Trade History section, with no fees and a time-and-position ref). Times are in the
   zone thinkorswim is set to (the user's is Pacific), not New York. Option fills only; stock rows are
   listed as not understood. `pairFills` makes long trades flat to flat per contract (a sale while flat
   closes a position from before the statement; scaled trades get weighted average prices).

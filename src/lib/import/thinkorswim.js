@@ -3,7 +3,10 @@
 //
 // The fills come from the Cash Balance section. Unlike the trade history
 // sections, it lists every trade with its fees and reference number and
-// isn't narrowed by the statement's symbol filter.
+// isn't narrowed by the statement's symbol filter. A paper-money (Virtual
+// Account) statement leaves it empty, so its fills come from the Account
+// Trade History section instead, which has no fees or reference numbers and
+// covers only the statement's symbol filter.
 
 const MONTHS = { JAN: 1, FEB: 2, MAR: 3, APR: 4, MAY: 5, JUN: 6, JUL: 7, AUG: 8, SEP: 9, OCT: 10, NOV: 11, DEC: 12 };
 
@@ -34,9 +37,10 @@ const amount = (text) => (text ? Number(text.replace(/[$,]/g, '')) : 0);
 const cents = (value) => Math.round(value * 100) / 100;
 const pad = (n) => String(n).padStart(2, '0');
 
-// The rows of the section titled `title`, as objects keyed by its header.
+// The rows of the section titled `title` (or starting with it, as in "Account
+// Trade History filtered by SPY"), as objects keyed by its header.
 function section(lines, title) {
-  const start = lines.findIndex((line) => line.trim() === title);
+  const start = lines.findIndex((line) => line.trim() === title || line.trim().startsWith(`${title} `));
   if (start === -1) return null;
   const header = splitCsvLine(lines[start + 1]);
   const rows = [];
@@ -100,6 +104,31 @@ function optionFill(row, timeZone) {
   };
 }
 
+// A row of the Account Trade History section: ",6/30/25 08:46:43,SINGLE,SELL,
+// -3,AUTO,SPY,30 JUN 25,616,CALL,.95,.95,MKT". Its rows carry no reference, so
+// the time and position stand in for one, and no fees.
+function tradeHistoryFill(row, index, timeZone) {
+  const [date, time] = row['Exec Time'].trim().split(' ');
+  const [day, month, year] = row.Exp.trim().split(' ');
+  const side = { BUY: 'buy', SELL: 'sell' }[row.Side];
+  const type = row.Type.toLowerCase();
+  if (!time || !MONTHS[month] || !side || !['call', 'put'].includes(type)) return null;
+  return {
+    ref: `${row['Exec Time'].trim()}#${index}`,
+    executedAt: zonedTime(date, time, timeZone),
+    side,
+    quantity: Math.abs(Number(row.Qty)),
+    symbol: row.Symbol,
+    assetClass: 'option',
+    optionType: type,
+    strike: Number(row.Strike),
+    expiration: `20${year}-${pad(MONTHS[month])}-${pad(day)}`,
+    multiplier: 100,
+    price: Number(row.Price),
+    fees: 0,
+  };
+}
+
 // Returns { fills, skipped }: the option fills in the order listed, with
 // times read in `timeZone` (the one thinkorswim is set to), and the trade
 // rows it doesn't understand, such as stock trades for now. Or { error } when
@@ -119,5 +148,13 @@ export function parseThinkorswimStatement(text, { timeZone }) {
     if (fill) fills.push(fill);
     else skipped.push({ ref: row.ref, description: row.DESCRIPTION.trim() });
   }
+  if (fills.length || skipped.length) return { fills, skipped };
+
+  const history = section(lines, 'Account Trade History') ?? [];
+  history.forEach((row, index) => {
+    const fill = tradeHistoryFill(row, index, timeZone);
+    if (fill) fills.push(fill);
+    else skipped.push({ ref: `${row['Exec Time'].trim()}#${index}`, description: [row.Side, row.Qty, row.Symbol].join(' ') });
+  });
   return { fills, skipped };
 }

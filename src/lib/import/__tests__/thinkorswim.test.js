@@ -96,4 +96,76 @@ describe('parseThinkorswimStatement', () => {
       error: 'This is not a thinkorswim account statement: it has no Cash Balance section.',
     });
   });
+
+  // A paper-money ("Virtual Account") statement has nothing in its Cash
+  // Balance, so the fills come from the trade history.
+  describe('with an empty cash balance (paper money)', () => {
+    const virtual = (tradeRows) =>
+      [
+        '\uFEFFAccount Statement for * (Virtual Account) since 6/29/25 through 6/29/25',
+        '',
+        'Cash Balance',
+        'DATE,TIME,TYPE,REF #,DESCRIPTION,Misc Fees,Commissions & Fees,AMOUNT,BALANCE',
+        ',,,,TOTAL,,,,',
+        '',
+        'Account Order History filtered by SPY',
+        ',Time Placed,Spread,Side,Qty,Pos Effect,Symbol,Exp,Strike,Type,PRICE,,TIF,Status',
+        ',6/30/25 08:55:43,SINGLE,SELL,-2,AUTO,SPY,30 JUN 25,616,CALL,~,MKT,DAY,FILLED',
+        '',
+        'Account Trade History filtered by SPY',
+        ',Exec Time,Spread,Side,Qty,Pos Effect,Symbol,Exp,Strike,Type,Price,Net Price,Order Type',
+        ...tradeRows,
+        '',
+        'Options',
+        'Symbol,Option Code,Exp,Strike,Type,Qty,Trade Price,P/L Day,P/L Open',
+        'SPY,SPY250625C608,25 JUN 25,608,CALL,+5,1.21,N/A,N/A',
+      ].join('\n');
+
+    const BOUGHT = ',6/30/25 08:27:58,SINGLE,BUY,+5,AUTO,SPY,30 JUN 25,616,CALL,1.21,1.21,MKT';
+    const SOLD = ',6/30/25 08:46:43,SINGLE,SELL,-3,AUTO,SPY,30 JUN 25,616,CALL,.95,.95,MKT';
+
+    it('reads the fills from the trade history, with no fees', () => {
+      const { fills, skipped } = parseThinkorswimStatement(virtual([SOLD, BOUGHT]), { timeZone: PACIFIC });
+
+      expect(skipped).toEqual([]);
+      expect(fills).toEqual([
+        {
+          ref: '6/30/25 08:46:43#0',
+          // 8:46:43 AM Pacific daylight time.
+          executedAt: new Date('2025-06-30T15:46:43Z'),
+          side: 'sell',
+          quantity: 3,
+          symbol: 'SPY',
+          assetClass: 'option',
+          optionType: 'call',
+          strike: 616,
+          expiration: '2025-06-30',
+          multiplier: 100,
+          price: 0.95,
+          fees: 0,
+        },
+        expect.objectContaining({ ref: '6/30/25 08:27:58#1', side: 'buy', quantity: 5, price: 1.21 }),
+      ]);
+    });
+
+    it('lists trade rows it does not understand', () => {
+      const stock = ',6/30/25 08:30:00,STOCK,BUY,+10,AUTO,AAPL,,,,250.00,250.00,MKT';
+
+      const { fills, skipped } = parseThinkorswimStatement(virtual([stock]), { timeZone: PACIFIC });
+
+      expect(fills).toEqual([]);
+      expect(skipped).toHaveLength(1);
+    });
+
+    it('still prefers the cash balance when it has trades', () => {
+      const text = statement([BUY]).replace(
+        'Account Summary',
+        'Account Trade History filtered by QQQ\n,Exec Time,Spread,Side,Qty,Pos Effect,Symbol,Exp,Strike,Type,Price,Net Price,Order Type\n,6/30/25 08:27:58,SINGLE,BUY,+5,AUTO,SPY,30 JUN 25,616,CALL,1.21,1.21,MKT\n\nAccount Summary'
+      );
+
+      const { fills } = parseThinkorswimStatement(text, { timeZone: PACIFIC });
+
+      expect(fills.map((f) => f.ref)).toEqual(['1000000000001']);
+    });
+  });
 });
