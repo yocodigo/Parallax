@@ -47,11 +47,10 @@ describe('REVIEW_SYSTEM_PROMPT', () => {
     expect(REVIEW_SYSTEM_PROMPT).toMatch(/how the checks work/i);
   });
 
-  it('says to list a sample of a long run of flagged trades and say that it is one', () => {
+  it('says to list the costliest ten of a long run of flagged trades and count the rest against the total', () => {
     expect(REVIEW_SYSTEM_PROMPT).toMatch(/more than 10 flagged trades in total/i);
-    expect(REVIEW_SYSTEM_PROMPT).toMatch(/costliest ten of the trades you were given/i);
-    expect(REVIEW_SYSTEM_PROMPT).toMatch(/only the most recent flagged trades/i);
-    expect(REVIEW_SYSTEM_PROMPT).toMatch(/not the worst overall/i);
+    expect(REVIEW_SYSTEM_PROMPT).toMatch(/costliest first/i);
+    expect(REVIEW_SYSTEM_PROMPT).toMatch(/list only the first ten/i);
     expect(REVIEW_SYSTEM_PROMPT).toMatch(/say how many more there are out of the total/i);
   });
 });

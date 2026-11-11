@@ -257,7 +257,7 @@ export function trendFacts(trades, entries) {
   };
 }
 
-// Most flagged trades listed, newest first; `omitted` says how many more.
+// Most flagged trades listed, costliest first; `omitted` says how many more.
 export const MAX_FLAGGED = 20;
 
 // Fewest closed trades a setup or condition needs to be called "working".
@@ -274,7 +274,8 @@ const CHECKS = [
 
 // Rule adherence over closed option trades (as the dashboard's table counts
 // it): `checks` is adherence()'s figures, and `flagged` the trades that missed
-// at least one check with the ones missed, newest first (at most MAX_FLAGGED).
+// at least one check with the ones missed, costliest first, the newest first
+// among equal results (at most MAX_FLAGGED).
 // The trades need `planWrittenAt` and `unmetRuleCount` (listPlanFacts).
 export function ruleAdherence(trades) {
   const flagged = trades
@@ -289,7 +290,7 @@ export function ruleAdherence(trades) {
       openedAt: new Date(trade.openedAt),
     }))
     .filter((trade) => trade.failed.length > 0)
-    .sort((a, b) => b.openedAt - a.openedAt);
+    .sort((a, b) => a.netPnl - b.netPnl || b.openedAt - a.openedAt);
   return {
     checks: adherence(trades),
     // `openedAt` was only there to sort by.

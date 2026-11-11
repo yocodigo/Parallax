@@ -387,7 +387,7 @@ describe('ruleAdherence', () => {
     expect(checks.window).toEqual({ ok: 1, missed: 1, cost: -5 });
   });
 
-  it('flags the trades that broke a rule, with which ones, newest first', () => {
+  it('flags the trades that broke a rule, with which ones, costliest first', () => {
     const broke = clean(-20, {
       ...inLockout,
       quantity: 3,
@@ -403,8 +403,8 @@ describe('ruleAdherence', () => {
     expect(flaggedTrades).toBe(2);
     expect(omitted).toBe(0);
     expect(flagged).toEqual([
-      { date: '2026-04-14', symbol: 'SPY', optionType: 'call', quantity: 1, netPnl: -5, failed: ['Window'] },
       { date: '2026-04-13', symbol: 'SPY', optionType: 'call', quantity: 3, netPnl: -60, failed: ['Window', 'Size', 'Plan', 'Stop', 'Exit'] },
+      { date: '2026-04-14', symbol: 'SPY', optionType: 'call', quantity: 1, netPnl: -5, failed: ['Window'] },
     ]);
   });
 
@@ -414,14 +414,28 @@ describe('ruleAdherence', () => {
     expect(ruleAdherence([clean(10), stock])).toMatchObject({ flagged: [], flaggedTrades: 0, omitted: 0 });
   });
 
-  it('keeps the newest MAX_FLAGGED and says how many it left out', () => {
-    const many = Array.from({ length: MAX_FLAGGED + 3 }, (_, i) =>
-      clean(-1, { ...inLockout, openedAt: new Date(Date.UTC(2026, 3, 1, 17) + i * 3_600_000 * 24), closedAt: new Date(Date.UTC(2026, 3, 1, 18) + i * 3_600_000 * 24) })
-    );
+  it('puts a winner that broke a rule after the losers, and the newest first among equal results', () => {
+    const at = (day, pnl) => clean(pnl, { ...inLockout, openedAt: new Date(`2026-04-${day}T17:00:00Z`), closedAt: new Date(`2026-04-${day}T18:00:00Z`) });
 
-    const result = ruleAdherence(many);
+    const { flagged } = ruleAdherence([at('13', -9), at('14', -5), at('15', -5), at('16', 8)]);
+
+    expect(flagged.map((trade) => [trade.date, trade.netPnl])).toEqual([
+      ['2026-04-13', -9],
+      ['2026-04-15', -5],
+      ['2026-04-14', -5],
+      ['2026-04-16', 8],
+    ]);
+  });
+
+  it('keeps the costliest MAX_FLAGGED whatever their dates, and says how many it left out', () => {
+    const day = (i) => ({ openedAt: new Date(Date.UTC(2026, 3, 1, 17) + i * 3_600_000 * 24), closedAt: new Date(Date.UTC(2026, 3, 1, 18) + i * 3_600_000 * 24) });
+    const small = Array.from({ length: MAX_FLAGGED + 2 }, (_, i) => clean(-1, { ...inLockout, ...day(i + 1) }));
+    const oldBigLoss = clean(-50, { ...inLockout, ...day(0) });
+
+    const result = ruleAdherence([...small, oldBigLoss]);
 
     expect(result.flagged).toHaveLength(MAX_FLAGGED);
+    expect(result.flagged[0]).toMatchObject({ date: '2026-04-01', netPnl: -50 });
     expect(result).toMatchObject({ flaggedTrades: MAX_FLAGGED + 3, omitted: 3 });
   });
 });
