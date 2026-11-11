@@ -400,7 +400,7 @@ export function buildReviewFacts({ trades, entries, dailyPlans, strategies, rang
     .sort((a, b) => new Date(a.openedAt) - new Date(b.openedAt));
   const kept = closed.slice(-MAX_TRADES);
   const refs = new Map(kept.map((trade, i) => [trade.id, i + 1]));
-  
+
   const listed = entries
     .filter((entry) => !entry.tradeId || refs.has(entry.tradeId))
     .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));

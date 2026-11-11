@@ -85,6 +85,17 @@ describe('gatherReviewFacts', () => {
     expect(facts.strategies).toEqual([{ name: 'Band cross', rules: [{ kind: 'edge', text: 'Cross on 15m' }] }]);
   });
 
+  it('reads the plan of the day a trade was opened, even when that is before the range', async () => {
+    // Opened Monday the 6th, closed Monday the 13th: a swing, in the range by its close.
+    await db.insert(trades).values(option('13', { openedAt: new Date('2026-04-06T14:00:00Z') }));
+    await saveDailyPlan(db, { tradeDate: '2026-04-06', ltfDirection: 'bullish', ltfFib50: 101, ltfFib100: 103 });
+    await saveDailyPlan(db, { tradeDate: '2026-04-01', ltfDirection: 'bullish', ltfFib50: 90, ltfFib100: 92 });
+
+    const facts = await gatherReviewFacts(db, week);
+
+    expect(facts.dailyPlans.map((p) => p.date)).toEqual(['2026-04-06']);
+  });
+
   it('reads every trade for all time', async () => {
     await db.insert(trades).values([option('13'), option('07', { openedAt: new Date('2025-01-07T15:00:00Z'), closedAt: new Date('2025-01-07T16:00:00Z') })]);
 
