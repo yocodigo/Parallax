@@ -437,6 +437,7 @@ describe('ruleAdherence', () => {
     expect(result.flagged).toHaveLength(MAX_FLAGGED);
     expect(result.flagged[0]).toMatchObject({ date: '2026-04-01', netPnl: -50 });
     expect(result.flaggedTrades).toBe(MAX_FLAGGED + 3);
+    expect(result.unlisted).toBe(MAX_FLAGGED + 3 - LIST_FLAGGED);
   });
 
   it('counts the flagged trades past the first LIST_FLAGGED as unlisted, even when all of them are given', () => {
