@@ -38,6 +38,16 @@ describe('parseReviewRange', () => {
       label: 'Last 30 days',
       fromDay: '2026-03-16',
       from: new Date('2026-03-16T04:00:00Z'),
+      to: new Date('2026-04-15T04:00:00Z'),
+    });
+  });
+
+  it('spans a clock change: the start is in standard time and the end in daylight time', () => {
+    // Tuesday 2026-03-10; clocks sprang forward on Sunday the 8th.
+    expect(parseReviewRange({ range: '7d' }, new Date('2026-03-10T16:00:00Z'))).toMatchObject({
+      fromDay: '2026-03-04',
+      from: new Date('2026-03-04T05:00:00Z'),
+      to: new Date('2026-03-11T04:00:00Z'),
     });
   });
 
