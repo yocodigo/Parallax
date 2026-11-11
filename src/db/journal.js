@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, isNull, lt } from 'drizzle-orm';
 import { journalEntries, trades } from './schema';
 
 // Repository functions take the database as their first argument, so tests
@@ -27,6 +27,22 @@ export async function listJournalEntries(db, { limit = 50, since } = {}) {
     .limit(limit);
 
   return rows.map(({ entry, trade }) => ({ ...entry, trade }));
+}
+
+// The entries linked to no trade that were created in [from, to), oldest first;
+// a bound left null is open. Entries of trades are read with their trades.
+export async function listUnlinkedEntriesBetween(db, { from, to }) {
+  return db
+    .select()
+    .from(journalEntries)
+    .where(
+      and(
+        isNull(journalEntries.tradeId),
+        from ? gte(journalEntries.createdAt, from) : undefined,
+        to ? lt(journalEntries.createdAt, to) : undefined
+      )
+    )
+    .orderBy(asc(journalEntries.createdAt));
 }
 
 export async function getJournalEntry(db, id) {

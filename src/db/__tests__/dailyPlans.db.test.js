@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { getDailyPlan, saveDailyPlan } from '../dailyPlans';
+import { getDailyPlan, listDailyPlansBetween, saveDailyPlan } from '../dailyPlans';
 import { dailyPlans } from '../schema';
 import { createTestDb, resetDb } from '../testing';
 
@@ -60,5 +60,24 @@ describe('saveDailyPlan', () => {
 describe('getDailyPlan', () => {
   it('has no plan for a day that was never planned', async () => {
     expect(await getDailyPlan(db, '2026-10-28')).toBeNull();
+  });
+});
+
+describe('listDailyPlansBetween', () => {
+  beforeEach(async () => {
+    for (const tradeDate of ['2026-10-27', '2026-10-28', '2026-10-29']) await saveDailyPlan(db, { ...onePlan, tradeDate });
+  });
+
+  it('lists the plans of the days in range, both ends included, oldest first', async () => {
+    const plans = await listDailyPlansBetween(db, { fromDay: '2026-10-28', toDay: '2026-10-29' });
+
+    expect(plans.map((plan) => plan.tradeDate)).toEqual(['2026-10-28', '2026-10-29']);
+    expect(plans[0]).toMatchObject({ ltfDirection: 'bullish', ltfFib50: 681.2, htfDirection: null, notes: null });
+  });
+
+  it('leaves a side open when its day is null, and lists every plan with both null', async () => {
+    expect((await listDailyPlansBetween(db, { fromDay: '2026-10-29', toDay: null })).map((p) => p.tradeDate)).toEqual(['2026-10-29']);
+    expect((await listDailyPlansBetween(db, { fromDay: null, toDay: '2026-10-27' })).map((p) => p.tradeDate)).toEqual(['2026-10-27']);
+    expect(await listDailyPlansBetween(db, { fromDay: null, toDay: null })).toHaveLength(3);
   });
 });

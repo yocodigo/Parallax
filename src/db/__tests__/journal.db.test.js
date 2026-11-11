@@ -6,6 +6,7 @@ import {
   getJournalEntry,
   getPlanEntry,
   listJournalEntries,
+  listUnlinkedEntriesBetween,
   saveCoaching,
   savePlan,
 } from '../journal';
@@ -217,5 +218,34 @@ describe('deleteJournalEntry', () => {
       deleted: false,
       reason: 'not_found',
     });
+  });
+});
+
+describe('listUnlinkedEntriesBetween', () => {
+  const at = (createdAt, overrides) => addJournalEntry(db, { kind: 'thesis', symbol: 'SPY', notes: 'A thesis.', createdAt, ...overrides });
+
+  it('lists the entries with no trade created in [from, to), oldest first', async () => {
+    await at(new Date('2026-04-10T12:00:00Z'));
+    const inside = await at(new Date('2026-04-12T12:00:00Z'));
+    const earlier = await at(new Date('2026-04-11T12:00:00Z'));
+    await at(new Date('2026-04-14T12:00:00Z'));
+
+    const entries = await listUnlinkedEntriesBetween(db, {
+      from: new Date('2026-04-11T00:00:00Z'),
+      to: new Date('2026-04-14T00:00:00Z'),
+    });
+
+    expect(entries.map((entry) => entry.id)).toEqual([earlier.id, inside.id]);
+  });
+
+  it('leaves out an entry linked to a trade, and leaves a side open when it is null', async () => {
+    const [trade] = await db
+      .insert(trades)
+      .values({ mode: 'live', symbol: 'SPY', assetClass: 'stock', direction: 'long', quantity: 1 })
+      .returning();
+    await addJournalEntry(db, { kind: 'review', tradeId: trade.id, notes: 'Linked.' });
+    const loose = await at(new Date('2026-04-12T12:00:00Z'), { kind: 'review', symbol: null });
+
+    expect((await listUnlinkedEntriesBetween(db, { from: null, to: null })).map((entry) => entry.id)).toEqual([loose.id]);
   });
 });

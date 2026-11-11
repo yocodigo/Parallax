@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, asc, eq, gte, lte } from 'drizzle-orm';
 import { dailyPlans } from './schema';
 
 // A plan without its bookkeeping columns. The optional fields come back as
@@ -33,4 +33,15 @@ export async function saveDailyPlan(db, plan) {
     .onConflictDoUpdate({ target: dailyPlans.tradeDate, set: values })
     .returning();
   return pickPlan(row);
+}
+
+// The plans of the days from `fromDay` to `toDay` ('YYYY-MM-DD' New York dates,
+// both included), oldest first; a day left null leaves that side open.
+export async function listDailyPlansBetween(db, { fromDay, toDay }) {
+  const rows = await db
+    .select()
+    .from(dailyPlans)
+    .where(and(fromDay ? gte(dailyPlans.tradeDate, fromDay) : undefined, toDay ? lte(dailyPlans.tradeDate, toDay) : undefined))
+    .orderBy(asc(dailyPlans.tradeDate));
+  return rows.map(pickPlan);
 }
