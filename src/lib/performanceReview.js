@@ -220,17 +220,16 @@ export function trendFacts(trades, entries) {
   const days = [...mistakesByDay.keys()];
   const runs = [];
   for (const mistake of new Set(rows.flatMap((row) => [...row.mistakes]))) {
+    // The run of trading days in a row with the mistake, pushed once it ends.
     let start = null;
-    days.forEach((day, i) => {
-      const tagged = mistakesByDay.get(day).has(mistake);
+    for (let i = 0; i <= days.length; i += 1) {
+      const tagged = i < days.length && mistakesByDay.get(days[i]).has(mistake);
       if (tagged && start === null) start = i;
-      const ended = !tagged || i === days.length - 1;
-      if (start !== null && ended) {
-        const last = tagged ? i : i - 1;
-        if (last > start) runs.push({ mistake, days: last - start + 1, from: days[start], to: days[last] });
+      if (!tagged && start !== null) {
+        if (i - start >= 2) runs.push({ mistake, days: i - start, from: days[start], to: days[i - 1] });
         start = null;
       }
-    });
+    }
   }
   runs.sort((a, b) => b.days - a.days || a.mistake.localeCompare(b.mistake) || a.from.localeCompare(b.from));
 
