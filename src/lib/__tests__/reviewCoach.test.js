@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LOCKOUTS, SIZE_MAX, SIZE_MIN } from '../setups/settings';
+import { LOCKOUTS, SIZE_MAX, SIZE_MIN, TIME_STOP } from '../setups/settings';
 import { REVIEW_SECTIONS, REVIEW_SYSTEM_PROMPT, formatReviewInput, reviewOutputSchema } from '../reviewCoach';
 import { SETUP_RULES } from '../setupRules';
 
@@ -33,6 +33,11 @@ describe('SETUP_RULES', () => {
   it('states the lockout windows and the contract range from the settings, not a copy of them', () => {
     for (const [from, to] of LOCKOUTS) expect(SETUP_RULES).toContain(`${from}-${to}`);
     expect(SETUP_RULES).toContain(`${SIZE_MIN}-${SIZE_MAX} contracts`);
+    expect(SETUP_RULES).toContain(`${TIME_STOP} minutes after entry`);
+  });
+
+  it('gives both ways a four-touch line can have good spacing, so a valid grade A is not flagged', () => {
+    expect(SETUP_RULES).toMatch(/even gaps between the touches, or two touches bunched together/);
   });
 });
 
