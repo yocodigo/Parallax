@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_FLAGGED, WORKING_MIN_TRADES, TREND_MIN_TRADES, breakdowns, byMode, outcomesByTag, ruleAdherence, trendFacts, workingGroups } from '../performanceReview';
+import { MAX_ENTRIES, MAX_FLAGGED, MAX_NOTE, MAX_TRADES, WORKING_MIN_TRADES, buildReviewFacts, TREND_MIN_TRADES, breakdowns, byMode, outcomesByTag, ruleAdherence, trendFacts, workingGroups } from '../performanceReview';
 
 // A closed long option, 1 contract: gross P/L is (exit - entry) * 100. The
 // fill defaults to Monday 2026-04-13, 10:00 New York time.
@@ -508,5 +508,143 @@ describe('workingGroups', () => {
 
     expect(workingGroups(none, entries, names).find((r) => r.kind === 'setup').name).toBe('No strategy');
     expect(workingGroups(gone, entries, names).find((r) => r.kind === 'setup').name).toBe('Unknown strategy');
+  });
+});
+
+describe('buildReviewFacts', () => {
+  const strategies = [{ id: 's1', name: 'Band cross', rules: [{ kind: 'edge', text: 'Cross on 15m' }] }];
+  const range = { label: 'Last 7 days', from: '2026-04-07', to: '2026-04-14' };
+  const plan = {
+    tradeDate: '2026-04-13',
+    ltfDirection: 'bullish',
+    ltfFib50: 101,
+    ltfFib100: 103,
+    htfDirection: null,
+    htfFib50: null,
+    htfFib100: null,
+    notes: 'Wait for the cross.',
+  };
+  const day = (n) => ({
+    openedAt: new Date(`2026-04-${String(n).padStart(2, '0')}T14:00:00Z`),
+    closedAt: new Date(`2026-04-${String(n).padStart(2, '0')}T15:00:00Z`),
+  });
+  const build = (overrides) =>
+    buildReviewFacts({ trades: [], entries: [], dailyPlans: [], strategies, range, ...overrides });
+
+  it('passes the range through and lists the strategies with their rules', () => {
+    const facts = build({});
+
+    expect(facts.range).toEqual(range);
+    expect(facts.strategies).toEqual([{ name: 'Band cross', rules: [{ kind: 'edge', text: 'Cross on 15m' }] }]);
+    expect(facts).toMatchObject({ modes: {}, trades: [], tradesOmitted: 0, journalEntries: [], journalEntriesOmitted: 0, dailyPlans: [] });
+  });
+
+  it('breaks each mode down apart', () => {
+    const facts = build({ trades: [clean(10, { id: 'a', ...day(13) }), clean(-5, { id: 'b', mode: 'backtest', ...day(14) })] });
+
+    expect(Object.keys(facts.modes)).toEqual(['live', 'backtest']);
+    expect(facts.modes.live.overall.netPnl).toBe(10);
+    expect(facts.modes.backtest.overall.netPnl).toBe(-5);
+    expect(Object.keys(facts.modes.live)).toEqual(
+      expect.arrayContaining(['overall', 'bySetup', 'byWeekday', 'byTimeOfDay', 'callsVsPuts', 'outcomes', 'trend', 'adherence', 'working'])
+    );
+  });
+
+  it('lists each trade oldest first with a ref, its setup by name, and New York fill times', () => {
+    const later = clean(-5, { id: 'later', strategyId: null, ...day(14), strike: 600, expiration: '2026-04-14' });
+    const earlier = clean(10, { id: 'earlier', strategyId: 's1', ...day(13), initialStop: 0.8, target: 1.5 });
+
+    const { trades } = build({ trades: [later, earlier] });
+
+    expect(trades.map((t) => t.ref)).toEqual([1, 2]);
+    expect(trades[0]).toMatchObject({
+      ref: 1,
+      mode: 'live',
+      symbol: 'SPY',
+      assetClass: 'option',
+      direction: 'long',
+      optionType: 'call',
+      setup: 'Band cross',
+      quantity: 1,
+      entryPrice: 1,
+      exitPrice: 1.1,
+      stop: 0.8,
+      target: 1.5,
+      exitReason: 'target',
+      filledAt: '2026-04-13 10:00',
+      closedAt: '2026-04-13 11:00',
+      netPnl: 10,
+      r: 0.5,
+    });
+    expect(trades[1]).toMatchObject({ ref: 2, setup: null, strike: 600, expiration: '2026-04-14', r: null });
+  });
+
+  it('keeps the newest MAX_TRADES trades and says how many it left out', () => {
+    const trades = Array.from({ length: MAX_TRADES + 2 }, (_, i) =>
+      clean(1, {
+        id: `t${i}`,
+        openedAt: new Date(Date.UTC(2026, 0, 1, 14) + i * 86_400_000),
+        closedAt: new Date(Date.UTC(2026, 0, 1, 15) + i * 86_400_000),
+      })
+    );
+
+    const facts = build({ trades });
+
+    expect(facts.trades).toHaveLength(MAX_TRADES);
+    expect(facts.tradesOmitted).toBe(2);
+    // The figures still cover every trade.
+    expect(facts.modes.live.overall.trades).toBe(MAX_TRADES + 2);
+  });
+
+  it('links each journal entry to its trade by ref, dropping the entries of trades it left out', () => {
+    const trades = Array.from({ length: MAX_TRADES + 1 }, (_, i) =>
+      clean(1, {
+        id: `t${i}`,
+        openedAt: new Date(Date.UTC(2026, 0, 1, 14) + i * 86_400_000),
+        closedAt: new Date(Date.UTC(2026, 0, 1, 15) + i * 86_400_000),
+      })
+    );
+    const entries = [
+      { tradeId: 't0', kind: 'review', emotion: 'fomo', mistakes: [], emotionalControl: 4, notes: 'Oldest, left out.', createdAt: new Date('2026-01-01T22:00:00Z') },
+      { tradeId: `t${MAX_TRADES}`, kind: 'review', emotion: 'calm', mistakes: ['oversized'], emotionalControl: 8, notes: 'Newest.', createdAt: new Date('2026-04-13T22:00:00Z') },
+      { tradeId: null, kind: 'thesis', symbol: 'SPY', emotion: null, mistakes: [], emotionalControl: null, notes: 'No trade.', createdAt: new Date('2026-04-12T22:00:00Z') },
+    ];
+
+    const { journalEntries } = build({ trades, entries });
+
+    expect(journalEntries).toEqual([
+      { ref: null, date: '2026-04-12', kind: 'thesis', symbol: 'SPY', emotion: null, mistakes: [], emotionalControl: null, notes: 'No trade.' },
+      { ref: MAX_TRADES, date: '2026-04-13', kind: 'review', symbol: null, emotion: 'calm', mistakes: ['oversized'], emotionalControl: 8, notes: 'Newest.' },
+    ]);
+  });
+
+  it('caps the entries at the newest MAX_ENTRIES, and shortens a long note', () => {
+    const entries = Array.from({ length: MAX_ENTRIES + 1 }, (_, i) => ({
+      tradeId: null,
+      kind: 'thesis',
+      symbol: 'SPY',
+      emotion: null,
+      mistakes: [],
+      emotionalControl: null,
+      notes: i === MAX_ENTRIES ? 'x'.repeat(MAX_NOTE + 50) : 'n',
+      createdAt: new Date(Date.UTC(2026, 0, 1, 12) + i * 3_600_000),
+    }));
+
+    const facts = build({ entries });
+
+    expect(facts.journalEntries).toHaveLength(MAX_ENTRIES);
+    expect(facts.journalEntriesOmitted).toBe(1);
+    expect(facts.journalEntries.at(-1).notes).toBe(`${'x'.repeat(MAX_NOTE)}…`);
+  });
+
+  it('lists the daily plans of the days that have a trade', () => {
+    const facts = build({
+      trades: [clean(10, { id: 'a', ...day(13) })],
+      dailyPlans: [plan, { ...plan, tradeDate: '2026-04-09' }],
+    });
+
+    expect(facts.dailyPlans).toEqual([
+      { date: '2026-04-13', lowerTimeframe: { direction: 'bullish', fib50: 101, fib100: 103 }, higherTimeframe: null, notes: 'Wait for the cross.' },
+    ]);
   });
 });

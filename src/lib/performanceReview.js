@@ -2,7 +2,7 @@ import { adherence, exitGate, planGate, stopHeldGate } from './adherence';
 import { MODES, bySetup, callsVsPuts, summarize, timeOfDay } from './performance';
 import { MISSED, sizeGate, windowGate } from './setups/gates';
 import { nyDay } from './setups/session';
-import { profitLoss } from './tradeMetrics';
+import { profitLoss, rMultiple } from './tradeMetrics';
 
 // The Performance Review's facts: the aggregate figures the coach reads
 // alongside the raw trades, worked out here so it quotes them rather than
@@ -338,4 +338,116 @@ export function workingGroups(trades, entries, strategyNames) {
     }
   }
   return rows.sort((a, b) => b.netPnl - a.netPnl);
+}
+
+// Most of the newest trades and journal entries listed raw, and the longest a
+// note is kept: the figures in `modes` always cover every trade, the lists only
+// give the coach dates and examples to quote.
+export const MAX_TRADES = 300;
+export const MAX_ENTRIES = 300;
+export const MAX_NOTE = 1500;
+
+const nyClock = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/New_York',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+});
+
+// "2026-04-13 10:00", in New York time.
+function nyDateTime(date) {
+  const parts = Object.fromEntries(nyClock.formatToParts(new Date(date)).map(({ type, value }) => [type, value]));
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}`;
+}
+
+const fibOf = (direction, fib50, fib100) => (direction ? { direction, fib50, fib100 } : null);
+
+// Everything the Performance Review's coach reads, as one object (reviewCoach.js
+// describes it): `modes` has the figures for each mode apart; the rest is raw
+// material to quote.
+// - `trades`: closed trades in range, each with the plan facts of ruleAdherence;
+// - `entries`: journal entries with a `tradeId` or none (those of the range);
+// - `dailyPlans`: rows of the daily_plans table; `strategies` with their rules;
+// - `range`: { label, from, to }, passed through.
+export function buildReviewFacts({ trades, entries, dailyPlans, strategies, range }) {
+  const strategyNames = new Map(strategies.map(({ id, name }) => [id, name]));
+
+  const modes = {};
+  for (const [mode, inMode] of Object.entries(byMode(trades, strategyNames))) {
+    const ofMode = trades.filter((trade) => trade.mode === mode);
+    modes[mode] = {
+      ...inMode,
+      outcomes: outcomesByTag(ofMode, entries),
+      trend: trendFacts(ofMode, entries),
+      adherence: ruleAdherence(ofMode),
+      working: workingGroups(ofMode, entries, strategyNames),
+    };
+  }
+
+  const closed = trades
+    .filter((trade) => profitLoss(trade) !== null && trade.openedAt)
+    .sort((a, b) => new Date(a.openedAt) - new Date(b.openedAt));
+  const kept = closed.slice(-MAX_TRADES);
+  const refs = new Map(kept.map((trade, i) => [trade.id, i + 1]));
+  const roundR = (r) => (r === null ? null : Math.round(r * 100) / 100);
+
+  const listed = entries
+    .filter((entry) => !entry.tradeId || refs.has(entry.tradeId))
+    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  const keptEntries = listed.slice(-MAX_ENTRIES);
+
+  const days = new Set(kept.map((trade) => nyDay(new Date(trade.openedAt))));
+
+  return {
+    range,
+    modes,
+    trades: kept.map((trade) => ({
+      ref: refs.get(trade.id),
+      mode: trade.mode,
+      symbol: trade.symbol,
+      assetClass: trade.assetClass,
+      direction: trade.direction,
+      optionType: trade.optionType ?? null,
+      strike: trade.strike ?? null,
+      expiration: trade.expiration ?? null,
+      quantity: trade.quantity,
+      setup: trade.strategyId ? (strategyNames.get(trade.strategyId) ?? null) : null,
+      stopRule: trade.stopRule ?? null,
+      plannedEntry: trade.plannedEntry ?? null,
+      entryPrice: trade.entryPrice,
+      exitPrice: trade.exitPrice,
+      stop: trade.initialStop ?? null,
+      target: trade.target ?? null,
+      exitReason: trade.exitReason ?? null,
+      filledAt: nyDateTime(trade.openedAt),
+      closedAt: nyDateTime(trade.closedAt),
+      netPnl: roundToCents(profitLoss(trade)),
+      r: roundR(rMultiple(trade)),
+    })),
+    tradesOmitted: closed.length - kept.length,
+    journalEntries: keptEntries.map((entry) => ({
+      ref: entry.tradeId ? refs.get(entry.tradeId) : null,
+      date: nyDay(new Date(entry.createdAt)),
+      kind: entry.kind,
+      symbol: entry.symbol ?? null,
+      emotion: entry.emotion ?? null,
+      mistakes: entry.mistakes ?? [],
+      emotionalControl: entry.emotionalControl ?? null,
+      notes: entry.notes.length > MAX_NOTE ? `${entry.notes.slice(0, MAX_NOTE)}…` : entry.notes,
+    })),
+    journalEntriesOmitted: listed.length - keptEntries.length,
+    dailyPlans: dailyPlans
+      .filter((plan) => days.has(plan.tradeDate))
+      .sort((a, b) => a.tradeDate.localeCompare(b.tradeDate))
+      .map((plan) => ({
+        date: plan.tradeDate,
+        lowerTimeframe: fibOf(plan.ltfDirection, plan.ltfFib50, plan.ltfFib100),
+        higherTimeframe: fibOf(plan.htfDirection, plan.htfFib50, plan.htfFib100),
+        notes: plan.notes ?? null,
+      })),
+    strategies: strategies.map(({ name, rules }) => ({ name, rules: rules.map(({ kind, text }) => ({ kind, text })) })),
+  };
 }
