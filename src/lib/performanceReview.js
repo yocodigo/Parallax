@@ -64,3 +64,85 @@ export function byMode(trades, strategyNames) {
   }
   return modes;
 }
+
+const countOf = (map, key) => map.set(key, (map.get(key) ?? 0) + 1);
+const mostFrequent = (a, b) => b.trades - a.trades || a.netPnl - b.netPnl;
+
+// Each of the trade's journal entries' tags, once per trade, with the trade's
+// 1-10 emotional-control ratings (reviews only) averaged.
+function tagsOf(entries) {
+  const mistakes = new Set(entries.flatMap((entry) => entry.mistakes ?? []));
+  const emotions = new Set(entries.map((entry) => entry.emotion).filter(Boolean));
+  const ratings = entries.map((entry) => entry.emotionalControl).filter(Boolean);
+  return {
+    mistakes,
+    emotions,
+    reviewed: entries.some((entry) => entry.kind === 'review'),
+    control: ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null,
+  };
+}
+
+const CONTROL_BANDS = [
+  { band: 'low (1-3)', max: 3 },
+  { band: 'middle (4-6)', max: 6 },
+  { band: 'high (7-10)', max: 10 },
+];
+const bandOf = (control) => CONTROL_BANDS.find(({ max }) => Math.round(control) <= max).band;
+
+// How the trader's own tags line up with results: each mistake, each emotion
+// (with the mistakes that came with it), and the emotional-control rating, all
+// over closed trades. A trade counts once per tag however many of its entries
+// carry it. Mistakes are compared with the trades that were reviewed and had
+// none tagged; trades with no review at all are counted apart, since an
+// untagged trade there says nothing. `entries` are journal entries with a
+// `tradeId`; `trades` need an `id`.
+export function outcomesByTag(trades, entries) {
+  const counted = trades.filter((trade) => profitLoss(trade) !== null);
+  const tagged = counted.map((trade) => ({
+    trade,
+    ...tagsOf(entries.filter((entry) => entry.tradeId === trade.id)),
+  }));
+  const rowOf = (list) => compact(summarize(list.map(({ trade }) => trade)));
+
+  const group = (keysOf) => {
+    const groups = new Map();
+    for (const row of tagged) for (const key of keysOf(row)) groups.set(key, [...(groups.get(key) ?? []), row]);
+    return groups;
+  };
+
+  const mistakes = [...group((row) => row.mistakes)]
+    .map(([mistake, list]) => ({ mistake, ...rowOf(list) }))
+    .sort(mostFrequent);
+
+  const emotions = [...group((row) => row.emotions)]
+    .map(([emotion, list]) => {
+      const withMistakes = list.filter((row) => row.mistakes.size > 0);
+      const counts = new Map();
+      for (const row of withMistakes) for (const mistake of row.mistakes) countOf(counts, mistake);
+      return {
+        emotion,
+        ...rowOf(list),
+        tradesWithMistakes: withMistakes.length,
+        mistakes: [...counts]
+          .map(([mistake, trades]) => ({ mistake, trades }))
+          .sort((a, b) => b.trades - a.trades || a.mistake.localeCompare(b.mistake)),
+      };
+    })
+    .sort(mostFrequent);
+
+  const rated = group((row) => (row.control === null ? [] : [bandOf(row.control)]));
+  const emotionalControl = CONTROL_BANDS.filter(({ band }) => rated.has(band)).map(({ band }) => ({
+    band,
+    ...rowOf(rated.get(band)),
+    tradesWithMistakes: rated.get(band).filter((row) => row.mistakes.size > 0).length,
+  }));
+
+  const clean = tagged.filter((row) => row.reviewed && row.mistakes.size === 0);
+  return {
+    mistakes,
+    noMistakes: clean.length ? rowOf(clean) : null,
+    unreviewed: tagged.filter((row) => !row.reviewed).length,
+    emotions,
+    emotionalControl,
+  };
+}

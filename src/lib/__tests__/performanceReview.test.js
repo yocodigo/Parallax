@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { breakdowns, byMode } from '../performanceReview';
+import { breakdowns, byMode, outcomesByTag } from '../performanceReview';
 
 // A closed long option, 1 contract: gross P/L is (exit - entry) * 100. The
 // fill defaults to Monday 2026-04-13, 10:00 New York time.
@@ -139,5 +139,73 @@ describe('byMode', () => {
     expect(Object.keys(modes)).toEqual(['live', 'backtest']);
     expect(modes.live.overall.netPnl).toBe(2);
     expect(modes.backtest.overall.netPnl).toBe(10);
+  });
+});
+
+describe('outcomesByTag', () => {
+  const t = (id, gross) => option(gross, { id });
+  const review = (tradeId, overrides) => ({ tradeId, kind: 'review', emotion: null, mistakes: [], emotionalControl: null, ...overrides });
+  const trades = [t('a', -30), t('b', -10), t('c', 20), t('d', 15), t('e', 5)];
+  const entries = [
+    review('a', { mistakes: ['revenge_trade', 'oversized'], emotion: 'frustrated', emotionalControl: 2 }),
+    review('b', { mistakes: ['revenge_trade'], emotion: 'frustrated', emotionalControl: 3 }),
+    // A plan entry's emotion counts, and a mistake on two of a trade's entries counts once.
+    { tradeId: 'b', kind: 'plan', emotion: 'fomo', mistakes: ['revenge_trade'], emotionalControl: null },
+    review('c', { emotion: 'calm', emotionalControl: 8 }),
+    review('d', { emotion: 'calm', emotionalControl: 7 }),
+    // 'e' has no review at all.
+  ];
+  const outcomes = outcomesByTag(trades, entries);
+
+  it('totals each mistake over the trades tagged with it, once per trade, most frequent first', () => {
+    expect(outcomes.mistakes).toEqual([
+      { mistake: 'revenge_trade', trades: 2, wins: 0, losses: 2, scratches: 0, winRatePct: 0, netPnl: -40, avgNetPnl: -20 },
+      { mistake: 'oversized', trades: 1, wins: 0, losses: 1, scratches: 0, winRatePct: 0, netPnl: -30, avgNetPnl: -30 },
+    ]);
+  });
+
+  it('compares with the reviewed trades that had no mistake, and counts the ones never reviewed', () => {
+    expect(outcomes.noMistakes).toMatchObject({ trades: 2, netPnl: 35, avgNetPnl: 17.5 });
+    expect(outcomes.unreviewed).toBe(1);
+  });
+
+  it('totals each emotion, with how many of its trades carried a mistake and which', () => {
+    expect(outcomes.emotions).toEqual([
+      {
+        emotion: 'frustrated',
+        trades: 2,
+        wins: 0,
+        losses: 2,
+        scratches: 0,
+        winRatePct: 0,
+        netPnl: -40,
+        avgNetPnl: -20,
+        tradesWithMistakes: 2,
+        mistakes: [
+          { mistake: 'revenge_trade', trades: 2 },
+          { mistake: 'oversized', trades: 1 },
+        ],
+      },
+      { emotion: 'calm', trades: 2, wins: 2, losses: 0, scratches: 0, winRatePct: 100, netPnl: 35, avgNetPnl: 17.5, tradesWithMistakes: 0, mistakes: [] },
+      { emotion: 'fomo', trades: 1, wins: 0, losses: 1, scratches: 0, winRatePct: 0, netPnl: -10, avgNetPnl: -10, tradesWithMistakes: 1, mistakes: [{ mistake: 'revenge_trade', trades: 1 }] },
+    ]);
+  });
+
+  it('groups trades by the emotional control rated on their reviews, low to high', () => {
+    expect(outcomes.emotionalControl).toEqual([
+      { band: 'low (1-3)', trades: 2, wins: 0, losses: 2, scratches: 0, winRatePct: 0, netPnl: -40, avgNetPnl: -20, tradesWithMistakes: 2 },
+      { band: 'high (7-10)', trades: 2, wins: 2, losses: 0, scratches: 0, winRatePct: 100, netPnl: 35, avgNetPnl: 17.5, tradesWithMistakes: 0 },
+    ]);
+  });
+
+  it('averages a trade’s ratings before banding it', () => {
+    const rated = outcomesByTag([t('a', 10)], [review('a', { emotionalControl: 3 }), review('a', { emotionalControl: 6 })]);
+
+    // 4.5 is in the middle band.
+    expect(rated.emotionalControl.map((r) => r.band)).toEqual(['middle (4-6)']);
+  });
+
+  it('is empty when nothing was tagged', () => {
+    expect(outcomesByTag([t('a', 10)], [])).toEqual({ mistakes: [], noMistakes: null, unreviewed: 1, emotions: [], emotionalControl: [] });
   });
 });
