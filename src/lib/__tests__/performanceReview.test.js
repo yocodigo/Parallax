@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { breakdowns, byMode, outcomesByTag } from '../performanceReview';
+import { TREND_MIN_TRADES, breakdowns, byMode, outcomesByTag, trendFacts } from '../performanceReview';
 
 // A closed long option, 1 contract: gross P/L is (exit - entry) * 100. The
 // fill defaults to Monday 2026-04-13, 10:00 New York time.
@@ -239,5 +239,102 @@ describe('outcomesByTag', () => {
 
   it('is empty when nothing was tagged', () => {
     expect(outcomesByTag([t('a', 10)], [])).toEqual({ mistakes: [], noMistakes: null, unreviewed: 1, emotions: [], emotionalControl: [] });
+  });
+});
+
+describe('trendFacts', () => {
+  // A trade filled on 2026-04-<day> at 10:00 New York time.
+  const onDay = (day, gross, id) =>
+    option(gross, {
+      id,
+      openedAt: new Date(`2026-04-${day}T14:00:00Z`),
+      closedAt: new Date(`2026-04-${day}T15:00:00Z`),
+    });
+  const review = (tradeId, overrides) => ({ tradeId, kind: 'review', emotion: null, mistakes: [], emotionalControl: null, ...overrides });
+
+  describe('mistakeRuns', () => {
+    // Trading days 13, 14, 15, 16, 17.
+    const days = ['13', '14', '15', '16', '17'];
+    const trades = days.map((day) => onDay(day, 10, `t${day}`));
+    const tag = (day, mistakes) => review(`t${day}`, { mistakes });
+
+    it('reports a mistake tagged on two or more trading days in a row, each run apart, longest first', () => {
+      const entries = [
+        tag('13', ['oversized']),
+        tag('14', ['oversized', 'moved_stop']),
+        tag('15', ['moved_stop']),
+        tag('16', ['oversized']),
+        tag('17', ['oversized']),
+      ];
+
+      expect(trendFacts(trades, entries).mistakeRuns).toEqual([
+        { mistake: 'moved_stop', days: 2, from: '2026-04-14', to: '2026-04-15' },
+        { mistake: 'oversized', days: 2, from: '2026-04-13', to: '2026-04-14' },
+        { mistake: 'oversized', days: 2, from: '2026-04-16', to: '2026-04-17' },
+      ]);
+    });
+
+    it('does not report a mistake seen on one day only, and counts a weekend as no gap', () => {
+      // Friday the 17th and Monday the 20th are consecutive trading days.
+      const friday = onDay('17', 10, 'fri');
+      const monday = onDay('20', 10, 'mon');
+      const entries = [review('fri', { mistakes: ['oversized'] }), review('mon', { mistakes: ['oversized'] }), tag('13', ['moved_stop'])];
+
+      const runs = trendFacts([...trades.slice(0, 1), friday, monday], entries).mistakeRuns;
+
+      expect(runs).toEqual([{ mistake: 'oversized', days: 2, from: '2026-04-17', to: '2026-04-20' }]);
+    });
+
+    it('counts a day once however many of its trades carry the mistake', () => {
+      const second = onDay('13', -5, 'second');
+      const entries = [tag('13', ['oversized']), review('second', { mistakes: ['oversized'] })];
+
+      expect(trendFacts([...trades.slice(0, 1), second], entries).mistakeRuns).toEqual([]);
+    });
+  });
+
+  describe('weeks', () => {
+    it('gives each New York week, Monday first, oldest first, with its results and tags', () => {
+      const trades = [onDay('13', 20, 'a'), onDay('15', -10, 'b'), onDay('21', 30, 'c')];
+      const entries = [
+        review('a', { emotionalControl: 8 }),
+        review('b', { mistakes: ['oversized', 'moved_stop'], emotionalControl: 4 }),
+        review('c', { emotionalControl: 7 }),
+      ];
+
+      expect(trendFacts(trades, entries).weeks).toEqual([
+        { week: '2026-04-13', trades: 2, wins: 1, losses: 1, scratches: 0, winRatePct: 50, netPnl: 10, avgNetPnl: 5, mistakesPerTrade: 1, avgControl: 6 },
+        { week: '2026-04-20', trades: 1, wins: 1, losses: 0, scratches: 0, winRatePct: 100, netPnl: 30, avgNetPnl: 30, mistakesPerTrade: 0, avgControl: 7 },
+      ]);
+    });
+
+    it('has no average control for a week with no rating', () => {
+      expect(trendFacts([onDay('13', 5, 'a')], []).weeks[0].avgControl).toBeNull();
+    });
+  });
+
+  describe('trend', () => {
+    // Ten trades on ten trading days: the first five lose with a mistake, the last five win clean.
+    const days = ['01', '02', '03', '06', '07', '08', '09', '10', '13', '14'];
+    const trades = days.map((day, i) => onDay(day, i < 5 ? -10 : 10, `t${i}`));
+    const entries = trades.slice(0, 5).map((trade) => review(trade.id, { mistakes: ['oversized'] }));
+
+    it('compares the first half of the trades with the second', () => {
+      const { trend } = trendFacts(trades, entries);
+
+      expect(trend.first).toMatchObject({ from: '2026-04-01', to: '2026-04-07', trades: 5, netPnl: -50, winRatePct: 0, mistakesPerTrade: 1 });
+      expect(trend.second).toMatchObject({ from: '2026-04-08', to: '2026-04-14', trades: 5, netPnl: 50, winRatePct: 100, mistakesPerTrade: 0 });
+    });
+
+    it('gives the odd trade to the first half', () => {
+      const { trend } = trendFacts([...trades, onDay('15', 1, 'extra')], entries);
+
+      expect([trend.first.trades, trend.second.trades]).toEqual([6, 5]);
+    });
+
+    it('says nothing below the minimum number of trades', () => {
+      expect(TREND_MIN_TRADES).toBe(10);
+      expect(trendFacts(trades.slice(0, 9), entries).trend).toBeNull();
+    });
   });
 });

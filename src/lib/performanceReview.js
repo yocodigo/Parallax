@@ -1,4 +1,5 @@
 import { MODES, bySetup, callsVsPuts, summarize, timeOfDay } from './performance';
+import { nyDay } from './setups/session';
 import { profitLoss } from './tradeMetrics';
 
 // The Performance Review's facts: the aggregate figures the coach reads
@@ -152,5 +153,93 @@ export function outcomesByTag(trades, entries) {
     unreviewed: tagged.filter((row) => !row.reviewed).length,
     emotions,
     emotionalControl,
+  };
+}
+
+// Fewest trades for a first-half against second-half comparison to mean anything.
+export const TREND_MIN_TRADES = 10;
+
+const average = (numbers, places) => {
+  if (numbers.length === 0) return null;
+  const factor = 10 ** places;
+  return Math.round((numbers.reduce((a, b) => a + b, 0) / numbers.length) * factor) / factor;
+};
+
+// The Monday of the week a 'YYYY-MM-DD' New York date falls in.
+function mondayOf(day) {
+  const [year, month, date] = day.split('-').map(Number);
+  const monday = new Date(Date.UTC(year, month - 1, date));
+  monday.setUTCDate(date - ((monday.getUTCDay() + 6) % 7));
+  return monday.toISOString().slice(0, 10);
+}
+
+// A group of trades (with their tags) as results plus how many mistakes they
+// carried per trade and the average emotional control they were rated.
+function trendRow(rows) {
+  const mistakeCount = rows.reduce((total, row) => total + row.mistakes.size, 0);
+  return {
+    ...compact(summarize(rows.map(({ trade }) => trade))),
+    mistakesPerTrade: Math.round((mistakeCount / rows.length) * 100) / 100,
+    avgControl: average(
+      rows.map((row) => row.control).filter((control) => control !== null),
+      1
+    ),
+  };
+}
+
+// Whether the trader repeats a mistake and whether they are improving, over
+// closed trades, by the New York day of the fill:
+// - `mistakeRuns`: a mistake tagged on two or more trading days in a row (days
+//   they traded, so a weekend or a day off is no gap), each run apart, longest first;
+// - `weeks`: each New York week (named by its Monday), oldest first;
+// - `trend`: the first half of the trades against the second (the odd trade in
+//   the first), null below TREND_MIN_TRADES.
+// `entries` are journal entries with a `tradeId`; `trades` need an `id`.
+export function trendFacts(trades, entries) {
+  const rows = trades
+    .filter((trade) => profitLoss(trade) !== null && trade.openedAt)
+    .sort((a, b) => new Date(a.openedAt) - new Date(b.openedAt))
+    .map((trade) => ({
+      trade,
+      day: nyDay(new Date(trade.openedAt)),
+      ...tagsOf(entries.filter((entry) => entry.tradeId === trade.id)),
+    }));
+
+  const mistakesByDay = new Map();
+  for (const row of rows) {
+    const seen = mistakesByDay.get(row.day) ?? new Set();
+    for (const mistake of row.mistakes) seen.add(mistake);
+    mistakesByDay.set(row.day, seen);
+  }
+  const days = [...mistakesByDay.keys()];
+  const runs = [];
+  for (const mistake of new Set(rows.flatMap((row) => [...row.mistakes]))) {
+    let start = null;
+    days.forEach((day, i) => {
+      const tagged = mistakesByDay.get(day).has(mistake);
+      if (tagged && start === null) start = i;
+      const ended = !tagged || i === days.length - 1;
+      if (start !== null && ended) {
+        const last = tagged ? i : i - 1;
+        if (last > start) runs.push({ mistake, days: last - start + 1, from: days[start], to: days[last] });
+        start = null;
+      }
+    });
+  }
+  runs.sort((a, b) => b.days - a.days || a.mistake.localeCompare(b.mistake) || a.from.localeCompare(b.from));
+
+  const byWeek = new Map();
+  for (const row of rows) {
+    const week = mondayOf(row.day);
+    if (!byWeek.has(week)) byWeek.set(week, []);
+    byWeek.get(week).push(row);
+  }
+
+  const half = Math.ceil(rows.length / 2);
+  const span = (list) => ({ from: list[0].day, to: list[list.length - 1].day, ...trendRow(list) });
+  return {
+    mistakeRuns: runs,
+    weeks: [...byWeek].map(([week, list]) => ({ week, ...trendRow(list) })),
+    trend: rows.length < TREND_MIN_TRADES ? null : { first: span(rows.slice(0, half)), second: span(rows.slice(half)) },
   };
 }
