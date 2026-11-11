@@ -576,7 +576,30 @@ describe('buildReviewFacts', () => {
       netPnl: 10,
       r: 0.5,
     });
-    expect(trades[1]).toMatchObject({ ref: 2, setup: null, strike: 600, expiration: '2026-04-14', r: null });
+    expect(trades[1]).toMatchObject({ ref: 2, setup: 'No strategy', strike: 600, expiration: '2026-04-14', r: null });
+  });
+
+  it('calls a trade’s setup the same thing as the figures do', () => {
+    const none = clean(5, { id: 'n', strategyId: null, ...day(13) });
+    const gone = clean(5, { id: 'g', strategyId: 'deleted', ...day(14) });
+
+    expect(build({ trades: [none, gone] }).trades.map((t) => t.setup)).toEqual(['No strategy', 'Unknown strategy']);
+  });
+
+  it('gives the stop rule and planned entry, leaves out an open trade, and shows a winter fill in standard time', () => {
+    const winter = clean(5, {
+      id: 'w',
+      stopRule: 'S2',
+      plannedEntry: 0.95,
+      openedAt: new Date('2026-01-05T15:00:00Z'),
+      closedAt: new Date('2026-01-05T16:00:00Z'),
+    });
+    const open = clean(5, { id: 'o', ...day(14), exitPrice: null, closedAt: null });
+
+    const { trades } = build({ trades: [winter, open] });
+
+    expect(trades).toHaveLength(1);
+    expect(trades[0]).toMatchObject({ stopRule: 'S2', plannedEntry: 0.95, filledAt: '2026-01-05 10:00', closedAt: '2026-01-05 11:00' });
   });
 
   it('keeps the newest MAX_TRADES trades and says how many it left out', () => {
@@ -612,6 +635,7 @@ describe('buildReviewFacts', () => {
 
     const { journalEntries } = build({ trades, entries });
 
+    expect(build({ trades, entries }).journalEntriesOmitted).toBe(1);
     expect(journalEntries).toEqual([
       { ref: null, date: '2026-04-12', kind: 'thesis', symbol: 'SPY', emotion: null, mistakes: [], emotionalControl: null, notes: 'No trade.' },
       { ref: MAX_TRADES, date: '2026-04-13', kind: 'review', symbol: null, emotion: 'calm', mistakes: ['oversized'], emotionalControl: 8, notes: 'Newest.' },
@@ -635,6 +659,14 @@ describe('buildReviewFacts', () => {
     expect(facts.journalEntries).toHaveLength(MAX_ENTRIES);
     expect(facts.journalEntriesOmitted).toBe(1);
     expect(facts.journalEntries.at(-1).notes).toBe(`${'x'.repeat(MAX_NOTE)}…`);
+  });
+
+  it('gives the higher-timeframe fib when the day has one', () => {
+    const withHtf = { ...plan, htfDirection: 'bearish', htfFib50: 98, htfFib100: 95 };
+
+    const { dailyPlans } = build({ trades: [clean(10, { id: 'a', ...day(13) })], dailyPlans: [withHtf] });
+
+    expect(dailyPlans[0].higherTimeframe).toEqual({ direction: 'bearish', fib50: 98, fib100: 95 });
   });
 
   it('lists the daily plans of the days that have a trade', () => {

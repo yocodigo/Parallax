@@ -26,11 +26,11 @@ export const REVIEW_SYSTEM_PROMPT = `You are a trading performance coach. Analyz
 You get, inside <review_input> tags, one JSON object:
 - range: the dates the review covers.
 - modes: for each of live, paper, and backtest that has trades, figures worked out by the app: overall results; results by setup, weekday, half hour of entry, and call or put; each tagged mistake and each emotion against results; results by emotional-control rating; mistakes that repeated on consecutive trading days; weekly results and a first-half against second-half trend; rule-adherence checks with the trades that missed them; and the setups and conditions that are working. Win rates are percentages and P/L is in dollars, net of fees.
-- trades: the individual trades (newest last), each with a ref number, its setup, contract, prices, stop, target, fill times in New York time, and result. Options usually have no stop, so they have no R.
+- trades: the individual trades (newest last, at most the newest 300), each with a ref number, its setup, contract, prices, stop, target, fill times in New York time, and result. Options usually have no stop, so they have no R.
 - journalEntries: the trader's own entries, linked to a trade by its ref: emotion, mistakes, emotional control (1-10, reviews only), and notes.
-- dailyPlans: each day's recorded fib levels and notes.
+- dailyPlans: the recorded fib levels and notes of each day that has a trade listed.
 - strategies: the trader's own strategies and their rules.
-If trades or journalEntries say some were left out, only the newest are listed; the figures in modes still cover all of them.
+When tradesOmitted or journalEntriesOmitted is above zero, that many older trades or journal entries are not listed; the figures in modes still cover every trade.
 
 The trader's setups and rules, which you judge trades against:
 

@@ -11,6 +11,12 @@ import { profitLoss, rMultiple } from './tradeMetrics';
 
 // Dollars rounded to the nearest cent.
 const roundToCents = (dollars) => (dollars === null ? null : Math.round(dollars * 100) / 100);
+const roundR = (r) => (r === null ? null : Math.round(r * 100) / 100);
+
+// What a trade's setup is called: its strategy's name, 'No strategy' when it
+// had none, 'Unknown strategy' when the strategy has since been deleted.
+const setupName = (strategyId, strategyNames) =>
+  strategyId ? (strategyNames.get(strategyId) ?? 'Unknown strategy') : 'No strategy';
 
 // The few figures of a `summarize` result worth sending, with the win rate as
 // a percentage to one decimal. P/L is net of fees.
@@ -49,7 +55,7 @@ export function breakdowns(trades, strategyNames) {
   return {
     overall: compact(summarize(trades)),
     bySetup: bySetup(trades).map(({ strategyId, ...summary }) => ({
-      setup: strategyId === null ? 'No strategy' : (strategyNames.get(strategyId) ?? 'Unknown strategy'),
+      setup: setupName(strategyId, strategyNames),
       ...compact(summary),
     })),
     byWeekday: byWeekday(trades),
@@ -307,7 +313,7 @@ const percent = (part, whole) => (whole ? Math.round((part / whole) * 1000) / 10
 export function workingGroups(trades, entries, strategyNames) {
   const counted = trades.filter((trade) => profitLoss(trade) !== null);
   const kinds = [
-    ['setup', (trade) => (trade.strategyId ? (strategyNames.get(trade.strategyId) ?? 'Unknown strategy') : 'No strategy')],
+    ['setup', (trade) => setupName(trade.strategyId, strategyNames)],
     ['weekday', (trade) => (trade.openedAt ? weekdayName.format(new Date(trade.openedAt)) : null)],
     ['call or put', (trade) => trade.optionType ?? null],
   ];
@@ -363,13 +369,15 @@ function nyDateTime(date) {
   return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}`;
 }
 
+// A day's fib for one timeframe, null when the day has none for it.
 const fibOf = (direction, fib50, fib100) => (direction ? { direction, fib50, fib100 } : null);
 
 // Everything the Performance Review's coach reads, as one object (reviewCoach.js
 // describes it): `modes` has the figures for each mode apart; the rest is raw
 // material to quote.
 // - `trades`: closed trades in range, each with the plan facts of ruleAdherence;
-// - `entries`: journal entries with a `tradeId` or none (those of the range);
+// - `entries`: journal entries with a `tradeId` or none, already limited to the
+//   range by the caller; those of a trade not listed are left out;
 // - `dailyPlans`: rows of the daily_plans table; `strategies` with their rules;
 // - `range`: { label, from, to }, passed through.
 export function buildReviewFacts({ trades, entries, dailyPlans, strategies, range }) {
@@ -392,8 +400,7 @@ export function buildReviewFacts({ trades, entries, dailyPlans, strategies, rang
     .sort((a, b) => new Date(a.openedAt) - new Date(b.openedAt));
   const kept = closed.slice(-MAX_TRADES);
   const refs = new Map(kept.map((trade, i) => [trade.id, i + 1]));
-  const roundR = (r) => (r === null ? null : Math.round(r * 100) / 100);
-
+  
   const listed = entries
     .filter((entry) => !entry.tradeId || refs.has(entry.tradeId))
     .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
@@ -414,7 +421,7 @@ export function buildReviewFacts({ trades, entries, dailyPlans, strategies, rang
       strike: trade.strike ?? null,
       expiration: trade.expiration ?? null,
       quantity: trade.quantity,
-      setup: trade.strategyId ? (strategyNames.get(trade.strategyId) ?? null) : null,
+      setup: setupName(trade.strategyId, strategyNames),
       stopRule: trade.stopRule ?? null,
       plannedEntry: trade.plannedEntry ?? null,
       entryPrice: trade.entryPrice,
@@ -438,7 +445,8 @@ export function buildReviewFacts({ trades, entries, dailyPlans, strategies, rang
       emotionalControl: entry.emotionalControl ?? null,
       notes: entry.notes.length > MAX_NOTE ? `${entry.notes.slice(0, MAX_NOTE)}…` : entry.notes,
     })),
-    journalEntriesOmitted: listed.length - keptEntries.length,
+    // Every entry given but not listed: past the cap, or of a trade left out.
+    journalEntriesOmitted: entries.length - keptEntries.length,
     dailyPlans: dailyPlans
       .filter((plan) => days.has(plan.tradeDate))
       .sort((a, b) => a.tradeDate.localeCompare(b.tradeDate))
