@@ -167,6 +167,7 @@ const average = (numbers, places) => {
 
 // The Monday of the week a 'YYYY-MM-DD' New York date falls in.
 function mondayOf(day) {
+  // getUTCDay() counts Sunday as 0; this is days since Monday, Monday being 0.
   const [year, month, date] = day.split('-').map(Number);
   const monday = new Date(Date.UTC(year, month - 1, date));
   monday.setUTCDate(date - ((monday.getUTCDay() + 6) % 7));
@@ -174,12 +175,16 @@ function mondayOf(day) {
 }
 
 // A group of trades (with their tags) as results plus how many mistakes they
-// carried per trade and the average emotional control they were rated.
+// carried per reviewed trade (a trade never reviewed says nothing about
+// mistakes, so it is left out of the rate and `reviewedTrades` says how many
+// there were; null when none was) and the average emotional control rated.
 function trendRow(rows) {
-  const mistakeCount = rows.reduce((total, row) => total + row.mistakes.size, 0);
+  const reviewed = rows.filter((row) => row.reviewed);
+  const mistakeCount = reviewed.reduce((total, row) => total + row.mistakes.size, 0);
   return {
     ...compact(summarize(rows.map(({ trade }) => trade))),
-    mistakesPerTrade: Math.round((mistakeCount / rows.length) * 100) / 100,
+    reviewedTrades: reviewed.length,
+    mistakesPerTrade: reviewed.length ? Math.round((mistakeCount / reviewed.length) * 100) / 100 : null,
     avgControl: average(
       rows.map((row) => row.control).filter((control) => control !== null),
       1
@@ -194,7 +199,8 @@ function trendRow(rows) {
 // - `weeks`: each New York week (named by its Monday), oldest first;
 // - `trend`: the first half of the trades against the second (the odd trade in
 //   the first), null below TREND_MIN_TRADES.
-// `entries` are journal entries with a `tradeId`; `trades` need an `id`.
+// `entries` are journal entries with a `tradeId`; `trades` need an `id`, and
+// should all be of one mode, since modes are never pooled.
 export function trendFacts(trades, entries) {
   const rows = trades
     .filter((trade) => profitLoss(trade) !== null && trade.openedAt)

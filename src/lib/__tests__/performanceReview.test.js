@@ -274,8 +274,8 @@ describe('trendFacts', () => {
       ]);
     });
 
-    it('does not report a mistake seen on one day only, and counts a weekend as no gap', () => {
-      // Friday the 17th and Monday the 20th are consecutive trading days.
+    it('does not report a mistake seen on one day only, and takes a day they did not trade as no gap', () => {
+      // The 13th, then Friday the 17th and Monday the 20th: the days between had no trade.
       const friday = onDay('17', 10, 'fri');
       const monday = onDay('20', 10, 'mon');
       const entries = [review('fri', { mistakes: ['oversized'] }), review('mon', { mistakes: ['oversized'] }), tag('13', ['moved_stop'])];
@@ -303,9 +303,29 @@ describe('trendFacts', () => {
       ];
 
       expect(trendFacts(trades, entries).weeks).toEqual([
-        { week: '2026-04-13', trades: 2, wins: 1, losses: 1, scratches: 0, winRatePct: 50, netPnl: 10, avgNetPnl: 5, mistakesPerTrade: 1, avgControl: 6 },
-        { week: '2026-04-20', trades: 1, wins: 1, losses: 0, scratches: 0, winRatePct: 100, netPnl: 30, avgNetPnl: 30, mistakesPerTrade: 0, avgControl: 7 },
+        { week: '2026-04-13', trades: 2, wins: 1, losses: 1, scratches: 0, winRatePct: 50, netPnl: 10, avgNetPnl: 5, reviewedTrades: 2, mistakesPerTrade: 1, avgControl: 6 },
+        { week: '2026-04-20', trades: 1, wins: 1, losses: 0, scratches: 0, winRatePct: 100, netPnl: 30, avgNetPnl: 30, reviewedTrades: 1, mistakesPerTrade: 0, avgControl: 7 },
       ]);
+    });
+
+    it('puts a Sunday fill in the week that began on the Monday before it', () => {
+      // 2026-04-19 is a Sunday.
+      expect(trendFacts([onDay('19', 5, 'a')], []).weeks.map((w) => w.week)).toEqual(['2026-04-13']);
+    });
+
+    it('names a week by a Monday in the month before, across a month boundary', () => {
+      // 2026-05-01 is a Friday, in the week of Monday 2026-04-27.
+      const trades = [onDay('30', 5, 'a'), { ...onDay('30', 5, 'b'), openedAt: new Date('2026-05-01T14:00:00Z'), closedAt: new Date('2026-05-01T15:00:00Z') }];
+
+      expect(trendFacts(trades, []).weeks.map((w) => [w.week, w.trades])).toEqual([['2026-04-27', 2]]);
+    });
+
+    it('counts mistakes per reviewed trade, and has none to count when no trade was reviewed', () => {
+      const trades = [onDay('13', 5, 'a'), onDay('14', 5, 'b'), onDay('15', 5, 'c')];
+      const entries = [review('a', { mistakes: ['oversized'] })];
+
+      expect(trendFacts(trades, entries).weeks[0]).toMatchObject({ trades: 3, reviewedTrades: 1, mistakesPerTrade: 1 });
+      expect(trendFacts(trades, []).weeks[0]).toMatchObject({ trades: 3, reviewedTrades: 0, mistakesPerTrade: null });
     });
 
     it('has no average control for a week with no rating', () => {
@@ -313,11 +333,15 @@ describe('trendFacts', () => {
     });
   });
 
+  it('has nothing to report for no trades', () => {
+    expect(trendFacts([], [])).toEqual({ mistakeRuns: [], weeks: [], trend: null });
+  });
+
   describe('trend', () => {
     // Ten trades on ten trading days: the first five lose with a mistake, the last five win clean.
     const days = ['01', '02', '03', '06', '07', '08', '09', '10', '13', '14'];
     const trades = days.map((day, i) => onDay(day, i < 5 ? -10 : 10, `t${i}`));
-    const entries = trades.slice(0, 5).map((trade) => review(trade.id, { mistakes: ['oversized'] }));
+    const entries = trades.map((trade, i) => review(trade.id, { mistakes: i < 5 ? ['oversized'] : [] }));
 
     it('compares the first half of the trades with the second', () => {
       const { trend } = trendFacts(trades, entries);
