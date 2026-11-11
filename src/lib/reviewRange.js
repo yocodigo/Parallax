@@ -23,13 +23,14 @@ const addDays = (day, days) => new Date(asUtc(day).getTime() + days * DAY_MS).to
 export function nyMidnight(day) {
   const start = asUtc(day).getTime();
   const instants = [4, 5].map((hours) => new Date(start + hours * 60 * 60 * 1000));
+  // One of the two always is, in New York.
   return instants.find((at) => nyDay(at) === day && Number(nyHour.format(at)) === 0);
 }
 
 // A real calendar date in 'YYYY-MM-DD' form, not '2026-02-30' or '04/01/2026'.
 const isDay = (value) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && asUtc(value).toISOString().slice(0, 10) === value;
 
-const range = (key, label, fromDay, toDay) => ({
+const buildRange = (key, label, fromDay, toDay) => ({
   ok: true,
   key,
   label,
@@ -47,13 +48,13 @@ export function parseReviewRange({ range: kind, from, to }, now = new Date()) {
   if (Object.hasOwn(PRESET_DAYS, kind)) {
     const days = PRESET_DAYS[kind];
     const today = nyDay(now);
-    return range(kind, `Last ${days} days`, addDays(today, 1 - days), today);
+    return buildRange(kind, `Last ${days} days`, addDays(today, 1 - days), today);
   }
-  if (kind === 'all') return range('all', 'All time', null, null);
+  if (kind === 'all') return buildRange('all', 'All time', null, null);
   if (kind === 'custom') {
     if (!isDay(from) || !isDay(to)) return { ok: false, error: 'A custom range needs a from and a to date (YYYY-MM-DD)' };
     if (from > to) return { ok: false, error: 'The from date is after the to date' };
-    return range(`custom:${from}:${to}`, `${from} to ${to}`, from, to);
+    return buildRange(`custom:${from}:${to}`, `${from} to ${to}`, from, to);
   }
   return { ok: false, error: 'Range must be 7d, 30d, all, or custom' };
 }
