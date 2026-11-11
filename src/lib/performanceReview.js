@@ -257,8 +257,12 @@ export function trendFacts(trades, entries) {
   };
 }
 
-// Most flagged trades listed, costliest first; `omitted` says how many more.
+// Most flagged trades given, costliest first.
 export const MAX_FLAGGED = 20;
+
+// How many of them the coach lists; `unlisted` counts the rest of the flagged
+// trades, given or not, so the coach quotes it instead of subtracting.
+export const LIST_FLAGGED = 10;
 
 // Fewest closed trades a setup or condition needs to be called "working".
 export const WORKING_MIN_TRADES = 5;
@@ -296,7 +300,7 @@ export function ruleAdherence(trades) {
     // `openedAt` was only there to sort by.
     flagged: flagged.slice(0, MAX_FLAGGED).map(({ openedAt, ...rest }) => rest),
     flaggedTrades: flagged.length,
-    omitted: Math.max(0, flagged.length - MAX_FLAGGED),
+    unlisted: Math.max(0, flagged.length - LIST_FLAGGED),
   };
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_ENTRIES, MAX_FLAGGED, MAX_NOTE, MAX_TRADES, WORKING_MIN_TRADES, buildReviewFacts, TREND_MIN_TRADES, breakdowns, byMode, outcomesByTag, ruleAdherence, trendFacts, workingGroups } from '../performanceReview';
+import { LIST_FLAGGED, MAX_ENTRIES, MAX_FLAGGED, MAX_NOTE, MAX_TRADES, WORKING_MIN_TRADES, buildReviewFacts, TREND_MIN_TRADES, breakdowns, byMode, outcomesByTag, ruleAdherence, trendFacts, workingGroups } from '../performanceReview';
 
 // A closed long option, 1 contract: gross P/L is (exit - entry) * 100. The
 // fill defaults to Monday 2026-04-13, 10:00 New York time.
@@ -398,10 +398,10 @@ describe('ruleAdherence', () => {
     });
     const later = clean(-5, { ...inLockout, openedAt: new Date('2026-04-14T17:00:00Z'), closedAt: new Date('2026-04-14T18:00:00Z') });
 
-    const { flagged, flaggedTrades, omitted } = ruleAdherence([clean(10), broke, later]);
+    const { flagged, flaggedTrades, unlisted } = ruleAdherence([clean(10), broke, later]);
 
     expect(flaggedTrades).toBe(2);
-    expect(omitted).toBe(0);
+    expect(unlisted).toBe(0);
     expect(flagged).toEqual([
       { date: '2026-04-13', symbol: 'SPY', optionType: 'call', quantity: 3, netPnl: -60, failed: ['Window', 'Size', 'Plan', 'Stop', 'Exit'] },
       { date: '2026-04-14', symbol: 'SPY', optionType: 'call', quantity: 1, netPnl: -5, failed: ['Window'] },
@@ -411,7 +411,7 @@ describe('ruleAdherence', () => {
   it('flags nothing for a clean trade, and leaves out stocks, which the checks do not judge', () => {
     const stock = clean(-5, { assetClass: 'stock', ...inLockout, strategyId: null });
 
-    expect(ruleAdherence([clean(10), stock])).toMatchObject({ flagged: [], flaggedTrades: 0, omitted: 0 });
+    expect(ruleAdherence([clean(10), stock])).toMatchObject({ flagged: [], flaggedTrades: 0, unlisted: 0 });
   });
 
   it('puts a winner that broke a rule after the losers, and the newest first among equal results', () => {
@@ -427,7 +427,7 @@ describe('ruleAdherence', () => {
     ]);
   });
 
-  it('keeps the costliest MAX_FLAGGED whatever their dates, and says how many it left out', () => {
+  it('keeps the costliest MAX_FLAGGED whatever their dates', () => {
     const day = (i) => ({ openedAt: new Date(Date.UTC(2026, 3, 1, 17) + i * 3_600_000 * 24), closedAt: new Date(Date.UTC(2026, 3, 1, 18) + i * 3_600_000 * 24) });
     const small = Array.from({ length: MAX_FLAGGED + 2 }, (_, i) => clean(-1, { ...inLockout, ...day(i + 1) }));
     const oldBigLoss = clean(-50, { ...inLockout, ...day(0) });
@@ -436,7 +436,19 @@ describe('ruleAdherence', () => {
 
     expect(result.flagged).toHaveLength(MAX_FLAGGED);
     expect(result.flagged[0]).toMatchObject({ date: '2026-04-01', netPnl: -50 });
-    expect(result).toMatchObject({ flaggedTrades: MAX_FLAGGED + 3, omitted: 3 });
+    expect(result.flaggedTrades).toBe(MAX_FLAGGED + 3);
+  });
+
+  it('counts the flagged trades past the first LIST_FLAGGED as unlisted, even when all of them are given', () => {
+    const some = Array.from({ length: LIST_FLAGGED + 2 }, (_, i) =>
+      clean(-1, { ...inLockout, openedAt: new Date(Date.UTC(2026, 3, 1 + i, 17)), closedAt: new Date(Date.UTC(2026, 3, 1 + i, 18)) })
+    );
+
+    const result = ruleAdherence(some);
+
+    expect(result.flagged).toHaveLength(LIST_FLAGGED + 2);
+    expect(result.unlisted).toBe(2);
+    expect(ruleAdherence(some.slice(0, LIST_FLAGGED)).unlisted).toBe(0);
   });
 });
 

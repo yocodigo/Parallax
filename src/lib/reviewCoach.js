@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { LIST_FLAGGED, MAX_FLAGGED } from './performanceReview';
 import { SETUP_RULES } from './setupRules';
 
 // The Performance Review: what Claude is told and what it answers with. The
@@ -33,7 +34,7 @@ Rules for the analysis:
 - Live, paper, and backtest results are different things: compare them, but never add or average results across modes, and say which mode a figure is from.
 - Where a group has fewer than 5 trades, say the sample is small instead of drawing a conclusion.
 - The trader hasn't seen the input. Never mention field names, JSON keys, null values, or ref numbers; name a trade by its date, symbol, and contract. When a figure is null, say nothing about it.
-- Ground the rule-adherence section in the setup rules above and the flagged trades: one line per flagged trade, with the date, the contract, and the rule missed. The flagged trades you are given are the costliest first, at most 20. With more than 10 flagged trades in total, state the totals from the figures, list only the first ten, and say how many more there are out of the total. Don't explain how the checks work or which trades they cover.
+- Ground the rule-adherence section in the setup rules above and the flagged trades: one line per flagged trade, with the date, the contract, and the rule missed. The flagged trades you are given are the costliest first, at most ${MAX_FLAGGED}. With more than ${LIST_FLAGGED} flagged trades in total, state the totals from the figures, list only the first ${LIST_FLAGGED}, and use the figure unlisted for how many more there are, without naming it. Don't explain how the checks work or which trades they cover.
 - Don't give market commentary or trade ideas. Give three to five recommendations, most important first, and make each follow from something in the data.
 
 Answer in five sections: Strengths, Patterns to Fix, Rule Adherence, Emotional Patterns, and Recommendations for This Week. Each is plain text of a few short paragraphs or lines, with no markdown or headings. Say so briefly when a section has nothing to report.

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LOCKOUTS, SIZE_MAX, SIZE_MIN, TIME_STOP } from '../setups/settings';
+import { LIST_FLAGGED, MAX_FLAGGED } from '../performanceReview';
 import { REVIEW_SYSTEM_PROMPT, formatReviewInput, reviewOutputSchema } from '../reviewCoach';
 import { REVIEW_SECTIONS } from '../reviewSections';
 import { SETUP_RULES } from '../setupRules';
@@ -48,10 +49,11 @@ describe('REVIEW_SYSTEM_PROMPT', () => {
   });
 
   it('says to list the costliest ten of a long run of flagged trades and count the rest against the total', () => {
-    expect(REVIEW_SYSTEM_PROMPT).toMatch(/more than 10 flagged trades in total/i);
+    expect(REVIEW_SYSTEM_PROMPT).toContain(`more than ${LIST_FLAGGED} flagged trades in total`);
     expect(REVIEW_SYSTEM_PROMPT).toMatch(/costliest first/i);
-    expect(REVIEW_SYSTEM_PROMPT).toMatch(/list only the first ten/i);
-    expect(REVIEW_SYSTEM_PROMPT).toMatch(/say how many more there are out of the total/i);
+    expect(REVIEW_SYSTEM_PROMPT).toContain(`list only the first ${LIST_FLAGGED}`);
+    expect(REVIEW_SYSTEM_PROMPT).toMatch(/the figure unlisted for how many more there are, without naming it/i);
+    expect(REVIEW_SYSTEM_PROMPT).toContain(`at most ${MAX_FLAGGED}`);
   });
 });
 
