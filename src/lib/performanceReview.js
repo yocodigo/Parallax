@@ -73,6 +73,7 @@ const mostFrequent = (a, b) => b.trades - a.trades || a.netPnl - b.netPnl;
 function tagsOf(entries) {
   const mistakes = new Set(entries.flatMap((entry) => entry.mistakes ?? []));
   const emotions = new Set(entries.map((entry) => entry.emotion).filter(Boolean));
+  // Only reviews carry a rating (journalEntry.js refuses one on any other kind).
   const ratings = entries.map((entry) => entry.emotionalControl).filter(Boolean);
   return {
     mistakes,
@@ -87,6 +88,8 @@ const CONTROL_BANDS = [
   { band: 'middle (4-6)', max: 6 },
   { band: 'high (7-10)', max: 10 },
 ];
+// The mean rating is rounded to a whole number first, so 3.5 and above is in the
+// middle band and 6.5 and above in the high one.
 const bandOf = (control) => CONTROL_BANDS.find(({ max }) => Math.round(control) <= max).band;
 
 // How the trader's own tags line up with results: each mistake, each emotion

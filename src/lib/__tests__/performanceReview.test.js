@@ -205,6 +205,38 @@ describe('outcomesByTag', () => {
     expect(rated.emotionalControl.map((r) => r.band)).toEqual(['middle (4-6)']);
   });
 
+  it('rounds the average rating to a whole number before banding it', () => {
+    const band = (...ratings) =>
+      outcomesByTag([t('a', 10)], ratings.map((emotionalControl) => review('a', { emotionalControl }))).emotionalControl[0].band;
+
+    expect(band(3, 3, 4)).toBe('low (1-3)'); // 3.33
+    expect(band(3, 4)).toBe('middle (4-6)'); // 3.5
+    expect(band(6, 7)).toBe('high (7-10)'); // 6.5
+  });
+
+  it('puts the costlier tag first when two have as many trades, then orders by name', () => {
+    const tied = outcomesByTag(
+      [t('a', -5), t('b', 20), t('c', -30)],
+      [
+        review('a', { mistakes: ['oversized'], emotion: 'fomo' }),
+        review('b', { mistakes: ['exited_early'], emotion: 'fomo' }),
+        review('c', { mistakes: ['moved_stop'], emotion: 'fomo' }),
+      ]
+    );
+
+    expect(tied.mistakes.map((m) => m.mistake)).toEqual(['moved_stop', 'oversized', 'exited_early']);
+    // Every mistake came with fomo once, so the emotion's list is alphabetical.
+    expect(tied.emotions[0].mistakes.map((m) => m.mistake)).toEqual(['exited_early', 'moved_stop', 'oversized']);
+  });
+
+  it('leaves out a trade that is not closed', () => {
+    const open = option(10, { id: 'z', closedAt: null });
+
+    const result = outcomesByTag([open], [review('z', { mistakes: ['oversized'], emotion: 'fomo', emotionalControl: 5 })]);
+
+    expect(result).toEqual({ mistakes: [], noMistakes: null, unreviewed: 0, emotions: [], emotionalControl: [] });
+  });
+
   it('is empty when nothing was tagged', () => {
     expect(outcomesByTag([t('a', 10)], [])).toEqual({ mistakes: [], noMistakes: null, unreviewed: 1, emotions: [], emotionalControl: [] });
   });
