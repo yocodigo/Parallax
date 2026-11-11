@@ -25,6 +25,7 @@ const failed = (request, details) => {
   return NextResponse.json({ error: "Couldn't write the review. Try again.", requestId: id }, { status: 502 });
 };
 
+// A saved review's row as the response gives it; no row (null) stays null.
 const toReview = (row) =>
   row && {
     sections: row.review,
@@ -34,6 +35,7 @@ const toReview = (row) =>
     rangeTo: row.rangeTo,
   };
 
+// The trades the figures cover: those with a P/L, as the listed trades are.
 const tradeCountOf = (facts) => Object.values(facts.modes).reduce((total, mode) => total + mode.overall.trades, 0);
 
 // Query: ?range=7d|30d|all|custom, and for custom ?from=YYYY-MM-DD&to=YYYY-MM-DD
@@ -44,6 +46,7 @@ const tradeCountOf = (facts) => Object.values(facts.modes).reduce((total, mode) 
 // Claude: writing a review is the POST.
 export const GET = withErrorLogging(ROUTE, async (request) => {
   const { searchParams } = new URL(request.url);
+  // A parameter that is missing reads as absent, not as the string "null".
   const range = parseReviewRange({
     range: searchParams.get('range') ?? undefined,
     from: searchParams.get('from') ?? undefined,

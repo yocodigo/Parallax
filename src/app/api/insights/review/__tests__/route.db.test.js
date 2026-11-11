@@ -176,6 +176,17 @@ describe('POST /api/insights/review', () => {
     expect(requests).toHaveLength(0);
   });
 
+  it('leaves the saved review alone when no trade closed in the range any more', async () => {
+    const saved = { rangeKey: 'custom:2026-04-01:2026-04-30', review: SECTIONS, tradeCount: 3, rangeFrom: '2026-04-01', rangeTo: '2026-04-30' };
+    await savePerformanceReview(getDb(), saved);
+    const requests = captureMessages(() => HttpResponse.json(message()));
+
+    expect(await (await post(RANGE)).json()).toEqual({ review: null, reason: 'No closed trades in this range' });
+
+    expect(requests).toHaveLength(0);
+    expect((await getPerformanceReview(getDb(), saved.rangeKey)).tradeCount).toBe(3);
+  });
+
   it('answers 400 for a body that is not JSON or names no readable range', async () => {
     expect((await post('not json')).status).toBe(400);
     expect((await post({ range: 'year' })).status).toBe(400);
