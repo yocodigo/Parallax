@@ -109,7 +109,12 @@ export function outcomesByTag(trades, entries) {
 
   const group = (keysOf) => {
     const groups = new Map();
-    for (const row of tagged) for (const key of keysOf(row)) groups.set(key, [...(groups.get(key) ?? []), row]);
+    for (const row of tagged) {
+      for (const key of keysOf(row)) {
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(row);
+      }
+    }
     return groups;
   };
 
