@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { TREND_MIN_TRADES, breakdowns, byMode, outcomesByTag, trendFacts } from '../performanceReview';
+import { MAX_FLAGGED, WORKING_MIN_TRADES, TREND_MIN_TRADES, breakdowns, byMode, outcomesByTag, ruleAdherence, trendFacts, workingGroups } from '../performanceReview';
 
 // A closed long option, 1 contract: gross P/L is (exit - entry) * 100. The
 // fill defaults to Monday 2026-04-13, 10:00 New York time.
 function option(gross, overrides = {}) {
   return {
     mode: 'live',
+    symbol: 'SPY',
     direction: 'long',
     assetClass: 'option',
     optionType: 'call',
@@ -360,5 +361,122 @@ describe('trendFacts', () => {
       expect(TREND_MIN_TRADES).toBe(10);
       expect(trendFacts(trades.slice(0, 9), entries).trend).toBeNull();
     });
+  });
+});
+
+// An option trade that kept every rule: filled at 10:00 New York time (outside
+// the lockouts), one contract, a plan written first, a strategy, a planned exit.
+const clean = (gross, overrides = {}) =>
+  option(gross, {
+    id: 'clean',
+    strategyId: 's1',
+    planWrittenAt: new Date('2026-04-13T13:00:00Z'),
+    unmetRuleCount: 0,
+    exitReason: 'target',
+    ...overrides,
+  });
+
+describe('ruleAdherence', () => {
+  // 13:00 New York time is inside the 11:00-14:00 lockout.
+  const inLockout = { openedAt: new Date('2026-04-13T17:00:00Z'), closedAt: new Date('2026-04-13T18:00:00Z') };
+
+  it('passes the dashboard’s adherence figures through', () => {
+    const { checks } = ruleAdherence([clean(10), clean(-5, inLockout)]);
+
+    expect(checks.trades).toBe(2);
+    expect(checks.window).toEqual({ ok: 1, missed: 1, cost: -5 });
+  });
+
+  it('flags the trades that broke a rule, with which ones, newest first', () => {
+    const broke = clean(-20, {
+      ...inLockout,
+      quantity: 3,
+      exitPrice: 0.8,
+      initialStop: 0.9,
+      strategyId: null,
+      exitReason: 'felt_heavy',
+    });
+    const later = clean(-5, { ...inLockout, openedAt: new Date('2026-04-14T17:00:00Z'), closedAt: new Date('2026-04-14T18:00:00Z') });
+
+    const { flagged, flaggedTrades, omitted } = ruleAdherence([clean(10), broke, later]);
+
+    expect(flaggedTrades).toBe(2);
+    expect(omitted).toBe(0);
+    expect(flagged).toEqual([
+      { date: '2026-04-14', symbol: 'SPY', optionType: 'call', quantity: 1, netPnl: -5, failed: ['Window'] },
+      { date: '2026-04-13', symbol: 'SPY', optionType: 'call', quantity: 3, netPnl: -60, failed: ['Window', 'Size', 'Plan', 'Stop', 'Exit'] },
+    ]);
+  });
+
+  it('flags nothing for a clean trade, and leaves out stocks, which the checks do not judge', () => {
+    const stock = clean(-5, { assetClass: 'stock', ...inLockout, strategyId: null });
+
+    expect(ruleAdherence([clean(10), stock])).toMatchObject({ flagged: [], flaggedTrades: 0, omitted: 0 });
+  });
+
+  it('keeps the newest MAX_FLAGGED and says how many it left out', () => {
+    const many = Array.from({ length: MAX_FLAGGED + 3 }, (_, i) =>
+      clean(-1, { ...inLockout, openedAt: new Date(Date.UTC(2026, 3, 1, 17) + i * 3_600_000 * 24), closedAt: new Date(Date.UTC(2026, 3, 1, 18) + i * 3_600_000 * 24) })
+    );
+
+    const result = ruleAdherence(many);
+
+    expect(result.flagged).toHaveLength(MAX_FLAGGED);
+    expect(result).toMatchObject({ flaggedTrades: MAX_FLAGGED + 3, omitted: 3 });
+  });
+});
+
+describe('workingGroups', () => {
+  const names = new Map([['s1', 'Band cross'], ['s2', 'Other']]);
+  const day = (n) => ({
+    openedAt: new Date(`2026-04-${String(n).padStart(2, '0')}T14:00:00Z`),
+    closedAt: new Date(`2026-04-${String(n).padStart(2, '0')}T15:00:00Z`),
+  });
+  // Five winning Band cross trades, all clean; four losing Other trades.
+  const winners = Array.from({ length: WORKING_MIN_TRADES }, (_, i) => clean(10, { id: `w${i}`, ...day(13 + i) }));
+  const losers = Array.from({ length: 4 }, (_, i) => clean(-10, { id: `l${i}`, strategyId: 's2', ...day(20 + i) }));
+  const entries = winners.map((trade) => ({ tradeId: trade.id, kind: 'review', mistakes: [] }));
+
+  it('lists setups, weekdays, and calls or puts with enough trades and a profit, with how well they were executed', () => {
+    const rows = workingGroups([...winners, ...losers], entries, names);
+
+    expect(rows.find((r) => r.kind === 'setup')).toEqual({
+      kind: 'setup',
+      name: 'Band cross',
+      trades: 5,
+      wins: 5,
+      losses: 0,
+      scratches: 0,
+      winRatePct: 100,
+      netPnl: 50,
+      avgNetPnl: 10,
+      disciplinePct: 100,
+      cleanReviewPct: 100,
+    });
+    expect(rows.find((r) => r.name === 'Other')).toBeUndefined();
+  });
+
+  it('leaves out a group with too few trades or no profit', () => {
+    expect(workingGroups(winners.slice(0, WORKING_MIN_TRADES - 1), entries, names)).toEqual([]);
+    expect(workingGroups(losers.concat(losers), entries, names)).toEqual([]);
+  });
+
+  it('says how much of the group’s reviewed trades were clean, and nothing when none was reviewed', () => {
+    const marked = [{ tradeId: 'w0', kind: 'review', mistakes: ['oversized'] }, ...entries.slice(1)];
+
+    expect(workingGroups(winners, marked, names).find((r) => r.kind === 'setup').cleanReviewPct).toBe(80);
+    expect(workingGroups(winners, [], names).find((r) => r.kind === 'setup').cleanReviewPct).toBeNull();
+  });
+
+  it('gives no discipline score when no check applied (a stock trade)', () => {
+    const stocks = winners.map((trade) => ({ ...trade, assetClass: 'stock', optionType: null }));
+
+    expect(workingGroups(stocks, entries, names).find((r) => r.kind === 'setup').disciplinePct).toBeNull();
+  });
+
+  it('orders by net P/L, best first', () => {
+    const rows = workingGroups(winners, entries, names);
+
+    expect(rows.map((r) => r.netPnl)).toEqual([...rows.map((r) => r.netPnl)].sort((a, b) => b - a));
   });
 });

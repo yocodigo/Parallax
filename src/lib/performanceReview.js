@@ -1,4 +1,6 @@
+import { adherence, exitGate, planGate, stopHeldGate } from './adherence';
 import { MODES, bySetup, callsVsPuts, summarize, timeOfDay } from './performance';
+import { MISSED, sizeGate, windowGate } from './setups/gates';
 import { nyDay } from './setups/session';
 import { profitLoss } from './tradeMetrics';
 
@@ -247,4 +249,89 @@ export function trendFacts(trades, entries) {
     weeks: [...byWeek].map(([week, list]) => ({ week, ...trendRow(list) })),
     trend: rows.length < TREND_MIN_TRADES ? null : { first: span(rows.slice(0, half)), second: span(rows.slice(half)) },
   };
+}
+
+// Most flagged trades listed, newest first; `omitted` says how many more.
+export const MAX_FLAGGED = 20;
+
+// Fewest closed trades a setup or condition needs to be called "working".
+export const WORKING_MIN_TRADES = 5;
+
+const CHECKS = [
+  ['Window', (trade) => windowGate(trade.openedAt && new Date(trade.openedAt))],
+  ['Size', (trade) => sizeGate(trade.quantity)],
+  ['Plan', planGate],
+  ['Stop', stopHeldGate],
+  ['Exit', exitGate],
+];
+
+// Rule adherence over closed option trades (as the dashboard's table counts
+// it): `checks` is adherence()'s figures, and `flagged` the trades that missed
+// at least one check with the ones missed, newest first (at most MAX_FLAGGED).
+// The trades need `planWrittenAt` and `unmetRuleCount` (listPlanFacts).
+export function ruleAdherence(trades) {
+  const flagged = trades
+    .filter((trade) => trade.assetClass === 'option' && profitLoss(trade) !== null && trade.openedAt)
+    .map((trade) => ({
+      date: nyDay(new Date(trade.openedAt)),
+      symbol: trade.symbol,
+      optionType: trade.optionType,
+      quantity: trade.quantity,
+      netPnl: roundToCents(profitLoss(trade)),
+      failed: CHECKS.filter(([, check]) => check(trade) === MISSED).map(([name]) => name),
+      openedAt: new Date(trade.openedAt),
+    }))
+    .filter((trade) => trade.failed.length > 0)
+    .sort((a, b) => b.openedAt - a.openedAt);
+  return {
+    checks: adherence(trades),
+    flagged: flagged.slice(0, MAX_FLAGGED).map(({ openedAt, ...rest }) => rest),
+    flaggedTrades: flagged.length,
+    omitted: Math.max(0, flagged.length - MAX_FLAGGED),
+  };
+}
+
+const percent = (part, whole) => (whole ? Math.round((part / whole) * 1000) / 10 : null);
+
+// The setups, New York weekdays, and calls or puts with at least
+// WORKING_MIN_TRADES closed trades and a profit, best first, each with how
+// well the trades in it were executed: the share of Plan, Stop, and Exit checks
+// passed (`disciplinePct`, null when none applied) and the share of reviewed
+// trades with no mistake tagged (`cleanReviewPct`, null when none was
+// reviewed). `trades` need the plan facts of ruleAdherence; `entries` are
+// journal entries with a `tradeId`.
+export function workingGroups(trades, entries, strategyNames) {
+  const counted = trades.filter((trade) => profitLoss(trade) !== null);
+  const kinds = [
+    ['setup', (trade) => (trade.strategyId ? (strategyNames.get(trade.strategyId) ?? 'Unknown strategy') : 'No strategy')],
+    ['weekday', (trade) => (trade.openedAt ? weekdayName.format(new Date(trade.openedAt)) : null)],
+    ['call or put', (trade) => trade.optionType ?? null],
+  ];
+
+  const rows = [];
+  for (const [kind, nameOf] of kinds) {
+    const groups = new Map();
+    for (const trade of counted) {
+      const name = nameOf(trade);
+      if (name === null) continue;
+      if (!groups.has(name)) groups.set(name, []);
+      groups.get(name).push(trade);
+    }
+    for (const [name, list] of groups) {
+      const summary = summarize(list);
+      if (list.length < WORKING_MIN_TRADES || summary.netPnl <= 0) continue;
+      const { discipline } = adherence(list);
+      const reviewed = list
+        .map((trade) => tagsOf(entries.filter((entry) => entry.tradeId === trade.id)))
+        .filter((tags) => tags.reviewed);
+      rows.push({
+        kind,
+        name,
+        ...compact(summary),
+        disciplinePct: percent(discipline.ok, discipline.ok + discipline.missed),
+        cleanReviewPct: percent(reviewed.filter((tags) => tags.mistakes.size === 0).length, reviewed.length),
+      });
+    }
+  }
+  return rows.sort((a, b) => b.netPnl - a.netPnl);
 }
