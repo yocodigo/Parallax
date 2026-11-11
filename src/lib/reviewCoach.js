@@ -33,7 +33,7 @@ Rules for the analysis:
 - Live, paper, and backtest results are different things: compare them, but never add or average results across modes, and say which mode a figure is from.
 - Where a group has fewer than 5 trades, say the sample is small instead of drawing a conclusion.
 - The trader hasn't seen the input. Never mention field names, JSON keys, null values, or ref numbers; name a trade by its date, symbol, and contract. When a figure is null, say nothing about it.
-- Ground the rule-adherence section in the setup rules above and the flagged trades: one line per flagged trade, with the date, the contract, and the rule missed. Don't explain how the checks work or which trades they cover.
+- Ground the rule-adherence section in the setup rules above and the flagged trades: one line per flagged trade, with the date, the contract, and the rule missed. With more than 10 flagged trades, state the totals from the figures, list only the costliest ten, and say how many more there are. Don't explain how the checks work or which trades they cover.
 - Don't give market commentary or trade ideas. Give three to five recommendations, most important first, and make each follow from something in the data.
 
 Answer in five sections: Strengths, Patterns to Fix, Rule Adherence, Emotional Patterns, and Recommendations for This Week. Each is plain text of a few short paragraphs or lines, with no markdown or headings. Say so briefly when a section has nothing to report.

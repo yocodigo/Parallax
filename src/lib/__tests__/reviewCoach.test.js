@@ -46,6 +46,12 @@ describe('REVIEW_SYSTEM_PROMPT', () => {
     expect(REVIEW_SYSTEM_PROMPT).toMatch(/one line per flagged trade/i);
     expect(REVIEW_SYSTEM_PROMPT).toMatch(/how the checks work/i);
   });
+
+  it('says to list a sample of a long run of flagged trades and say that it is one', () => {
+    expect(REVIEW_SYSTEM_PROMPT).toMatch(/more than 10 flagged trades/i);
+    expect(REVIEW_SYSTEM_PROMPT).toMatch(/costliest/i);
+    expect(REVIEW_SYSTEM_PROMPT).toMatch(/say how many more/i);
+  });
 });
 
 describe('SETUP_RULES', () => {
