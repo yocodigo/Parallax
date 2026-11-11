@@ -29,6 +29,23 @@ describe('REVIEW_SYSTEM_PROMPT', () => {
   it('says to hold back when a group has few trades', () => {
     expect(REVIEW_SYSTEM_PROMPT).toMatch(/fewer than 5 trades/i);
   });
+
+  it('keeps the input’s field names, null values, and ref numbers out of the answer', () => {
+    expect(REVIEW_SYSTEM_PROMPT).toMatch(/hasn't seen the input/i);
+    expect(REVIEW_SYSTEM_PROMPT).toMatch(/never mention field names/i);
+    expect(REVIEW_SYSTEM_PROMPT).toMatch(/ref numbers/i);
+    expect(REVIEW_SYSTEM_PROMPT).toMatch(/by its date, symbol, and contract/i);
+  });
+
+  it('asks for three to five recommendations, most important first', () => {
+    expect(REVIEW_SYSTEM_PROMPT).toMatch(/three to five recommendations/i);
+    expect(REVIEW_SYSTEM_PROMPT).toMatch(/most important first/i);
+  });
+
+  it('keeps the rule-adherence section to a line per trade and off how the checks work', () => {
+    expect(REVIEW_SYSTEM_PROMPT).toMatch(/one line per flagged trade/i);
+    expect(REVIEW_SYSTEM_PROMPT).toMatch(/how the checks work/i);
+  });
 });
 
 describe('SETUP_RULES', () => {
