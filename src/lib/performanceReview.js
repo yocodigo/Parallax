@@ -6,7 +6,8 @@ import { profitLoss } from './tradeMetrics';
 // doing the arithmetic (the way the weekly review and the coaching pass do).
 // Each mode is broken down apart: modes are never pooled into one result.
 
-const cents = (dollars) => (dollars === null ? null : Math.round(dollars * 100) / 100);
+// Dollars rounded to the nearest cent.
+const roundToCents = (dollars) => (dollars === null ? null : Math.round(dollars * 100) / 100);
 
 // The few figures of a `summarize` result worth sending, with the win rate as
 // a percentage to one decimal. P/L is net of fees.
@@ -16,9 +17,10 @@ function compact(summary) {
     wins: summary.wins,
     losses: summary.losses,
     scratches: summary.scratches,
+    // The fraction as a percentage to one decimal: 0.3333 becomes 33.3.
     winRatePct: summary.winRate === null ? null : Math.round(summary.winRate * 1000) / 10,
     netPnl: summary.netPnl,
-    avgNetPnl: cents(summary.netExpectancy),
+    avgNetPnl: roundToCents(summary.netExpectancy),
   };
 }
 
