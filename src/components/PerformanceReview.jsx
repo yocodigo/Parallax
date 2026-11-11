@@ -34,14 +34,16 @@ function StatsTable({ stats }) {
   return (
     <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
       <table className="w-full text-sm">
-        <caption className="px-4 pt-3 text-left text-xs text-gray-500">Closed trades by mode, net of fees</caption>
+        <caption className="px-4 pt-3 text-left text-xs text-gray-500">
+          Closed trades by mode. Win rate is judged on gross P/L; the P/L figures are net of fees.
+        </caption>
         <thead>
           <tr className="text-left text-xs text-gray-500">
             <th scope="col" className="px-4 py-2 font-medium">Mode</th>
             <th scope="col" className="px-4 py-2 text-right font-medium">Trades</th>
-            <th scope="col" className="px-4 py-2 text-right font-medium">Win rate</th>
-            <th scope="col" className="px-4 py-2 text-right font-medium">Total P/L</th>
-            <th scope="col" className="px-4 py-2 text-right font-medium">Avg P/L per trade</th>
+            <th scope="col" className="px-4 py-2 text-right font-medium">Win rate (gross)</th>
+            <th scope="col" className="px-4 py-2 text-right font-medium">Total P/L (net)</th>
+            <th scope="col" className="px-4 py-2 text-right font-medium">Avg P/L per trade (net)</th>
           </tr>
         </thead>
         <tbody>
@@ -49,9 +51,9 @@ function StatsTable({ stats }) {
             <tr key={mode} className="border-t border-gray-100 tabular-nums">
               <th scope="row" className="px-4 py-2 text-left font-medium text-gray-900">{MODE_NAMES[mode] ?? mode}</th>
               <td className="px-4 py-2 text-right">{s.trades}</td>
-              <td className="px-4 py-2 text-right">{s.winRatePct === null ? '–' : `${s.winRatePct.toFixed(1)}%`}</td>
+              <td className="px-4 py-2 text-right">{s.winRatePct === null ? '—' : `${s.winRatePct.toFixed(1)}%`}</td>
               <td className="px-4 py-2 text-right">{formatProfitLoss(s.netPnl)}</td>
-              <td className="px-4 py-2 text-right">{s.avgNetPnl === null ? '–' : formatProfitLoss(s.avgNetPnl)}</td>
+              <td className="px-4 py-2 text-right">{s.avgNetPnl === null ? '—' : formatProfitLoss(s.avgNetPnl)}</td>
             </tr>
           ))}
         </tbody>
@@ -79,7 +81,7 @@ function ReviewText({ review }) {
   );
 }
 
-// The Performance Review (see docs in CLAUDE.md): the figures for a date range
+// The Performance Review (CLAUDE.md, "Performance Review"): the figures for a date range
 // at the top, then the coach's last analysis of it. Each analysis is a paid
 // Claude call, so it is written only when asked for; the page loads the stored
 // one with the figures.
@@ -94,7 +96,15 @@ export default function PerformanceReview() {
   const custom = range === 'custom';
   const datesOutOfOrder = custom && from && to && from > to;
   const ready = !custom || (from && to && !datesOutOfOrder);
+  // from and to go only with a custom range (spreading false adds nothing).
   const selection = { range, ...(custom && { from, to }) };
+
+  // Choosing another range or date starts over: an old error or reason was about the last one.
+  const choose = (setter) => (value) => {
+    setter(value);
+    setError(null);
+    setReason(null);
+  };
 
   const { data, error: loadError, isLoading, mutate } = useSWR(
     ready ? `/api/insights/review?${new URLSearchParams(selection)}` : null,
@@ -107,7 +117,11 @@ export default function PerformanceReview() {
     setError(null);
     setReason(null);
     try {
-      const res = await fetch('/api/insights/review', { method: 'POST', body: JSON.stringify(selection) });
+      const res = await fetch('/api/insights/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(selection),
+      });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(apiErrorMessage(json, "Couldn't write the review"));
@@ -181,7 +195,7 @@ export default function PerformanceReview() {
           Range
           <select
             value={range}
-            onChange={(e) => setRange(e.target.value)}
+            onChange={(e) => choose(setRange)(e.target.value)}
             disabled={writing}
             className={`${inputClass} disabled:opacity-50`}
           >
@@ -196,15 +210,19 @@ export default function PerformanceReview() {
           <>
             <label className="flex flex-col gap-1 text-xs text-gray-500">
               From
-              <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} disabled={writing} className={inputClass} />
+              <input type="date" value={from} onChange={(e) => choose(setFrom)(e.target.value)} disabled={writing} className={inputClass} />
             </label>
             <label className="flex flex-col gap-1 text-xs text-gray-500">
               To
-              <input type="date" value={to} onChange={(e) => setTo(e.target.value)} disabled={writing} className={inputClass} />
+              <input type="date" value={to} onChange={(e) => choose(setTo)(e.target.value)} disabled={writing} className={inputClass} />
             </label>
           </>
         )}
-        {datesOutOfOrder && <p className="text-sm text-red-800">The from date is after the to date.</p>}
+        {datesOutOfOrder && (
+          <p role="alert" className="text-sm text-red-800">
+            The from date is after the to date.
+          </p>
+        )}
       </div>
       {body}
     </div>

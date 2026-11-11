@@ -114,7 +114,7 @@ describe('PerformanceReview', () => {
     expect(queries).toHaveLength(requestsBefore);
 
     fireEvent.change(screen.getByLabelText(/^to/i), { target: { value: '2026-04-01' } });
-    expect(await screen.findByText(/from date is after the to date/i)).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent(/from date is after the to date/i);
     expect(queries).toHaveLength(requestsBefore);
 
     fireEvent.change(screen.getByLabelText(/^to/i), { target: { value: '2026-04-12' } });
@@ -201,6 +201,58 @@ describe('PerformanceReview', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/couldn't write the review.*req-9/i);
     expect(screen.getByText(/cap size at 2 contracts/i)).toBeInTheDocument();
+  });
+
+  it('shows an error when the request itself fails, and keeps the earlier review', async () => {
+    serveOverview(overview({ review: saved }));
+    servePost(() => HttpResponse.error());
+    const user = userEvent.setup();
+    renderReview();
+
+    await user.click(await screen.findByRole('button', { name: /refresh analysis/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/couldn't write the review/i);
+    expect(screen.getByText(/cap size at 2 contracts/i)).toBeInTheDocument();
+  });
+
+  it('drops an old error or reason when another range is chosen', async () => {
+    serveOverview();
+    servePost(() => HttpResponse.json({ error: "Couldn't write the review. Try again." }, { status: 502 }));
+    const user = userEvent.setup();
+    renderReview();
+    await user.click(await screen.findByRole('button', { name: /write review/i }));
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText(/range/i), '30d');
+
+    await screen.findByText(/no review written for this range yet/i);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('sends the request as JSON', async () => {
+    serveOverview();
+    const types = [];
+    server.use(
+      http.post('*/api/insights/review', ({ request }) => {
+        types.push(request.headers.get('content-type'));
+        return HttpResponse.json({ review: saved });
+      })
+    );
+    const user = userEvent.setup();
+    renderReview();
+
+    await user.click(await screen.findByRole('button', { name: /write review/i }));
+
+    await screen.findByText(/cap size at 2 contracts/i);
+    expect(types).toEqual(['application/json']);
+  });
+
+  it('says which figures are net of fees and which are gross', async () => {
+    serveOverview();
+    renderReview();
+
+    const table = await screen.findByRole('table', { name: /win rate is judged on gross p\/l.*net of fees/i });
+    expect(within(table).getByRole('columnheader', { name: /win rate \(gross\)/i })).toBeInTheDocument();
   });
 
   it('says so when no trade closed in the range, with nothing to write a review of', async () => {
