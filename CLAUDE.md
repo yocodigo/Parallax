@@ -50,7 +50,7 @@ Vitest, JavaScript (not TypeScript).
 
 - `src/lib/`: pure logic with unit tests (bars, correlation, risk, timeframes, `tradePlan`,
   `journalEntry`, `tradeFill`, `tradeMetrics`, `mistakeLedger`, `excursions`, `historyWarnings`,
-  `circuitBreakers`, `circuitBreakerSettings`, `strategy`, `checklistReport`, `format`, `session` (signed sign-in tokens), shared `symbol` validation). Validation uses Zod 4 and returns `safeParse` results.
+  `circuitBreakers`, `circuitBreakerSettings`, `strategy`, `checklistReport`, `performanceReview`, `reviewCoach`, `reviewRange`, `setupRules`, `format`, `session` (signed sign-in tokens), shared `symbol` validation). Validation uses Zod 4 and returns `safeParse` results.
 - `src/db/schema.js`: Drizzle schema. Migrations live in `drizzle/` (generated and committed,
   including `meta/`). Never hand-edit a migration that has been applied.
 - `src/lib/context/`: pure pieces of the entry context snapshot (indicators, macro calendar, VIX,
@@ -84,9 +84,9 @@ Vitest, JavaScript (not TypeScript).
   through `atMost`/`atLeast` (`compare.js`), which allow for floating-point error in decimal
   prices (761.40 − 761.00 isn't exactly 0.4).
 - `src/server/`: server-only fetchers that call outside services (`marketContext.js`, and
-  `minuteBars.js`, Alpaca's minute bars for the gates and the reviews), tested with MSW in the node
-  environment.
-- `src/db/journal.js`, `trades.js`, `settings.js`, `strategies.js`, `contexts.js`, `screenshots.js`, `dailyPlans.js` (the day's fib extensions, which give the exit review its T1 and T2), `imports.js`, and `signIn.js` (wrong passwords in `sign_in_failures`, counted per IP for the sign-in limit): repository
+  `minuteBars.js`, Alpaca's minute bars for the gates and the reviews; and `reviewFacts.js`, the
+  Performance Review's database reads), tested with MSW in the node environment.
+- `src/db/journal.js`, `trades.js`, `settings.js`, `strategies.js`, `contexts.js`, `screenshots.js`, `dailyPlans.js` (the day's fib extensions, which give the exit review its T1 and T2), `performanceReviews.js` (the last Performance Review of each date range), `imports.js`, and `signIn.js` (wrong passwords in `sign_in_failures`, counted per IP for the sign-in limit): repository
   functions. They take `db` as the first argument so tests can
   pass the test database.
 - `src/db/index.js`: `getDb()`, created lazily (builds need no database) and cached on `globalThis`.
@@ -281,6 +281,33 @@ Vitest, JavaScript (not TypeScript).
   with a stop only), `stopAdherence.js` (S1-S3 replayed against the exit), `whatsWorking.js` (R where a
   trade has a stop, dollar P/L where it has none, never mixed). A day with no trades returns a null
   coaching without calling Claude; a failed call keeps the earlier text.
+- Performance Review (`/performance-review`, in the nav; separate from the per-trade coaching pass): an aggregate
+  coach over closed trades and journal entries in a date range. `PerformanceReview.jsx` has a Range select (last 7
+  or 30 days counting today, all time, or custom dates; New York days, by the day a trade closed;
+  `reviewRange.js` parses them and names the range key), a table of each mode's trades, win rate (gross),
+  total and average P/L (net), then the stored analysis under five headings (`reviewSections.js`: Strengths,
+  Patterns to Fix, Rule Adherence, Emotional Patterns, Recommendations for This Week) and a "Write review" or
+  "Refresh analysis" button. `GET /api/insights/review` (`?range=7d|30d|all|custom`, `&from=&to=` for custom)
+  returns `{ range, stats, tradeCount, review }` without calling Claude; `POST` (body the same, JSON) is the paid
+  call (shares the voice routes' rate limit; a POST, so the demo's 403 stops it), saves the answer in
+  `performance_reviews` (one row per range key, a rerun replaces it, a failed call keeps the old one) and
+  returns `{ review }`; an empty range answers a null review with a reason and costs no call. The demo shows a
+  stored review but hides the button. `gatherReviewFacts` (`src/server/reviewFacts.js`) reads the range's closed
+  trades in every mode with their plan facts, the entries of those trades (any date) and the unlinked entries
+  written in it, the fib plans of the range and of the days its trades were opened (a swing trade keeps its
+  opening day's plan), and the strategies; `buildReviewFacts` (`performanceReview.js`) turns them into the JSON
+  the coach reads: `modes` (each mode apart, never pooled: `overall`, `bySetup`, `byWeekday`, `byTimeOfDay`,
+  `callsVsPuts`, `outcomes` by mistake, emotion, and emotional-control band, `trend` with repeated-mistake runs,
+  weekly rows and a first-half against second-half comparison, `adherence` flagging option trades that missed
+  Window, Size, Plan, Stop, or Exit, and `working` groups with at least 5 trades and a profit), plus the newest 300
+  `trades` and `journalEntries` (linked by `ref`, notes cut at 1500 characters, with `tradesOmitted` and
+  `journalEntriesOmitted` saying how many were left out), `dailyPlans`, and `strategies`. The app works out every
+  figure and Claude quotes them (`reviewCoach.js`: the system prompt opens with Joel's own wording, answers as
+  structured output through a Zod schema). The setup rules the coach judges against are `setupRules.js`, a
+  paraphrase of `docs/private/setups.md` so they exist on a deploy (the lockout windows, contract range, and time
+  stop are read from `settings.js`); keep it in step with the spec by hand. Rule adherence covers option trades
+  only, as the dashboard's does, and counts trades with no review apart when it rates mistakes (a trade
+  never reviewed says nothing about mistakes).
 - Trading setups and detector rules: `docs/private/setups.md` (git-ignored). Read it before building any detector, gate, or review feature.
 - After each commit, run the reviewer subagent on it and address every FIX before starting the next commit.
 
@@ -345,6 +372,8 @@ Vitest, JavaScript (not TypeScript).
    - Done: dark mode, following the system setting, with a picker in the nav to override it.
    - Done: setup detectors, gates, voice flows, and the entry and exit review, following the build
      order in `docs/private/setups.md` (steps 1 to 11, the coaching pass included).
+   - Done: Performance Review at `/performance-review`, an aggregate coach over a date range (separate from the
+     per-trade coaching).
 5. Last, once the product is polished: deploy to Vercel plus Neon (Postgres 17). Done: Next.js
    upgraded to 16.4.1 for the security advisories. Two deployments of the same code:
    - Mine, behind auth: one password from an env var, a login page, and a signed httpOnly session
