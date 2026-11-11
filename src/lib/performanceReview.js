@@ -439,6 +439,7 @@ export function buildReviewFacts({ trades, entries, dailyPlans, strategies, rang
       ref: entry.tradeId ? refs.get(entry.tradeId) : null,
       date: nyDay(new Date(entry.createdAt)),
       kind: entry.kind,
+      mode: entry.mode ?? null,
       symbol: entry.symbol ?? null,
       emotion: entry.emotion ?? null,
       mistakes: entry.mistakes ?? [],

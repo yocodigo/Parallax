@@ -628,17 +628,17 @@ describe('buildReviewFacts', () => {
       })
     );
     const entries = [
-      { tradeId: 't0', kind: 'review', emotion: 'fomo', mistakes: [], emotionalControl: 4, notes: 'Oldest, left out.', createdAt: new Date('2026-01-01T22:00:00Z') },
-      { tradeId: `t${MAX_TRADES}`, kind: 'review', emotion: 'calm', mistakes: ['oversized'], emotionalControl: 8, notes: 'Newest.', createdAt: new Date('2026-04-13T22:00:00Z') },
-      { tradeId: null, kind: 'thesis', symbol: 'SPY', emotion: null, mistakes: [], emotionalControl: null, notes: 'No trade.', createdAt: new Date('2026-04-12T22:00:00Z') },
+      { tradeId: 't0', kind: 'review', mode: 'live', emotion: 'fomo', mistakes: [], emotionalControl: 4, notes: 'Oldest, left out.', createdAt: new Date('2026-01-01T22:00:00Z') },
+      { tradeId: `t${MAX_TRADES}`, kind: 'review', mode: 'live', emotion: 'calm', mistakes: ['oversized'], emotionalControl: 8, notes: 'Newest.', createdAt: new Date('2026-04-13T22:00:00Z') },
+      { tradeId: null, kind: 'thesis', mode: 'backtest', symbol: 'SPY', emotion: null, mistakes: [], emotionalControl: null, notes: 'No trade.', createdAt: new Date('2026-04-12T22:00:00Z') },
     ];
 
     const { journalEntries } = build({ trades, entries });
 
     expect(build({ trades, entries }).journalEntriesOmitted).toBe(1);
     expect(journalEntries).toEqual([
-      { ref: null, date: '2026-04-12', kind: 'thesis', symbol: 'SPY', emotion: null, mistakes: [], emotionalControl: null, notes: 'No trade.' },
-      { ref: MAX_TRADES, date: '2026-04-13', kind: 'review', symbol: null, emotion: 'calm', mistakes: ['oversized'], emotionalControl: 8, notes: 'Newest.' },
+      { ref: null, date: '2026-04-12', kind: 'thesis', mode: 'backtest', symbol: 'SPY', emotion: null, mistakes: [], emotionalControl: null, notes: 'No trade.' },
+      { ref: MAX_TRADES, date: '2026-04-13', kind: 'review', mode: 'live', symbol: null, emotion: 'calm', mistakes: ['oversized'], emotionalControl: 8, notes: 'Newest.' },
     ]);
   });
 
