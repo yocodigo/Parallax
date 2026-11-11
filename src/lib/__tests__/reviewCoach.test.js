@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { LOCKOUTS, SIZE_MAX, SIZE_MIN, TIME_STOP } from '../setups/settings';
-import { REVIEW_SECTIONS, REVIEW_SYSTEM_PROMPT, formatReviewInput, reviewOutputSchema } from '../reviewCoach';
+import { REVIEW_SYSTEM_PROMPT, formatReviewInput, reviewOutputSchema } from '../reviewCoach';
+import { REVIEW_SECTIONS } from '../reviewSections';
 import { SETUP_RULES } from '../setupRules';
 
 describe('REVIEW_SYSTEM_PROMPT', () => {

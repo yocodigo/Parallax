@@ -5,14 +5,6 @@ import { SETUP_RULES } from './setupRules';
 // aggregate figures in the input were worked out by the app (performanceReview.js),
 // so Claude quotes them the way the weekly review and the coaching pass do.
 
-export const REVIEW_SECTIONS = [
-  { key: 'strengths', title: 'Strengths' },
-  { key: 'patternsToFix', title: 'Patterns to Fix' },
-  { key: 'ruleAdherence', title: 'Rule Adherence' },
-  { key: 'emotionalPatterns', title: 'Emotional Patterns' },
-  { key: 'recommendations', title: 'Recommendations for This Week' },
-];
-
 export const reviewOutputSchema = z.object({
   strengths: z.string().describe('What is working: setups or conditions that are profitable and well executed.'),
   patternsToFix: z.string().describe('Recurring losses and mistakes, repeated sequences, and whether they are improving.'),
