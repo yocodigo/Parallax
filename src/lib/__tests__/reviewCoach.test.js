@@ -50,6 +50,8 @@ describe('REVIEW_SYSTEM_PROMPT', () => {
   it('says to list a sample of a long run of flagged trades and say that it is one', () => {
     expect(REVIEW_SYSTEM_PROMPT).toMatch(/more than 10 flagged trades in total/i);
     expect(REVIEW_SYSTEM_PROMPT).toMatch(/costliest ten of the trades you were given/i);
+    expect(REVIEW_SYSTEM_PROMPT).toMatch(/only the most recent flagged trades/i);
+    expect(REVIEW_SYSTEM_PROMPT).toMatch(/not the worst overall/i);
     expect(REVIEW_SYSTEM_PROMPT).toMatch(/say how many more there are out of the total/i);
   });
 });
