@@ -257,6 +257,7 @@ export const MAX_FLAGGED = 20;
 // Fewest closed trades a setup or condition needs to be called "working".
 export const WORKING_MIN_TRADES = 5;
 
+// The checks adherence() makes (adherence.js); keep the two in step.
 const CHECKS = [
   ['Window', (trade) => windowGate(trade.openedAt && new Date(trade.openedAt))],
   ['Size', (trade) => sizeGate(trade.quantity)],
@@ -285,6 +286,7 @@ export function ruleAdherence(trades) {
     .sort((a, b) => b.openedAt - a.openedAt);
   return {
     checks: adherence(trades),
+    // `openedAt` was only there to sort by.
     flagged: flagged.slice(0, MAX_FLAGGED).map(({ openedAt, ...rest }) => rest),
     flaggedTrades: flagged.length,
     omitted: Math.max(0, flagged.length - MAX_FLAGGED),
@@ -299,7 +301,9 @@ const percent = (part, whole) => (whole ? Math.round((part / whole) * 1000) / 10
 // passed (`disciplinePct`, null when none applied) and the share of reviewed
 // trades with no mistake tagged (`cleanReviewPct`, null when none was
 // reviewed). `trades` need the plan facts of ruleAdherence; `entries` are
-// journal entries with a `tradeId`.
+// journal entries with a `tradeId`. (One pass over the three kinds rather than
+// the breakdowns above, since each group also needs its discipline and
+// clean-review shares.)
 export function workingGroups(trades, entries, strategyNames) {
   const counted = trades.filter((trade) => profitLoss(trade) !== null);
   const kinds = [

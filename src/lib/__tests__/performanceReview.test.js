@@ -474,9 +474,39 @@ describe('workingGroups', () => {
     expect(workingGroups(stocks, entries, names).find((r) => r.kind === 'setup').disciplinePct).toBeNull();
   });
 
-  it('orders by net P/L, best first', () => {
-    const rows = workingGroups(winners, entries, names);
+  it('orders by net P/L, best first, across the kinds', () => {
+    const others = Array.from({ length: 5 }, (_, i) => clean(20, { id: `o${i}`, strategyId: 's2', ...day(13 + i) }));
 
-    expect(rows.map((r) => r.netPnl)).toEqual([...rows.map((r) => r.netPnl)].sort((a, b) => b - a));
+    const rows = workingGroups([...winners, ...others], entries, names);
+
+    // Calls (all ten trades) 150, Other 100, Band cross 50.
+    expect(rows.filter((r) => r.kind !== 'weekday').map((r) => [r.kind, r.name, r.netPnl])).toEqual([
+      ['call or put', 'call', 150],
+      ['setup', 'Other', 100],
+      ['setup', 'Band cross', 50],
+    ]);
+  });
+
+  it('lists a call or put group, and no row for stocks, which have no option type', () => {
+    expect(workingGroups(winners, entries, names).find((r) => r.kind === 'call or put')).toMatchObject({ name: 'call', trades: 5, netPnl: 50 });
+
+    const stocks = winners.map((trade) => ({ ...trade, assetClass: 'stock', optionType: null }));
+    expect(workingGroups(stocks, entries, names).some((r) => r.kind === 'call or put')).toBe(false);
+  });
+
+  it('groups by the New York weekday of the fill', () => {
+    // Five Mondays; the last fill is Monday 21:30 in New York, which is Tuesday in UTC.
+    const fills = ['2026-04-06T14:00:00Z', '2026-04-13T14:00:00Z', '2026-04-20T14:00:00Z', '2026-04-27T14:00:00Z', '2026-05-05T01:30:00Z'];
+    const mondays = fills.map((at, i) => clean(10, { id: `m${i}`, openedAt: new Date(at), closedAt: new Date(new Date(at).getTime() + 3_600_000) }));
+
+    expect(workingGroups(mondays, [], names).find((r) => r.kind === 'weekday')).toMatchObject({ name: 'Mon', trades: 5 });
+  });
+
+  it('names a trade with no strategy, or one whose strategy is gone', () => {
+    const none = winners.map((trade) => ({ ...trade, strategyId: null }));
+    const gone = winners.map((trade) => ({ ...trade, strategyId: 'deleted' }));
+
+    expect(workingGroups(none, entries, names).find((r) => r.kind === 'setup').name).toBe('No strategy');
+    expect(workingGroups(gone, entries, names).find((r) => r.kind === 'setup').name).toBe('Unknown strategy');
   });
 });
