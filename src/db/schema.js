@@ -283,6 +283,21 @@ export const dailyPlans = pgTable(
   ]
 );
 
+// The last Performance Review written for a date range: a paid Claude call, so
+// it is kept and shown until someone asks for a new one. `rangeKey` names the
+// range ('7d', '30d', 'all', or 'custom:<from>:<to>'); a preset's dates move
+// with the day, so the dates it covered are kept too (New York dates, null for
+// all time). `review` is the five sections of reviewCoach.js; `tradeCount` the
+// closed trades it read.
+export const performanceReviews = pgTable('performance_reviews', {
+  rangeKey: text('range_key').primaryKey(),
+  review: jsonb('review').notNull(),
+  tradeCount: integer('trade_count').notNull(),
+  rangeFrom: date('range_from', { mode: 'string' }),
+  rangeTo: date('range_to', { mode: 'string' }),
+  reviewedAt: timestamp('reviewed_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 // Wrong passwords at sign-in, one row each, so the limit holds across serverless
 // instances (an in-memory count is per instance). Pruned as new ones come in.
 export const signInFailures = pgTable(
