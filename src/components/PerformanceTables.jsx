@@ -117,6 +117,12 @@ const HOLD_COLUMNS = [
   ['Net P/L', (b) => (b.trades === 0 ? '–' : signed(b.netPnl))],
 ];
 
+const EXIT_COLUMNS = [
+  ['Trades', (e) => e.trades],
+  ['Share of exits', (e) => pct(e.share)],
+  ['Net P/L', (e) => (e.trades === 0 ? '–' : signed(e.netPnl))],
+];
+
 // The section 3 tables (dashboard.md): the monthly summary, year to date, and
 // rule adherence and the violation costs, from the performance route's `months`,
 // `yearToDate`, `adherence`, and `violationCosts`, and, for option trades, the `execution` tables. `yearToDate` is the totals for whatever range was asked for, so
@@ -180,6 +186,33 @@ export default function PerformanceTables({ months, yearToDate, adherence, viola
         >
           <p className="text-xs text-gray-500">
             Option trades only, by how long the position was held from the entry fill to the exit.
+          </p>
+        </Table>
+      )}
+      {execution && (
+        <Table
+          label="Exit triggers"
+          firstColumn="Exit"
+          columns={EXIT_COLUMNS}
+          rows={[
+            {
+              key: 'triggered',
+              name: 'Backstop or time stop',
+              values: {
+                ...execution.exits.triggered,
+                share: execution.exits.untriggeredShare === null ? null : 1 - execution.exits.untriggeredShare,
+              },
+            },
+            {
+              key: 'untriggered',
+              name: 'No trigger',
+              values: { ...execution.exits.untriggered, share: execution.exits.untriggeredShare },
+            },
+          ]}
+        >
+          <p className="text-xs text-gray-500">
+            Option trades only. An exit is triggered when it sold at or under the backstop level or held as long as the
+            time stop; every other exit was nobody&apos;s rule. Only those two triggers count for now.
           </p>
         </Table>
       )}

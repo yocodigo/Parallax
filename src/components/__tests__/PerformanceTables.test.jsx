@@ -205,6 +205,12 @@ describe('PerformanceTables: option execution', () => {
       { key: '1to3', label: '1–3 min', trades: 20, winRate: 0.55, netPnl: 12.5 },
       { key: '3to5', label: '3–5 min', trades: 0, winRate: null, netPnl: 0 },
     ],
+    exits: {
+      trades: 10,
+      triggered: { trades: 4, netPnl: -30 },
+      untriggered: { trades: 6, netPnl: 12.5 },
+      untriggeredShare: 0.6,
+    },
   };
 
   it('shows each hold bucket with its trades, gross win rate, and net P/L', () => {
@@ -215,6 +221,17 @@ describe('PerformanceTables: option execution', () => {
     expect(within(rows[1]).getByRole('rowheader')).toHaveTextContent('Under 1 min');
     expect(within(rows[1]).getAllByRole('cell').map((c) => c.textContent)).toEqual(['46', '37%', '-$149.00']);
     expect(within(rows[3]).getAllByRole('cell').map((c) => c.textContent)).toEqual(['0', '–', '–']);
+  });
+
+  it('shows the exits a backstop or time stop explains against those with no trigger', () => {
+    renderTables({ execution });
+    const table = screen.getByRole('table', { name: 'Exit triggers' });
+    const [, triggered, none] = within(table).getAllByRole('row');
+
+    expect(within(triggered).getByRole('rowheader')).toHaveTextContent('Backstop or time stop');
+    expect(within(triggered).getAllByRole('cell').map((c) => c.textContent)).toEqual(['4', '40%', '-$30.00']);
+    expect(within(none).getByRole('rowheader')).toHaveTextContent('No trigger');
+    expect(within(none).getAllByRole('cell').map((c) => c.textContent)).toEqual(['6', '60%', '+$12.50']);
   });
 
   it('leaves the execution tables out when the response has none', () => {

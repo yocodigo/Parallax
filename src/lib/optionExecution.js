@@ -29,3 +29,32 @@ export function holdTime(trades) {
     return { key, label, trades: inBucket.length, winRate, netPnl };
   });
 }
+
+// Premiums are decimals, so a sale at exactly the backstop level can land a
+// hair above it.
+const PRICE_TOLERANCE = 1e-9;
+
+// [8.2] Exits with no trigger. Only the backstop and the time stop count as
+// triggers for now: a sale at or under the backstop level (the entry premium
+// less `backstopPct`), or a hold of `timeStopMinutes` or more. Everything else
+// was nobody's rule. A trigger whose rule is off isn't counted. `rules` is the
+// stored rule settings. Returns the trades split into triggered and untriggered
+// with their net P/L, and the untriggered share (null without trades).
+export function untriggeredExits(trades, rules) {
+  const options = countedOptions(trades);
+  const isTriggered = (trade) => {
+    const backstop =
+      rules.backstopOn && trade.exitPrice <= trade.entryPrice * (1 - rules.backstopPct) + PRICE_TOLERANCE;
+    const time = rules.timeStopOn && holdMinutes(trade) >= rules.timeStopMinutes;
+    return backstop || time;
+  };
+
+  const triggered = options.filter(isTriggered);
+  const untriggered = options.filter((trade) => !isTriggered(trade));
+  return {
+    trades: options.length,
+    triggered: { trades: triggered.length, netPnl: summarize(triggered).netPnl },
+    untriggered: { trades: untriggered.length, netPnl: summarize(untriggered).netPnl },
+    untriggeredShare: options.length ? untriggered.length / options.length : null,
+  };
+}

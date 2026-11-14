@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { holdTime } from '../optionExecution';
+import { holdTime, untriggeredExits } from '../optionExecution';
 
 // A closed long option, one contract, held `seconds`: gross P/L is
 // (exit - entry) * 100, less `fees`.
@@ -64,5 +64,52 @@ describe('holdTime', () => {
     ]);
 
     expect(rows.every((row) => row.trades === 0)).toBe(true);
+  });
+});
+
+// The rule settings the triggers read: a backstop 25% under the premium and a
+// time stop at 15 minutes.
+const RULES = { backstopOn: true, backstopPct: 0.25, timeStopOn: true, timeStopMinutes: 15 };
+
+describe('untriggeredExits', () => {
+  // Bought at 1.00. A sale at 0.75 or lower fills the backstop; 15 minutes of
+  // holding is the time stop. Anything else was nobody's rule.
+  it('splits exits into those a backstop or time stop explains and those with no trigger', () => {
+    const result = untriggeredExits(
+      [
+        option(-25, { seconds: 30 }), // sold at 0.75: the backstop
+        option(-40, { seconds: 90 }), // through the backstop
+        option(3, { seconds: 900 }), // out at the time stop
+        option(5, { seconds: 45 }), // a quick win, no trigger
+        option(-10, { seconds: 120 }), // a small loss, no trigger
+      ],
+      RULES
+    );
+
+    expect(result).toMatchObject({
+      trades: 5,
+      triggered: { trades: 3, netPnl: -62 },
+      untriggered: { trades: 2, netPnl: -5 },
+      untriggeredShare: 0.4,
+    });
+  });
+
+  it('counts a trade past both as the backstop and once', () => {
+    const result = untriggeredExits([option(-30, { seconds: 1200 })], RULES);
+
+    expect(result.triggered.trades).toBe(1);
+  });
+
+  it('does not count a trigger whose rule is off', () => {
+    const result = untriggeredExits([option(-30, { seconds: 30 }), option(3, { seconds: 900 })], {
+      ...RULES,
+      backstopOn: false,
+    });
+
+    expect(result).toMatchObject({ triggered: { trades: 1 }, untriggered: { trades: 1 } });
+  });
+
+  it('has no share without trades', () => {
+    expect(untriggeredExits([], RULES)).toMatchObject({ trades: 0, untriggeredShare: null });
   });
 });

@@ -205,7 +205,9 @@ Vitest, JavaScript (not TypeScript).
   stores the breakers in `trades.overridden_breakers`. Plans and exits are never blocked.
 - Option execution (`rules-v3.md` section 8, `src/lib/optionExecution.js`): the performance route's `execution`
   holds tables over closed option trades, shown on the Tables tab by `PerformanceTables` when present: `holdTime`
-  (trades, gross win rate, and net P/L by how long the position was held). `moneyR` (`tradeMetrics.js`) is net P/L
+  (trades, gross win rate, and net P/L by how long the position was held) and `exits` (`untriggeredExits`: exits a
+  backstop fill or the time stop explains against those with no trigger, by the saved rule settings; only those two
+  triggers count so far). `moneyR` (`tradeMetrics.js`) is net P/L
   over the recorded stop's risk, or, with none, over the backstop's share of the premium, labelled assumed
   (`TradeProgress`); `rMultiple` and its consumers still leave options without R.
 - Option rules as settings (`rules-v3.md` section 5): `rule_settings` (one row, id 1) holds the entry windows

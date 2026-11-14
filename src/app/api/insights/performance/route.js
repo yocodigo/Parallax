@@ -2,11 +2,12 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getDb } from '@/db';
 import { listContextGrades } from '@/db/contexts';
+import { getRuleSettings } from '@/db/settings';
 import { listStrategies } from '@/db/strategies';
 import { listClosedTradesBetween, listPlanFacts, listReviewRatings } from '@/db/trades';
 import { adherence, disciplineByMonth, emotionalControlByMonth, violationCosts } from '@/lib/adherence';
 import { withErrorLogging } from '@/lib/log';
-import { holdTime } from '@/lib/optionExecution';
+import { holdTime, untriggeredExits } from '@/lib/optionExecution';
 import { byGrade, byUnderlying, bySetup, callsVsPuts, equityCurve, monthlySummary, rDistribution, rollingExpectancy, summarize, timeOfDay } from '@/lib/performance';
 
 // Read fresh from the database on every request, never prerendered.
@@ -79,6 +80,7 @@ export const GET = withErrorLogging('/api/insights/performance', async (request)
   );
   const withRatings = closed.map((trade) => ({ ...trade, emotionalControls: ratings.get(trade.id) }));
 
+  const rules = await getRuleSettings(getDb());
   const names = new Map((await listStrategies(getDb())).map((strategy) => [strategy.id, strategy.name]));
 
   return NextResponse.json({
@@ -96,6 +98,6 @@ export const GET = withErrorLogging('/api/insights/performance', async (request)
     bySetup: bySetup(closed).map((setup) => ({ ...setup, name: names.get(setup.strategyId) ?? null })),
     byGrade: byGrade(withGrades),
     rDistribution: rDistribution(closed),
-    execution: { holdTime: holdTime(closed) },
+    execution: { holdTime: holdTime(closed), exits: untriggeredExits(closed, rules) },
   });
 });

@@ -3,7 +3,9 @@ import { getDb } from '@/db';
 import { journalEntries, trades } from '@/db/schema';
 import { resetDb } from '@/db/testing';
 import { saveTradeContext } from '@/db/contexts';
+import { saveRuleSettings } from '@/db/settings';
 import { createStrategy } from '@/db/strategies';
+import { DEFAULT_RULE_SETTINGS } from '@/lib/ruleSettings';
 import { GET } from '../route';
 
 // Swap the app's database for the test database. Everything else is real.
@@ -350,6 +352,24 @@ describe('GET /api/insights/performance', () => {
       ['15plus', 2],
     ]);
     expect(body.execution.holdTime[4]).toMatchObject({ winRate: 0.5, netPnl: 15 });
+  });
+
+  it('returns how many option exits had no trigger, by the saved backstop and time stop', async () => {
+    // Held an hour each, so both are past the 15-minute time stop by default.
+    await closedOption(40, '2026-04-13T20:30:00Z');
+    await closedOption(-25, '2026-04-14T17:00:00Z');
+    await saveRuleSettings(getDb(), { ...DEFAULT_RULE_SETTINGS, timeStopOn: false });
+
+    const { execution } = await (await get('?year=2026')).json();
+
+    // With the time stop off only the backstop explains an exit, and a sale at
+    // 0.75 on a 1.00 entry fills it.
+    expect(execution.exits).toMatchObject({
+      trades: 2,
+      triggered: { trades: 1, netPnl: -25 },
+      untriggered: { trades: 1, netPnl: 40 },
+      untriggeredShare: 0.5,
+    });
   });
 
   it('counts a trade by the New York year it closed in', async () => {
