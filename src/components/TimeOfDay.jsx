@@ -49,7 +49,7 @@ const clock = (minutes) => {
 const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
 
 const lockouts = LOCKOUTS.map(([from, to]) => [toMinutes(from), toMinutes(to)]);
-// A lockout touches a half hour when they share some time; one ending exactly where it starts doesn't.
+// A window touches a half hour when they share some time; one ending exactly where it starts doesn't.
 const inLockout = (start) => lockouts.some(([from, to]) => from < start + BUCKET && to > start);
 
 // The day in words: the chart's text alternative, shown to everyone.
@@ -90,7 +90,7 @@ export function TimeTooltip({ active, payload }) {
           {plural(trades, 'trade')} · {percent.format(winRate)} win rate · {formatProfitLoss(netExpectancy)} per trade
         </p>
       )}
-      {inLockout(from) && <p className="text-gray-500">Overlaps a lockout window</p>}
+      {inLockout(from) && <p className="text-gray-500">Overlaps an entry window</p>}
     </div>
   );
 }
@@ -114,7 +114,7 @@ export default function TimeOfDay({ buckets }) {
       <div>
         <h2 className="text-sm font-semibold text-gray-700">Results by time of day</h2>
         <p className="text-xs text-gray-500">
-          Net P/L by the half hour of entry, New York time. Shaded: lockout windows, when entries are off limits.
+          Net P/L by the half hour of entry, New York time. Shaded: entry windows, where an entry needs a detected, grade A setup (not scored yet).
         </p>
       </div>
 

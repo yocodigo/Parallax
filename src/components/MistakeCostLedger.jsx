@@ -25,9 +25,9 @@ const LOSS = "#dc2626";
 // In the order of `violationCosts`, with the names the sentence and chart use.
 const BUCKETS = [
   { key: "followed", name: "Rules followed" },
-  { key: "window", name: "Lockout only" },
+  { key: "window", name: "Window only" },
   { key: "size", name: "Size only" },
-  { key: "both", name: "Lockout and size" },
+  { key: "both", name: "Window and size" },
 ];
 
 const compactMoney = new Intl.NumberFormat("en-US", {
@@ -100,8 +100,8 @@ export default function MistakeCostLedger({ costs }) {
           Mistake cost ledger
         </h2>
         <p className="text-xs text-gray-500">
-          Net P/L of option trades by the entry rules broken: lockout window and
-          size.
+          Net P/L of option trades by the entry rules broken: window and size.
+          Entry windows aren&apos;t scored yet, so the window buckets stay empty.
         </p>
       </div>
 

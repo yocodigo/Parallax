@@ -135,7 +135,7 @@ export function emotionalControlByMonth(trades) {
 }
 
 // Which bucket of `violationCosts` a trade falls in. `window` means the
-// lockout gate (Window OK) was missed.
+// window gate (Window OK) was missed, which it never is while windows aren't scored.
 function violationBucket(windowMissed, sizeMissed) {
   if (windowMissed && sizeMissed) return 'both';
   if (windowMissed) return 'window';
@@ -147,7 +147,7 @@ function violationBucket(windowMissed, sizeMissed) {
 // (dashboard.md section 4, chart 1). Unlike `adherence`, each trade lands in
 // exactly one bucket, so the buckets add up to the total: `followed` (neither
 // gate missed; a gate that can't judge counts as not missed), `window` (the
-// lockout only), `size` (the size only), or `both`.
+// window only), `size` (the size only), or `both`.
 export function violationCosts(trades) {
   const buckets = {
     followed: { trades: 0, cents: 0 },

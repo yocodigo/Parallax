@@ -22,9 +22,15 @@ describe("MistakeCostLedger", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Rules followed: 3 trades, +$60.00. Lockout only: 1 trade, -$30.00. Lockout and size: 1 trade, -$15.00.",
+        "Rules followed: 3 trades, +$60.00. Window only: 1 trade, -$30.00. Window and size: 1 trade, -$15.00.",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("says the entry windows are not scored yet, so the window buckets stay empty", () => {
+    render(<MistakeCostLedger costs={{ followed: zero, window: zero, size: zero, both: zero }} />);
+
+    expect(screen.getByText(/Entry windows aren.t scored yet/)).toBeInTheDocument();
   });
 
   it("says so when no option trade has closed, instead of drawing empty axes", () => {
@@ -42,10 +48,10 @@ describe("MistakeCostLedger", () => {
 
 describe('BucketTooltip', () => {
   it('leads with the net P/L, then the bucket and its trades', () => {
-    render(<BucketTooltip active payload={[{ payload: { name: 'Lockout only', net: -30, trades: 1 } }]} />);
+    render(<BucketTooltip active payload={[{ payload: { name: 'Window only', net: -30, trades: 1 } }]} />);
 
     expect(screen.getByText('-$30.00')).toBeInTheDocument();
-    expect(screen.getByText('Lockout only · 1 trade')).toBeInTheDocument();
+    expect(screen.getByText('Window only · 1 trade')).toBeInTheDocument();
   });
 
   it('renders nothing while the pointer is off the chart', () => {

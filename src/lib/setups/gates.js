@@ -16,7 +16,7 @@ export const MISSED = 'missed';
 export const UNKNOWN = 'unknown';
 
 // Wall-clock minutes, not context/indicators.js's minutesSinceOpen: the
-// lockout windows are clock times and two of them need judging outside the
+// entry windows are clock times and two of them need judging outside the
 // regular session, where that helper gives null.
 const nyTime = new Intl.DateTimeFormat('en-US', {
   timeZone: 'America/New_York',

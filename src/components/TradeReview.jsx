@@ -57,11 +57,11 @@ export default function TradeReview({ tradeId }) {
         )}
       </ul>
       <div className="flex flex-wrap gap-1.5">
-        {review.inLockout && <Flag style="bg-red-50 text-red-700">In a lockout window</Flag>}
+        {review.inLockout && <Flag style="bg-amber-100 text-amber-900">In an entry window</Flag>}
         {review.midRange && <Flag style="bg-red-50 text-red-700">Mid-range entry</Flag>}
         {review.pressureDate && <Flag style="bg-amber-100 text-amber-900">Pressure date</Flag>}
         {review.seasonalDate && <Flag style="bg-amber-100 text-amber-900">{`Gann date ${review.seasonalDate}`}</Flag>}
-        {noFlags && <span className="text-gray-500">No lockout, mid-range, or calendar flags</span>}
+        {noFlags && <span className="text-gray-500">No entry window, mid-range, or calendar flags</span>}
       </div>
     </div>
   );

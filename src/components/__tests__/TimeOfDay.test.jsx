@@ -71,7 +71,7 @@ describe('TimeOfDay', () => {
     expect(screen.getByText('No closed trades in this range.')).toBeInTheDocument();
   });
 
-  it('shades the three lockout windows to scale, a quarter hour wide for the first', () => {
+  it('shades the three entry windows to scale, a quarter hour wide for the first', () => {
     const { container } = render(<TimeOfDay buckets={buckets({ '10:00': [1, 12, 1] })} />);
 
     const areas = [...container.querySelectorAll('.recharts-reference-area-rect')].map((rect) => ({
@@ -118,13 +118,13 @@ describe('TimeTooltip', () => {
     expect(screen.getByText('+$20.00')).toBeInTheDocument();
     expect(screen.getByText('10:00 to 10:30 ET')).toBeInTheDocument();
     expect(screen.getByText('2 trades · 50% win rate · +$10.00 per trade')).toBeInTheDocument();
-    expect(screen.queryByText('Overlaps a lockout window')).not.toBeInTheDocument();
+    expect(screen.queryByText('Overlaps an entry window')).not.toBeInTheDocument();
   });
 
-  it('says when the half hour overlaps a lockout window', () => {
+  it('says when the half hour overlaps an entry window', () => {
     render(<TimeTooltip {...at(row('11:00'))} />);
 
-    expect(screen.getByText('Overlaps a lockout window')).toBeInTheDocument();
+    expect(screen.getByText('Overlaps an entry window')).toBeInTheDocument();
   });
 
   it('says there were no trades in an empty half hour', () => {
@@ -133,10 +133,10 @@ describe('TimeTooltip', () => {
     expect(screen.getByText('No trades')).toBeInTheDocument();
   });
 
-  it('does not count a lockout that ends where the half hour begins', () => {
+  it('does not count a window that ends where the half hour begins', () => {
     render(<TimeTooltip {...at(row('15:00'))} />);
 
-    expect(screen.queryByText('Overlaps a lockout window')).not.toBeInTheDocument();
+    expect(screen.queryByText('Overlaps an entry window')).not.toBeInTheDocument();
   });
 
   it('renders nothing while the pointer is off the chart', () => {

@@ -80,13 +80,13 @@ describe('TradeReview', () => {
     expect(await screen.findByText('4xBO on the 5m, valid, grade A')).toBeInTheDocument();
   });
 
-  it('flags a lockout, a mid-range entry, and the calendar dates', async () => {
+  it('flags an entry window, a mid-range entry, and the calendar dates', async () => {
     serveReview({
       review: review({ inLockout: true, midRange: true, pressureDate: true, seasonalDate: '09-23' }),
     });
     renderReview();
 
-    expect(await screen.findByText('In a lockout window')).toBeInTheDocument();
+    expect(await screen.findByText('In an entry window')).toBeInTheDocument();
     expect(screen.getByText('Mid-range entry')).toBeInTheDocument();
     expect(screen.getByText('Pressure date')).toBeInTheDocument();
     expect(screen.getByText('Gann date 09-23')).toBeInTheDocument();
@@ -96,7 +96,7 @@ describe('TradeReview', () => {
     serveReview({ review: review() });
     renderReview();
 
-    expect(await screen.findByText('No lockout, mid-range, or calendar flags')).toBeInTheDocument();
+    expect(await screen.findByText('No entry window, mid-range, or calendar flags')).toBeInTheDocument();
   });
 
   it('explains why there is no review', async () => {

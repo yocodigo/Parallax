@@ -101,9 +101,9 @@ const ADHERENCE_COLUMNS = [
 // In the order of `violationCosts`, with the names the mistake cost ledger uses.
 const VIOLATION_ROWS = [
   ['followed', 'Rules followed'],
-  ['window', 'Lockout only'],
+  ['window', 'Window only'],
   ['size', 'Size only'],
-  ['both', 'Lockout and size'],
+  ['both', 'Window and size'],
 ];
 
 const VIOLATION_COLUMNS = [
@@ -151,7 +151,7 @@ export default function PerformanceTables({ months, yearToDate, adherence, viola
           exit was no worse than the stop; trades with no stop aren&apos;t judged. Exit OK: the recorded exit reason was a
           planned one, not a discomfort exit. Discipline score: the Plan OK, Stop OK, and Exit OK checks passed out of the
           ones that applied (Window OK and Size OK aren&apos;t in it). It has no cost, since one trade can fail
-          several checks.
+          several checks. Window OK isn&apos;t scored yet: a window will need a detected setup rather than close the door.
         </p>
       </Table>
       <Table

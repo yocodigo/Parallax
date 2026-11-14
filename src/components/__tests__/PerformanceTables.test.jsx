@@ -144,6 +144,12 @@ describe('PerformanceTables', () => {
     expect(screen.getByText('No closed trades in this range.')).toBeInTheDocument();
   });
 
+  it('says the entry windows are not scored yet', () => {
+    renderTables();
+
+    expect(screen.getByText(/Window OK isn.t scored yet/)).toBeInTheDocument();
+  });
+
   it('shows the rules kept and broken with the cost of the broken ones, for option trades', () => {
     renderTables();
     const table = screen.getByRole('table', { name: 'Rule adherence' });
@@ -178,9 +184,9 @@ describe('PerformanceTables', () => {
     ]);
     expect(rows.slice(1).map(read)).toEqual([
       ['Rules followed', '3', '+$187.40'],
-      ['Lockout only', '2', '-$55.50'],
+      ['Window only', '2', '-$55.50'],
       ['Size only', '0', '–'],
-      ['Lockout and size', '1', '-$12.00'],
+      ['Window and size', '1', '-$12.00'],
     ]);
   });
 
