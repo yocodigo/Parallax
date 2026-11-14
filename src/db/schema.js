@@ -180,6 +180,34 @@ export const circuitBreakerSettings = pgTable(
   (t) => [check('circuit_breaker_settings_single_row', sql`${t.id} = 1`)]
 );
 
+// The option rules the trader edits (rules-v3 section 5), each with an on
+// flag. One row (id 1). A null premiumMax or riskPerTrade is not set. The
+// windows are [from, to] New York clock times.
+export const ruleSettings = pgTable(
+  'rule_settings',
+  {
+    id: integer('id').primaryKey().default(1),
+    windowsOn: boolean('windows_on').notNull(),
+    windows: jsonb('windows').notNull(),
+    sizeOn: boolean('size_on').notNull(),
+    sizeMin: integer('size_min').notNull(),
+    sizeMax: integer('size_max').notNull(),
+    premiumBandOn: boolean('premium_band_on').notNull(),
+    premiumMin: numeric('premium_min', { precision: 8, scale: 2, mode: 'number' }).notNull(),
+    premiumMax: numeric('premium_max', { precision: 8, scale: 2, mode: 'number' }),
+    riskPerTrade: numeric('risk_per_trade', { precision: 8, scale: 2, mode: 'number' }),
+    backstopOn: boolean('backstop_on').notNull(),
+    backstopPct: numeric('backstop_pct', { precision: 5, scale: 4, mode: 'number' }).notNull(),
+    timeStopOn: boolean('time_stop_on').notNull(),
+    timeStopMinutes: integer('time_stop_minutes').notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [check('rule_settings_single_row', sql`${t.id} = 1`)]
+);
+
 // The recording prompts shown next to the voice record button (setups.md
 // 9.6), editable as app content rather than hard-coded. One row (id 1).
 export const recordingPrompts = pgTable(

@@ -1,7 +1,15 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { DEFAULT_BREAKER_SETTINGS } from '@/lib/circuitBreakerSettings';
 import { DEFAULT_RECORDING_PROMPTS } from '@/lib/recordingPrompts';
-import { getBreakerSettings, getRecordingPrompts, saveBreakerSettings, saveRecordingPrompts } from '../settings';
+import { DEFAULT_RULE_SETTINGS } from '@/lib/ruleSettings';
+import {
+  getBreakerSettings,
+  getRecordingPrompts,
+  getRuleSettings,
+  saveBreakerSettings,
+  saveRecordingPrompts,
+  saveRuleSettings,
+} from '../settings';
 import { createTestDb, resetDb } from '../testing';
 
 const db = createTestDb();
@@ -58,5 +66,32 @@ describe('recording prompts', () => {
     await saveRecordingPrompts(db, updated);
 
     expect(await getRecordingPrompts(db)).toEqual(updated);
+  });
+});
+
+describe('rule settings', () => {
+  const rules = {
+    ...DEFAULT_RULE_SETTINGS,
+    windowsOn: false,
+    windows: [['10:00', '10:30']],
+    premiumMax: 4.5,
+    riskPerTrade: 20,
+    backstopPct: 0.3,
+  };
+
+  it('are the defaults before anything is saved', async () => {
+    expect(await getRuleSettings(db)).toEqual(DEFAULT_RULE_SETTINGS);
+  });
+
+  it('saves and reads back every rule, windows included', async () => {
+    expect(await saveRuleSettings(db, rules)).toEqual(rules);
+    expect(await getRuleSettings(db)).toEqual(rules);
+  });
+
+  it('replaces the saved rules on a second save, clearing a value set to null', async () => {
+    await saveRuleSettings(db, rules);
+    await saveRuleSettings(db, { ...rules, premiumMax: null, riskPerTrade: null });
+
+    expect(await getRuleSettings(db)).toEqual({ ...rules, premiumMax: null, riskPerTrade: null });
   });
 });

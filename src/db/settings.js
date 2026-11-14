@@ -2,7 +2,8 @@ import { eq } from 'drizzle-orm';
 import { circuitBreakers } from '@/lib/circuitBreakers';
 import { DEFAULT_BREAKER_SETTINGS } from '@/lib/circuitBreakerSettings';
 import { DEFAULT_RECORDING_PROMPTS } from '@/lib/recordingPrompts';
-import { circuitBreakerSettings, recordingPrompts } from './schema';
+import { DEFAULT_RULE_SETTINGS } from '@/lib/ruleSettings';
+import { circuitBreakerSettings, recordingPrompts, ruleSettings } from './schema';
 import { listRecentTrades } from './trades';
 
 // The settings row without its bookkeeping columns.
@@ -71,4 +72,38 @@ export async function saveRecordingPrompts(db, prompts) {
     .onConflictDoUpdate({ target: recordingPrompts.id, set: values })
     .returning();
   return pickPrompts(row);
+}
+
+// The rule settings without their bookkeeping columns.
+const pickRules = (row) => ({
+  windowsOn: row.windowsOn,
+  windows: row.windows,
+  sizeOn: row.sizeOn,
+  sizeMin: row.sizeMin,
+  sizeMax: row.sizeMax,
+  premiumBandOn: row.premiumBandOn,
+  premiumMin: row.premiumMin,
+  premiumMax: row.premiumMax,
+  riskPerTrade: row.riskPerTrade,
+  backstopOn: row.backstopOn,
+  backstopPct: row.backstopPct,
+  timeStopOn: row.timeStopOn,
+  timeStopMinutes: row.timeStopMinutes,
+});
+
+// The trader's option rules, or the defaults until they've saved some.
+export async function getRuleSettings(db) {
+  const [row] = await db.select().from(ruleSettings).where(eq(ruleSettings.id, 1));
+  return row ? pickRules(row) : { ...DEFAULT_RULE_SETTINGS };
+}
+
+// Replaces the rules; there's only ever the one row.
+export async function saveRuleSettings(db, rules) {
+  const values = pickRules(rules);
+  const [row] = await db
+    .insert(ruleSettings)
+    .values({ id: 1, ...values })
+    .onConflictDoUpdate({ target: ruleSettings.id, set: values })
+    .returning();
+  return pickRules(row);
 }
