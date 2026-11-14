@@ -203,6 +203,12 @@ Vitest, JavaScript (not TypeScript).
   entries, and the losing streak. `POST /api/trades/[id]/entry` answers 409 `{ error, breakers }`
   while one is tripped for the trade's mode; resending with `override: true` records the entry and
   stores the breakers in `trades.overridden_breakers`. Plans and exits are never blocked.
+- Option rules as settings (`rules-v3.md` section 5): `rule_settings` (one row, id 1) holds the entry windows
+  (New York clock times), contract range, premium band, risk per trade (null until the winners' heat sets it),
+  backstop, and time stop, each with an `*On` flag whose values are kept while it is off. `ruleSettings.js` has
+  the defaults (from `settings.js`) and `parseRuleSettings`; `getRuleSettings`/`saveRuleSettings` in
+  `src/db/settings.js` (defaults until the first save; the route validates before saving); edited in
+  `RuleSettings.jsx` on `/insights` through `GET`/`PUT /api/rule-settings`.
 - Strategies and the entry checklist: `strategies` with ordered `strategy_rules` (kind `edge` for the
   setup or `discipline` for risk and process), edited on `/strategies` (`Strategies.jsx`, `GET`/`POST
   /api/strategies`, `PUT /api/strategies/[id]`). Editing keeps the ids of rules sent back with one.
