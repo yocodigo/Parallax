@@ -14,13 +14,19 @@ const toText = (value) => (value === null ? '' : String(value));
 // 0.3 × 100 doesn't come out as 30.000000000000004.
 const toPercent = (share) => String(Math.round(share * 10000) / 100);
 
+// A rule with an on flag, or, with no `onToggle`, one that is off by being
+// blank (risk per trade has no flag: null means not set).
 function Rule({ id, label, on, onToggle, hint, children }) {
   return (
     <fieldset className="space-y-2 border-t border-gray-100 pt-3">
-      <label htmlFor={`rules-${id}-on`} className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
-        <input id={`rules-${id}-on`} type="checkbox" checked={on} onChange={onToggle} />
-        {label}
-      </label>
+      {onToggle ? (
+        <label htmlFor={`rules-${id}-on`} className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
+          <input id={`rules-${id}-on`} type="checkbox" checked={on} onChange={onToggle} />
+          {label}
+        </label>
+      ) : (
+        <legend className="text-sm font-medium text-gray-700">{label}</legend>
+      )}
       {hint && <p className="text-xs text-gray-500">{hint}</p>}
       {children}
     </fieldset>
@@ -182,13 +188,7 @@ function SettingsForm({ settings, onSaved }) {
         <p className="text-xs text-gray-500">Leave the highest blank for no ceiling.</p>
       </Rule>
 
-      <Rule
-        id="risk"
-        label="Risk per trade"
-        on={form.riskPerTrade !== ''}
-        onToggle={() => set('riskPerTrade', form.riskPerTrade === '' ? '20' : '')}
-        hint="Not set until the winners’ heat gives it a number."
-      >
+      <Rule id="risk" label="Risk per trade" hint="Leave blank until the winners’ heat gives it a number.">
         {number('riskPerTrade', 'Risk per trade ($)')}
       </Rule>
 

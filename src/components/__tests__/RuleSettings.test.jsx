@@ -67,6 +67,20 @@ describe('RuleSettings', () => {
     expect(saved).toEqual([{ ...settings, backstopOn: false, premiumMax: null, riskPerTrade: null }]);
   });
 
+  it('has no on flag for risk per trade: blank is not set, and a number is saved as typed', async () => {
+    const saved = serveRules({ initial: { ...settings, riskPerTrade: null } });
+    const user = userEvent.setup();
+    renderRules();
+
+    const risk = await screen.findByLabelText('Risk per trade ($)');
+    expect(screen.queryByRole('checkbox', { name: 'Risk per trade' })).not.toBeInTheDocument();
+    await user.type(risk, '25');
+    await user.click(screen.getByRole('button', { name: 'Save rules' }));
+
+    await waitFor(() => expect(saved).toHaveLength(1));
+    expect(saved[0].riskPerTrade).toBe(25);
+  });
+
   it('saves the backstop as a share of the premium', async () => {
     const saved = serveRules();
     const user = userEvent.setup();
