@@ -137,5 +137,5 @@ export const SIZE_MAX = 2;
 // heat. **(confirm)**
 export const BACKSTOP_PCT = 0.25;
 
-// [rules-v3 1.1] Contracts under this premium won 10% of the time. **(confirm)**
+// [rules-v3 1.1] The cheapest premium the band allows. **(confirm)**
 export const PREMIUM_MIN = 0.5;
