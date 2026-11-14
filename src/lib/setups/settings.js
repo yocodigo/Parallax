@@ -131,3 +131,11 @@ export const SEASONAL_WINDOW = 1;
 // [8] Contracts per trade.
 export const SIZE_MIN = 1;
 export const SIZE_MAX = 2;
+
+// [rules-v3 1] The backstop: a resting stop on the option this share of the
+// entry premium below the fill. A starting value, to be reset from winners'
+// heat. **(confirm)**
+export const BACKSTOP_PCT = 0.25;
+
+// [rules-v3 1.1] Contracts under this premium won 10% of the time. **(confirm)**
+export const PREMIUM_MIN = 0.5;
