@@ -209,7 +209,7 @@ describe('formatCoachingInput', () => {
     expect(text).toContain("5m entry bar: overlap 8% of the bar before, volume 1.6x the bar before's");
     expect(text).toContain('1m room to the outer band on the underlying: 0.46, needed 0.12 (enough)');
     expect(text).toContain('Four-touch line: 4xBO on the 5m, valid, grade A');
-    expect(text).toContain('Flags: in a lockout window, pressure date');
+    expect(text).toContain('Flags: in an entry window, pressure date');
   });
 
   it('gives the exit review and stop adherence', () => {

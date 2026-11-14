@@ -209,6 +209,10 @@ Vitest, JavaScript (not TypeScript).
   the defaults (from `settings.js`) and `parseRuleSettings`; `getRuleSettings`/`saveRuleSettings` in
   `src/db/settings.js` (defaults until the first save; the route validates before saving); edited in
   `RuleSettings.jsx` on `/insights` through `GET`/`PUT /api/rule-settings`.
+  Windows raise the bar instead of closing the door, and are recorded and charted but never scored until
+  detected setups exist (build step 5): `windowGate` answers unknown for every entry, so Window OK, the
+  discipline score, and the violation costs leave them out, while `inWindow` keeps the recorded fact for
+  the entry review's flag. `setupRules.js` tells the coach not to call a window entry a violation.
 - Strategies and the entry checklist: `strategies` with ordered `strategy_rules` (kind `edge` for the
   setup or `discipline` for risk and process), edited on `/strategies` (`Strategies.jsx`, `GET`/`POST
   /api/strategies`, `PUT /api/strategies/[id]`). Editing keeps the ids of rules sent back with one.

@@ -86,7 +86,7 @@ function entryReviewLines(review) {
   if (!review) return ['Entry review: none (no bars for this trade)'];
   const { setup, chaseR, entryCandle, room, fourTouch } = review;
   const flags = [
-    review.inLockout && 'in a lockout window',
+    review.inLockout && 'in an entry window',
     review.midRange && 'mid-range entry',
     review.midRange === null && 'mid-range unknown',
     review.pressureDate && 'pressure date',

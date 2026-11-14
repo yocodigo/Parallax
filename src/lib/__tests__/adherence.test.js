@@ -16,13 +16,14 @@ function option(net, { quantity = 1, openedAt = '2026-04-13T14:00:00Z' } = {}) {
   };
 }
 
-// Lockouts are New York clock times (settings.js): 16:00Z is 12:00 there,
+// Entry windows are New York clock times (settings.js): 16:00Z is 12:00 there,
 // inside the 11:00-14:00 window; 14:00Z is 10:00, outside every window.
+// Windows aren't scored (rules-v3 section 5), so neither time changes a score.
 const LOCKED = '2026-04-13T16:00:00Z';
 const FREE = '2026-04-13T14:00:00Z';
 
 describe('adherence', () => {
-  it('counts trades that held the window and size rules, and what the violations cost', () => {
+  it('counts trades that held the size rule and what the violations cost, leaving the window unscored', () => {
     const result = adherence([
       option(50, { openedAt: FREE }),
       option(-30, { openedAt: LOCKED }),
@@ -31,7 +32,7 @@ describe('adherence', () => {
     ]);
 
     expect(result.trades).toBe(4);
-    expect(result.window).toEqual({ ok: 2, missed: 2, cost: -20 });
+    expect(result.window).toEqual({ ok: 0, missed: 0, cost: 0 });
     expect(result.size).toEqual({ ok: 2, missed: 2, cost: -10 });
   });
 
@@ -77,7 +78,7 @@ describe('adherence', () => {
 });
 
 describe('violationCosts', () => {
-  it('splits net P/L by which rules the entry broke, each trade in one bucket', () => {
+  it('splits net P/L by which rules the entry broke, each trade in one bucket, a window entry breaking nothing', () => {
     const result = violationCosts([
       option(50, { openedAt: FREE }),
       option(-30, { openedAt: LOCKED }),
@@ -87,10 +88,10 @@ describe('violationCosts', () => {
     ]);
 
     expect(result).toEqual({
-      followed: { trades: 2, net: 60 },
-      window: { trades: 1, net: -30 },
-      size: { trades: 1, net: -20 },
-      both: { trades: 1, net: -15 },
+      followed: { trades: 3, net: 30 },
+      window: { trades: 0, net: 0 },
+      size: { trades: 2, net: -35 },
+      both: { trades: 0, net: 0 },
     });
   });
 
@@ -224,7 +225,7 @@ describe('adherence: discipline score', () => {
   it('leaves out the window and size rules', () => {
     const result = adherence([trade({ openedAt: new Date(LOCKED), quantity: 3, strategyId: null, initialStop: null, exitReason: null })]);
 
-    expect(result.window.missed).toBe(1);
+    expect(result.window).toEqual({ ok: 0, missed: 0, cost: 0 });
     expect(result.size.missed).toBe(1);
     expect(result.discipline).toEqual({ ok: 0, missed: 1, cost: null });
   });

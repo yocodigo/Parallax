@@ -4,6 +4,7 @@ import {
   directionGate,
   entryGate,
   gradeGates,
+  inWindow,
   locationGate,
   sizeGate,
   stateGate,
@@ -16,31 +17,47 @@ import {
 // the user's Pacific clock: 6:30-6:45, 8:00-11:00, 11:45-12:00.
 const at = (nyTime) => new Date(`2026-10-28T${nyTime}:00-04:00`);
 
-describe('windowGate', () => {
-  it('misses inside each lockout window', () => {
-    expect(windowGate(at('09:35'))).toBe('missed');
-    expect(windowGate(at('12:30'))).toBe('missed');
-    expect(windowGate(at('14:50'))).toBe('missed');
+describe('inWindow', () => {
+  it('is true inside each entry window', () => {
+    expect(inWindow(at('09:35'))).toBe(true);
+    expect(inWindow(at('12:30'))).toBe(true);
+    expect(inWindow(at('14:50'))).toBe(true);
   });
 
-  it('is met between the windows', () => {
-    expect(windowGate(at('10:15'))).toBe('met');
-    expect(windowGate(at('14:30'))).toBe('met');
-    expect(windowGate(at('15:30'))).toBe('met');
+  it('is false between the windows', () => {
+    expect(inWindow(at('10:15'))).toBe(false);
+    expect(inWindow(at('14:30'))).toBe(false);
+    expect(inWindow(at('15:30'))).toBe(false);
   });
 
-  it('locks out from the start of a window up to its end', () => {
-    expect(windowGate(at('09:30'))).toBe('missed');
-    expect(windowGate(at('09:44'))).toBe('missed');
-    expect(windowGate(at('09:45'))).toBe('met');
+  it('takes a window from its start up to its end', () => {
+    expect(inWindow(at('09:30'))).toBe(true);
+    expect(inWindow(at('09:44'))).toBe(true);
+    expect(inWindow(at('09:45'))).toBe(false);
   });
 
   it('keeps the windows on the New York clock through the winter', () => {
-    expect(windowGate(new Date('2026-01-14T09:35:00-05:00'))).toBe('missed');
-    expect(windowGate(new Date('2026-01-14T10:15:00-05:00'))).toBe('met');
+    expect(inWindow(new Date('2026-01-14T09:35:00-05:00'))).toBe(true);
+    expect(inWindow(new Date('2026-01-14T10:15:00-05:00'))).toBe(false);
   });
 
-  it("can't judge a plan that was never entered", () => {
+  it('uses the windows it is given', () => {
+    expect(inWindow(at('10:15'), [['10:00', '10:30']])).toBe(true);
+    expect(inWindow(at('09:35'), [['10:00', '10:30']])).toBe(false);
+  });
+
+  it('is false for a plan that was never entered', () => {
+    expect(inWindow(null)).toBe(false);
+  });
+});
+
+// rules-v3 section 5: a window raises the bar (a detected, valid, grade A
+// setup) instead of closing the door, and detected setups come later. Until
+// then the windows are recorded and charted but never scored.
+describe('windowGate', () => {
+  it('judges nothing, inside a window or out of one', () => {
+    expect(windowGate(at('09:35'))).toBe('unknown');
+    expect(windowGate(at('10:15'))).toBe('unknown');
     expect(windowGate(null)).toBe('unknown');
   });
 });
@@ -197,7 +214,7 @@ describe('gradeGates', () => {
 
   it('grades every gate, including size and stop, for an option trade', () => {
     expect(gradeGates(metTrade)).toEqual({
-      window: 'met',
+      window: 'unknown',
       direction: 'met',
       entry: 'met',
       location: 'met',
@@ -214,10 +231,10 @@ describe('gradeGates', () => {
   });
 
   it('misses one gate without affecting the others', () => {
-    const result = gradeGates({ ...metTrade, openedAt: at('12:30') });
-    expect(result.window).toBe('missed');
+    const result = gradeGates({ ...metTrade, quantity: 5 });
+    expect(result.size).toBe('missed');
     expect(result.state).toBe('met');
-    expect(result.size).toBe('met');
+    expect(result.window).toBe('unknown');
     expect(result.stop).toBe('met');
   });
 

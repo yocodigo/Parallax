@@ -365,7 +365,7 @@ describe('trendFacts', () => {
 });
 
 // An option trade that kept every rule: filled at 10:00 New York time (outside
-// the lockouts), one contract, a plan written first, a strategy, a planned exit.
+// every window), one contract, a plan written first, a strategy, a planned exit.
 const clean = (gross, overrides = {}) =>
   option(gross, {
     id: 'clean',
@@ -377,45 +377,51 @@ const clean = (gross, overrides = {}) =>
   });
 
 describe('ruleAdherence', () => {
-  // 13:00 New York time is inside the 11:00-14:00 lockout.
-  const inLockout = { openedAt: new Date('2026-04-13T17:00:00Z'), closedAt: new Date('2026-04-13T18:00:00Z') };
+  // Filled at 13:00 New York time, inside the 11:00-14:00 window, which breaks nothing
+  // (windows aren't scored); the trade breaks Exit OK with a discomfort exit.
+  const rough = {
+    openedAt: new Date('2026-04-13T17:00:00Z'),
+    closedAt: new Date('2026-04-13T18:00:00Z'),
+    exitReason: 'felt_heavy',
+  };
 
   it('passes the dashboard’s adherence figures through', () => {
-    const { checks } = ruleAdherence([clean(10), clean(-5, inLockout)]);
+    const { checks } = ruleAdherence([clean(10), clean(-5, rough)]);
 
     expect(checks.trades).toBe(2);
-    expect(checks.window).toEqual({ ok: 1, missed: 1, cost: -5 });
+    expect(checks.exit).toEqual({ ok: 1, missed: 1, cost: -5 });
+    expect(checks.window).toEqual({ ok: 0, missed: 0, cost: 0 });
   });
 
   it('flags the trades that broke a rule, with which ones, costliest first', () => {
     const broke = clean(-20, {
-      ...inLockout,
+      ...rough,
       quantity: 3,
       exitPrice: 0.8,
       initialStop: 0.9,
       strategyId: null,
       exitReason: 'felt_heavy',
     });
-    const later = clean(-5, { ...inLockout, openedAt: new Date('2026-04-14T17:00:00Z'), closedAt: new Date('2026-04-14T18:00:00Z') });
+    const later = clean(-5, { ...rough, openedAt: new Date('2026-04-14T17:00:00Z'), closedAt: new Date('2026-04-14T18:00:00Z') });
 
     const { flagged, flaggedTrades, unlisted } = ruleAdherence([clean(10), broke, later]);
 
     expect(flaggedTrades).toBe(2);
     expect(unlisted).toBe(0);
     expect(flagged).toEqual([
-      { date: '2026-04-13', symbol: 'SPY', optionType: 'call', quantity: 3, netPnl: -60, failed: ['Window', 'Size', 'Plan', 'Stop', 'Exit'] },
-      { date: '2026-04-14', symbol: 'SPY', optionType: 'call', quantity: 1, netPnl: -5, failed: ['Window'] },
+      { date: '2026-04-13', symbol: 'SPY', optionType: 'call', quantity: 3, netPnl: -60, failed: ['Size', 'Plan', 'Stop', 'Exit'] },
+      { date: '2026-04-14', symbol: 'SPY', optionType: 'call', quantity: 1, netPnl: -5, failed: ['Exit'] },
     ]);
   });
 
   it('flags nothing for a clean trade, and leaves out stocks, which the checks do not judge', () => {
-    const stock = clean(-5, { assetClass: 'stock', ...inLockout, strategyId: null });
+    const stock = clean(-5, { assetClass: 'stock', ...rough, strategyId: null });
 
     expect(ruleAdherence([clean(10), stock])).toMatchObject({ flagged: [], flaggedTrades: 0, unlisted: 0 });
   });
 
   it('puts a winner that broke a rule after the losers, and the newest first among equal results', () => {
-    const at = (day, pnl) => clean(pnl, { ...inLockout, openedAt: new Date(`2026-04-${day}T17:00:00Z`), closedAt: new Date(`2026-04-${day}T18:00:00Z`) });
+    const at = (day, pnl) => clean(pnl, { ...rough, openedAt: new Date(`2026-04-${day}T17:00:00Z`), closedAt: new Date(`2026-04-${day}T18:00:00Z`) });
 
     const { flagged } = ruleAdherence([at('13', -9), at('14', -5), at('15', -5), at('16', 8)]);
 
@@ -429,8 +435,8 @@ describe('ruleAdherence', () => {
 
   it('keeps the costliest MAX_FLAGGED whatever their dates', () => {
     const day = (i) => ({ openedAt: new Date(Date.UTC(2026, 3, 1, 17) + i * 3_600_000 * 24), closedAt: new Date(Date.UTC(2026, 3, 1, 18) + i * 3_600_000 * 24) });
-    const small = Array.from({ length: MAX_FLAGGED + 2 }, (_, i) => clean(-1, { ...inLockout, ...day(i + 1) }));
-    const oldBigLoss = clean(-50, { ...inLockout, ...day(0) });
+    const small = Array.from({ length: MAX_FLAGGED + 2 }, (_, i) => clean(-1, { ...rough, ...day(i + 1) }));
+    const oldBigLoss = clean(-50, { ...rough, ...day(0) });
 
     const result = ruleAdherence([...small, oldBigLoss]);
 
@@ -442,7 +448,7 @@ describe('ruleAdherence', () => {
 
   it('counts the flagged trades past the first LIST_FLAGGED as unlisted, even when all of them are given', () => {
     const some = Array.from({ length: LIST_FLAGGED + 2 }, (_, i) =>
-      clean(-1, { ...inLockout, openedAt: new Date(Date.UTC(2026, 3, 1 + i, 17)), closedAt: new Date(Date.UTC(2026, 3, 1 + i, 18)) })
+      clean(-1, { ...rough, openedAt: new Date(Date.UTC(2026, 3, 1 + i, 17)), closedAt: new Date(Date.UTC(2026, 3, 1 + i, 18)) })
     );
 
     const result = ruleAdherence(some);

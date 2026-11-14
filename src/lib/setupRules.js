@@ -29,7 +29,7 @@ Stops are chosen and written down before entry and move only on structure:
 Exits: planned exits are an invalidation (the stop rule hit), a target, a rejection at the 50%, a planned partial, a structural trail, and a planned time exit. Discomfort exits are a sweep scare, an adverse candle, the P/L moving, time in the trade, and feeling heavy; they are the exits the rules are meant to prevent.
 
 Pre-entry gates:
-- Window: no entries in the lockout windows, New York time ${lockouts}.
+- Window: the entry windows, New York time ${lockouts}, are recorded but not scored yet. They don't lock anything out: an entry inside one will need a detected, valid, grade A setup once setups are detected, so don't call a window entry a violation.
 - Size: ${SIZE_MIN}-${SIZE_MAX} contracts.
 - Direction: the 15m has closed beyond the middle band the trade's way.
 - Entry: the 5m entry candle's overlap is within its limit.

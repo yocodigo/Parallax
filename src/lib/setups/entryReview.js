@@ -15,7 +15,7 @@ import { isPressureDate, seasonalDate } from './calendarDates';
 import { bandCross } from './direction';
 import { findEntry, risingVolume } from './entry';
 import { fourTouchBreaks } from './fourTouch';
-import { MISSED, windowGate } from './gates';
+import { inWindow } from './gates';
 import { tradeBias } from './replayTrades';
 import { resample } from './resample';
 import { roomToBand } from './room';
@@ -140,7 +140,7 @@ export function reviewEntry(trade, bars = []) {
     room: price === null ? null : roomToBand(bars1, bars1.length - 1, bias, price),
     // Resamples on its own, since the context snapshot calls it alone.
     fourTouch: fourTouchAt(trade, bars),
-    inLockout: windowGate(asOf) === MISSED,
+    inLockout: inWindow(asOf),
     midRange: price !== null && range ? isMidRange(price, range) : null,
     pressureDate: isPressureDate(day),
     seasonalDate: seasonalDate(day),

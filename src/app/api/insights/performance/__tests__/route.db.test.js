@@ -319,8 +319,8 @@ describe('GET /api/insights/performance', () => {
     });
   });
 
-  it('returns net P/L by the rules the entry broke', async () => {
-    // Entered an hour before closing, in New York time (EDT): 15:30 is free, 12:00 is in the 11:00-14:00 lockout.
+  it('returns net P/L by the rules the entry broke, an entry inside a window breaking none', async () => {
+    // Entered an hour before closing, in New York time (EDT): 15:30 is outside every window, 12:00 is in the 11:00-14:00 one. Windows aren't scored.
     await closedOption(40, '2026-04-13T20:30:00Z');
     await closedOption(-25, '2026-04-14T17:00:00Z');
     await closedOption(-5, '2026-04-15T17:00:00Z', { mode: 'paper' });
@@ -328,8 +328,8 @@ describe('GET /api/insights/performance', () => {
     const body = await (await get('?year=2026')).json();
 
     expect(body.violationCosts).toEqual({
-      followed: { trades: 1, net: 40 },
-      window: { trades: 1, net: -25 },
+      followed: { trades: 2, net: 15 },
+      window: { trades: 0, net: 0 },
       size: { trades: 0, net: 0 },
       both: { trades: 0, net: 0 },
     });

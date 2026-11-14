@@ -35,13 +35,22 @@ const toMinutes = (time) => {
   return Number(hour) * 60 + Number(minute);
 };
 
-// Window OK: the entry wasn't inside a lockout window. A plan that was never
-// entered has no time to judge, and an unentered plan broke no rule.
-export function windowGate(openedAt) {
-  if (!openedAt) return UNKNOWN;
+// Whether a fill was inside an entry window (New York clock times, the
+// defaults from settings.js unless given others). A plan never entered is in
+// none. This is a recorded fact for the entry review, not a score.
+export function inWindow(openedAt, windows = LOCKOUTS) {
+  if (!openedAt) return false;
   const minutes = minutesOfDay(openedAt);
-  const locked = LOCKOUTS.some(([from, to]) => minutes >= toMinutes(from) && minutes < toMinutes(to));
-  return locked ? MISSED : MET;
+  return windows.some(([from, to]) => minutes >= toMinutes(from) && minutes < toMinutes(to));
+}
+
+// Window OK: not judged. Windows raise the bar instead of closing the door
+// (rules-v3 section 5): inside one, an entry needs a detected, valid, grade A
+// setup. Until detected setups exist the windows are recorded (`inWindow`) and
+// charted but never scored, so this answers unknown for every entry, and
+// adherence, the discipline score, and the violation costs leave it out.
+export function windowGate() {
+  return UNKNOWN;
 }
 
 // Size OK: contracts within the planned range.
