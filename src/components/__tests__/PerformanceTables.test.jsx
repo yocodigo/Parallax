@@ -197,3 +197,30 @@ describe('PerformanceTables', () => {
     expect(within(windowRow).getAllByRole('cell')[2]).toHaveTextContent('–');
   });
 });
+
+describe('PerformanceTables: option execution', () => {
+  const execution = {
+    holdTime: [
+      { key: 'under1', label: 'Under 1 min', trades: 46, winRate: 0.37, netPnl: -149 },
+      { key: '1to3', label: '1–3 min', trades: 20, winRate: 0.55, netPnl: 12.5 },
+      { key: '3to5', label: '3–5 min', trades: 0, winRate: null, netPnl: 0 },
+    ],
+  };
+
+  it('shows each hold bucket with its trades, gross win rate, and net P/L', () => {
+    renderTables({ execution });
+    const table = screen.getByRole('table', { name: 'Hold time' });
+    const rows = within(table).getAllByRole('row');
+
+    expect(within(rows[1]).getByRole('rowheader')).toHaveTextContent('Under 1 min');
+    expect(within(rows[1]).getAllByRole('cell').map((c) => c.textContent)).toEqual(['46', '37%', '-$149.00']);
+    expect(within(rows[3]).getAllByRole('cell').map((c) => c.textContent)).toEqual(['0', '–', '–']);
+  });
+
+  it('leaves the execution tables out when the response has none', () => {
+    renderTables();
+
+    expect(screen.queryByRole('table', { name: 'Hold time' })).not.toBeInTheDocument();
+  });
+});
+

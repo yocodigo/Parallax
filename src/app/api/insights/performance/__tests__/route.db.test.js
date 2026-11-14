@@ -335,6 +335,23 @@ describe('GET /api/insights/performance', () => {
     });
   });
 
+  it('returns the option execution tables: hold time by bucket', async () => {
+    // Each fixture trade is held an hour, so both land in the 15+ minute bucket.
+    await closedOption(40, '2026-04-13T20:30:00Z');
+    await closedOption(-25, '2026-04-14T17:00:00Z');
+
+    const body = await (await get('?year=2026')).json();
+
+    expect(body.execution.holdTime.map((b) => [b.key, b.trades])).toEqual([
+      ['under1', 0],
+      ['1to3', 0],
+      ['3to5', 0],
+      ['5to15', 0],
+      ['15plus', 2],
+    ]);
+    expect(body.execution.holdTime[4]).toMatchObject({ winRate: 0.5, netPnl: 15 });
+  });
+
   it('counts a trade by the New York year it closed in', async () => {
     // 03:00Z on January 1 is still December 31 in New York.
     await closedOption(40, '2026-01-01T03:00:00Z');

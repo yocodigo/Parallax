@@ -111,11 +111,17 @@ const VIOLATION_COLUMNS = [
   ['Net P/L', (v) => (v.trades === 0 ? '–' : formatProfitLoss(v.net))],
 ];
 
+const HOLD_COLUMNS = [
+  ['Trades', (b) => b.trades],
+  ['Win rate (gross)', (b) => (b.trades === 0 ? '–' : pct(b.winRate))],
+  ['Net P/L', (b) => (b.trades === 0 ? '–' : signed(b.netPnl))],
+];
+
 // The section 3 tables (dashboard.md): the monthly summary, year to date, and
 // rule adherence and the violation costs, from the performance route's `months`,
-// `yearToDate`, `adherence`, and `violationCosts`. `yearToDate` is the totals for whatever range was asked for, so
+// `yearToDate`, `adherence`, and `violationCosts`, and, for option trades, the `execution` tables. `yearToDate` is the totals for whatever range was asked for, so
 // the table is titled "Totals" and its row names that range ("2026", "All years").
-export default function PerformanceTables({ months, yearToDate, adherence, violationCosts, rangeLabel }) {
+export default function PerformanceTables({ months, yearToDate, adherence, violationCosts, execution, rangeLabel }) {
   return (
     <div className="space-y-6">
       <Table
@@ -165,6 +171,18 @@ export default function PerformanceTables({ months, yearToDate, adherence, viola
           alone and the rows add up to the total.
         </p>
       </Table>
+      {execution && (
+        <Table
+          label="Hold time"
+          firstColumn="Held"
+          columns={HOLD_COLUMNS}
+          rows={execution.holdTime.map((bucket) => ({ key: bucket.key, name: bucket.label, values: bucket }))}
+        >
+          <p className="text-xs text-gray-500">
+            Option trades only, by how long the position was held from the entry fill to the exit.
+          </p>
+        </Table>
+      )}
     </div>
   );
 }

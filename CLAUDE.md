@@ -203,6 +203,11 @@ Vitest, JavaScript (not TypeScript).
   entries, and the losing streak. `POST /api/trades/[id]/entry` answers 409 `{ error, breakers }`
   while one is tripped for the trade's mode; resending with `override: true` records the entry and
   stores the breakers in `trades.overridden_breakers`. Plans and exits are never blocked.
+- Option execution (`rules-v3.md` section 8, `src/lib/optionExecution.js`): the performance route's `execution`
+  holds tables over closed option trades, shown on the Tables tab by `PerformanceTables` when present: `holdTime`
+  (trades, gross win rate, and net P/L by how long the position was held). `moneyR` (`tradeMetrics.js`) is net P/L
+  over the recorded stop's risk, or, with none, over the backstop's share of the premium, labelled assumed
+  (`TradeProgress`); `rMultiple` and its consumers still leave options without R.
 - Option rules as settings (`rules-v3.md` section 5): `rule_settings` (one row, id 1) holds the entry windows
   (New York clock times), contract range, premium band, risk per trade (null until the winners' heat sets it),
   backstop, and time stop, each with an `*On` flag whose values are kept while it is off. `ruleSettings.js` has
