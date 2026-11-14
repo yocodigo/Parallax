@@ -5,7 +5,7 @@ import useSWR, { useSWRConfig } from 'swr';
 import { BREAKER_LABELS, describeBreaker } from '@/lib/circuitBreakers';
 import { apiErrorMessage, fetchJson } from '@/lib/fetchJson';
 import { formatProfitLoss, formatR } from '@/lib/format';
-import { profitLoss, rMultiple, tradeStatus } from '@/lib/tradeMetrics';
+import { moneyR, profitLoss, rMultiple, tradeStatus } from '@/lib/tradeMetrics';
 import { EXIT_REASONS, EXIT_REASON_LABELS } from '@/lib/tradeFill';
 import Field, { inputClass } from './Field';
 import TradeContext from './TradeContext';
@@ -309,7 +309,31 @@ function Summary({ trade, status }) {
       <span>{`${trade.entryPrice} → ${trade.exitPrice}`}</span>
       <span className={`font-medium ${tone}`}>{formatProfitLoss(pnl)}</span>
       {r !== null && <span className={`font-medium ${tone}`}>{formatR(r)}</span>}
+      {r === null && trade.assetClass === 'option' && <AssumedR trade={trade} tone={tone} />}
     </>
+  );
+}
+
+// An option with no recorded stop has no R of its own, so show it against the
+// risk the backstop rule would have set (rules-v3 section 7), labelled as
+// assumed. Nothing while the rule is off or its settings haven't loaded.
+function AssumedR({ trade, tone }) {
+  const { data } = useSWR('/api/rule-settings', fetchJson, { revalidateOnFocus: false });
+  if (!data?.settings.backstopOn) return null;
+
+  const result = moneyR(trade, data.settings.backstopPct);
+  if (!result) return null;
+
+  return (
+    <span className={`font-medium ${tone}`}>
+      {formatR(result.r)}{' '}
+      <abbr
+        title="Assumed from the backstop: the premium paid times the backstop share, since no stop was recorded"
+        className="font-normal text-gray-500 no-underline"
+      >
+        assumed
+      </abbr>
+    </span>
   );
 }
 

@@ -203,6 +203,59 @@ describe('recording a trade from the journal', () => {
   });
 });
 
+describe('money R for an option', () => {
+  // One call bought at 1.00 and sold at 1.10: +$10, against $25 of assumed
+  // risk at a 25% backstop.
+  const option = (overrides = {}) =>
+    plannedTrade({
+      assetClass: 'option',
+      quantity: 1,
+      multiplier: 100,
+      plannedEntry: 1,
+      initialStop: null,
+      target: null,
+      entryPrice: 1,
+      exitPrice: 1.1,
+      openedAt: '2026-10-20T14:00:00.000Z',
+      closedAt: '2026-10-20T14:10:00.000Z',
+      exitReason: 'target',
+      exitedPerPlan: true,
+      ...overrides,
+    });
+  const serveRules = (backstopOn = true) =>
+    server.use(
+      http.get('*/api/rule-settings', () =>
+        HttpResponse.json({ settings: { backstopOn, backstopPct: 0.25 } })
+      )
+    );
+
+  it('shows R assumed from the backstop when the plan had no stop, labelled as assumed', async () => {
+    serveJournal(option());
+    serveRules();
+    renderJournal();
+
+    expect(await screen.findByText('+0.4R')).toBeInTheDocument();
+    expect(screen.getByTitle(/assumed from the backstop/i)).toHaveTextContent('assumed');
+  });
+
+  it('shows no assumed R when the backstop rule is off', async () => {
+    serveJournal(option());
+    serveRules(false);
+    renderJournal();
+
+    expect(await screen.findByText('Closed')).toBeInTheDocument();
+    expect(screen.queryByText('+0.4R')).not.toBeInTheDocument();
+  });
+
+  it('shows the recorded stop as plain R, with no label and no settings request', async () => {
+    serveJournal(option({ initialStop: 0.8 }));
+    renderJournal();
+
+    expect(await screen.findByText('+0.5R')).toBeInTheDocument();
+    expect(screen.queryByTitle(/assumed from the backstop/i)).not.toBeInTheDocument();
+  });
+});
+
 describe('MAE and MFE', () => {
   const closed = {
     ...opened,

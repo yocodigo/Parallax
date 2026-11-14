@@ -44,3 +44,22 @@ export function rMultiple(trade) {
   if (pnl === null || !risk) return null;
   return pnl / risk;
 }
+
+// Money R (rules-v3 section 7): net P/L over the planned dollar risk, as
+// { r, assumed }. A recorded stop gives the risk (for an option, the backstop
+// premium). Without one an option's risk is assumed, never stored: the
+// backstop's share (`backstopPct`) of the entry premium, times the contracts.
+// `assumed` says which, so it can be labelled wherever it is shown. Stocks and
+// crypto have no backstop to assume, so with no stop they have none. Null
+// until the trade is closed.
+export function moneyR(trade, backstopPct) {
+  const pnl = profitLoss(trade);
+  if (pnl === null) return null;
+
+  const recorded = initialRisk(trade);
+  if (recorded) return { r: pnl / recorded, assumed: false };
+
+  const entry = trade.entryPrice ?? trade.plannedEntry;
+  if (trade.assetClass !== 'option' || !isSet(entry)) return null;
+  return { r: pnl / (entry * backstopPct * trade.quantity * trade.multiplier), assumed: true };
+}

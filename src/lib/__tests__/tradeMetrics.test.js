@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { holdMinutes, initialRisk, profitLoss, rMultiple, tradeStatus } from '../tradeMetrics';
+import { holdMinutes, initialRisk, moneyR, profitLoss, rMultiple, tradeStatus } from '../tradeMetrics';
 
 // A closed long: bought 100 at 50 with a stop at 48 (2.00 of risk a share),
 // sold at 54.
@@ -105,5 +105,43 @@ describe('rMultiple', () => {
 
   it('is null when the entry was filled at the stop, leaving no risk to measure against', () => {
     expect(rMultiple(trade({ entryPrice: 48 }))).toBeNull();
+  });
+});
+
+// rules-v3 section 7: net P/L over the planned dollar risk. A recorded stop (an
+// option's backstop premium) gives the risk; without one it is assumed from the
+// backstop's share of the premium, and labelled so.
+describe('moneyR', () => {
+  // A long call bought at 1.00 for one contract, sold at 1.10: +$10 gross.
+  const call = (overrides = {}) =>
+    trade({ assetClass: 'option', quantity: 1, multiplier: 100, plannedEntry: 1, entryPrice: 1, initialStop: null, exitPrice: 1.1, ...overrides });
+
+  it('uses the recorded stop as the risk, not assumed', () => {
+    // Stop at 0.80: $20 of risk, +$10 is +0.5R.
+    const result = moneyR(call({ initialStop: 0.8 }), 0.25);
+    expect(result.r).toBeCloseTo(0.5);
+    expect(result.assumed).toBe(false);
+  });
+
+  it('assumes the risk from the backstop share of the entry premium when there is no stop', () => {
+    // 25% of $1.00 is $25 a contract: +$10 is +0.4R.
+    const result = moneyR(call(), 0.25);
+    expect(result.r).toBeCloseTo(0.4);
+    expect(result.assumed).toBe(true);
+  });
+
+  it('counts fees against it and scales the assumed risk by contracts', () => {
+    // Two contracts: $50 of risk; +$20 gross less $2 fees is +0.36R.
+    const result = moneyR(call({ quantity: 2, fees: 2 }), 0.25);
+    expect(result.r).toBeCloseTo(0.36);
+    expect(result.assumed).toBe(true);
+  });
+
+  it('is null for a stock with no stop, which has no backstop to assume', () => {
+    expect(moneyR(trade({ initialStop: null }), 0.25)).toBeNull();
+  });
+
+  it('is null until the trade is closed', () => {
+    expect(moneyR(call({ exitPrice: null, closedAt: null }), 0.25)).toBeNull();
   });
 });
