@@ -123,6 +123,12 @@ const EXIT_COLUMNS = [
   ['Net P/L', (e) => (e.trades === 0 ? '–' : signed(e.netPnl))],
 ];
 
+const BAND_NAMES = { in: 'Inside', partly: 'Partly', out: 'Outside' };
+const PREMIUM_COLUMNS = [
+  ...HOLD_COLUMNS,
+  ['Allowed band', (b) => BAND_NAMES[b.band] ?? '–'],
+];
+
 const money = orDash(plainMoney.format);
 const FRICTION_COLUMNS = [
   ['Trades', (f) => f.trades],
@@ -238,6 +244,19 @@ export default function PerformanceTables({ months, yearToDate, adherence, viola
             Option trades only. Friction is the fees plus an estimated spread (the quotes aren&apos;t stored, so the
             spread is assumed). Break-even move is the premium, per share and as a share of what was paid, the
             position has to gain before a round trip makes money.
+          </p>
+        </Table>
+      )}
+      {execution && (
+        <Table
+          label="Entry premium"
+          firstColumn="Premium paid"
+          columns={PREMIUM_COLUMNS}
+          rows={execution.premiumBand.map((bucket) => ({ key: bucket.key, name: bucket.label, values: bucket }))}
+        >
+          <p className="text-xs text-gray-500">
+            Option trades only, by the premium paid a share. Allowed band: whether the bucket lies inside the premium
+            band in the option rules, partly inside it, or outside it; blank while that rule is off.
           </p>
         </Table>
       )}

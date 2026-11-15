@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { friction, holdTime, untriggeredExits } from '../optionExecution';
+import { friction, holdTime, premiumBand, untriggeredExits } from '../optionExecution';
 
 // A closed long option, one contract, held `seconds`: gross P/L is
 // (exit - entry) * 100, less `fees`.
@@ -164,5 +164,42 @@ describe('friction', () => {
       breakEvenMove: null,
       breakEvenMovePct: null,
     });
+  });
+});
+
+describe('premiumBand', () => {
+  const band = { premiumBandOn: true, premiumMin: 0.5, premiumMax: null };
+  // `entry` is the premium paid; the exit is moved by `gross` dollars on one contract.
+  const at = (entry, gross) => option(gross, { entryPrice: entry, exitPrice: entry + gross / 100 });
+
+  it('buckets option trades by entry premium, every bucket always there', () => {
+    const rows = premiumBand([at(0.3, -5), at(0.5, 5), at(0.99, -2), at(1.2, 4), at(2, 6), at(3, 1), at(4.5, -1)], band);
+
+    expect(rows.map((row) => [row.key, row.trades])).toEqual([
+      ['under050', 1],
+      ['050to100', 2],
+      ['100to150', 1],
+      ['150to300', 1],
+      ['300plus', 2],
+    ]);
+  });
+
+  it('gives each bucket its win rate on gross P/L and its net P/L after fees', () => {
+    const rows = premiumBand([at(0.3, 5), at(0.3, -10)].map((t) => ({ ...t, fees: 1 })), band);
+
+    expect(rows[0]).toMatchObject({ trades: 2, winRate: 0.5, netPnl: -7 });
+    expect(rows[4]).toMatchObject({ trades: 0, winRate: null, netPnl: 0 });
+  });
+
+  it('marks each bucket in, partly in, or out of the allowed band', () => {
+    const marks = (rule) => premiumBand([], rule).map((row) => row.band);
+
+    expect(marks(band)).toEqual(['out', 'in', 'in', 'in', 'in']);
+    expect(marks({ ...band, premiumMax: 1.5 })).toEqual(['out', 'in', 'in', 'out', 'out']);
+    expect(marks({ ...band, premiumMin: 0.75, premiumMax: 2 })).toEqual(['out', 'partly', 'in', 'partly', 'out']);
+  });
+
+  it('marks nothing while the premium band rule is off', () => {
+    expect(premiumBand([], { ...band, premiumBandOn: false }).map((row) => row.band)).toEqual([null, null, null, null, null]);
   });
 });

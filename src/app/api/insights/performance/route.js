@@ -7,7 +7,7 @@ import { listStrategies } from '@/db/strategies';
 import { listClosedTradesBetween, listPlanFacts, listReviewRatings } from '@/db/trades';
 import { adherence, disciplineByMonth, emotionalControlByMonth, violationCosts } from '@/lib/adherence';
 import { withErrorLogging } from '@/lib/log';
-import { friction, holdTime, untriggeredExits } from '@/lib/optionExecution';
+import { friction, holdTime, premiumBand, untriggeredExits } from '@/lib/optionExecution';
 import { ASSUMED_SPREAD } from '@/lib/setups/settings';
 import { byGrade, byUnderlying, bySetup, callsVsPuts, equityCurve, monthlySummary, rDistribution, rollingExpectancy, summarize, timeOfDay } from '@/lib/performance';
 
@@ -103,6 +103,7 @@ export const GET = withErrorLogging('/api/insights/performance', async (request)
       holdTime: holdTime(closed),
       exits: untriggeredExits(closed, rules),
       friction: friction(closed, { spread: ASSUMED_SPREAD }),
+      premiumBand: premiumBand(closed, rules),
     },
   });
 });

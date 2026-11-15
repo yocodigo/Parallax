@@ -211,6 +211,12 @@ describe('PerformanceTables: option execution', () => {
       untriggered: { trades: 6, netPnl: 12.5 },
       untriggeredShare: 0.6,
     },
+    premiumBand: [
+      { key: 'under050', label: 'Under $0.50', trades: 21, winRate: 0.1, netPnl: -71, band: 'out' },
+      { key: '050to100', label: '$0.50–$1.00', trades: 26, winRate: 0.65, netPnl: 8, band: 'in' },
+      { key: '100to150', label: '$1.00–$1.50', trades: 0, winRate: null, netPnl: 0, band: 'partly' },
+      { key: '150to300', label: '$1.50–$3.00', trades: 14, winRate: 0.71, netPnl: -9, band: null },
+    ],
     friction: {
       trades: 76,
       medianWin: 5,
@@ -241,6 +247,18 @@ describe('PerformanceTables: option execution', () => {
     expect(within(triggered).getAllByRole('cell').map((c) => c.textContent)).toEqual(['4', '40%', '-$30.00']);
     expect(within(none).getByRole('rowheader')).toHaveTextContent('No trigger');
     expect(within(none).getAllByRole('cell').map((c) => c.textContent)).toEqual(['6', '60%', '+$12.50']);
+  });
+
+  it('shows results by entry premium with the allowed band marked', () => {
+    renderTables({ execution });
+    const rows = within(screen.getByRole('table', { name: 'Entry premium' })).getAllByRole('row');
+    const cells = (row) => within(row).getAllByRole('cell').map((c) => c.textContent);
+
+    expect(within(rows[1]).getByRole('rowheader')).toHaveTextContent('Under $0.50');
+    expect(cells(rows[1])).toEqual(['21', '10%', '-$71.00', 'Outside']);
+    expect(cells(rows[2])).toEqual(['26', '65%', '+$8.00', 'Inside']);
+    expect(cells(rows[3])).toEqual(['0', '–', '–', 'Partly']);
+    expect(cells(rows[4])).toEqual(['14', '71%', '-$9.00', '–']);
   });
 
   it('sets friction against the median win, with the move needed to break even', () => {

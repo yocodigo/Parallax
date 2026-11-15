@@ -388,6 +388,24 @@ describe('GET /api/insights/performance', () => {
     });
   });
 
+  it('returns results by entry premium, marked against the saved premium band', async () => {
+    // closedOption enters at 1.00, so both trades are in the $1.00-$1.50 bucket.
+    await closedOption(40, '2026-04-13T20:30:00Z');
+    await closedOption(-25, '2026-04-14T17:00:00Z');
+    await saveRuleSettings(getDb(), { ...DEFAULT_RULE_SETTINGS, premiumMin: 1.25 });
+
+    const { execution } = await (await get('?year=2026')).json();
+
+    expect(execution.premiumBand.map((b) => [b.key, b.trades, b.band])).toEqual([
+      ['under050', 0, 'out'],
+      ['050to100', 0, 'out'],
+      ['100to150', 2, 'partly'],
+      ['150to300', 0, 'in'],
+      ['300plus', 0, 'in'],
+    ]);
+    expect(execution.premiumBand[2]).toMatchObject({ winRate: 0.5, netPnl: 15 });
+  });
+
   it('counts a trade by the New York year it closed in', async () => {
     // 03:00Z on January 1 is still December 31 in New York.
     await closedOption(40, '2026-01-01T03:00:00Z');

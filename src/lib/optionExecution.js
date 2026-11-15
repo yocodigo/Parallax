@@ -73,7 +73,8 @@ const cents = (dollars) => Math.round(dollars * 100) / 100;
 // an estimated spread (`spread`, the premium a round trip gives up per share:
 // the quotes aren't stored, so it is assumed, see ASSUMED_SPREAD) against the
 // median win, and the premium move needed to break even. Medians, so a few big
-// trades don't set the picture. A win is judged on gross P/L, as everywhere.
+// trades don't set the picture; the move and its share of the premium are each
+// a median of their own, not one divided by the other. A win is judged on gross P/L, as everywhere.
 export function friction(trades, { spread }) {
   const options = countedOptions(trades);
   const rows = options.map((trade) => {
@@ -100,4 +101,42 @@ export function friction(trades, { spread }) {
     breakEvenMove: median(rows.map((row) => row.move)),
     breakEvenMovePct: median(rows.map((row) => row.movePct)),
   };
+}
+
+// [8.5] Entry premium buckets in dollars a share, each from its lower edge up
+// to the next.
+const PREMIUM_BUCKETS = [
+  { key: 'under050', label: 'Under $0.50', from: 0, to: 0.5 },
+  { key: '050to100', label: '$0.50–$1.00', from: 0.5, to: 1 },
+  { key: '100to150', label: '$1.00–$1.50', from: 1, to: 1.5 },
+  { key: '150to300', label: '$1.50–$3.00', from: 1.5, to: 3 },
+  { key: '300plus', label: '$3.00+', from: 3, to: Infinity },
+];
+
+// Where a bucket sits against the allowed band: wholly inside, wholly outside,
+// or straddling an edge. Null while the rule is off.
+function bandMark({ from, to }, { premiumBandOn, premiumMin, premiumMax }) {
+  if (!premiumBandOn) return null;
+  const max = premiumMax ?? Infinity;
+  if (to <= premiumMin || from >= max) return 'out';
+  return from >= premiumMin && to <= max ? 'in' : 'partly';
+}
+
+// [8.5] Premium band: trades, win rate (gross), and net P/L by the premium paid,
+// with each bucket marked against the allowed band (`rules` is the stored rule
+// settings). Every bucket is always there.
+export function premiumBand(trades, rules) {
+  const options = countedOptions(trades);
+  return PREMIUM_BUCKETS.map((bucket) => {
+    const inBucket = options.filter((trade) => trade.entryPrice >= bucket.from && trade.entryPrice < bucket.to);
+    const { winRate, netPnl } = summarize(inBucket);
+    return {
+      key: bucket.key,
+      label: bucket.label,
+      trades: inBucket.length,
+      winRate,
+      netPnl,
+      band: bandMark(bucket, rules),
+    };
+  });
 }
