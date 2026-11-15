@@ -105,7 +105,9 @@ function exclusion(premium) {
 // premium figure (partial coverage, edge minutes, and delta estimates) and
 // leaves out only those with none. The underlying's heat is in R, kept apart
 // by where the stop came from (a planned and a derived stop are never pooled),
-// and in points for every trade measured, stop or not.
+// and in points for every trade measured, stop or not. It follows the same
+// edge-only rule: those windows are counted in `underlying.excluded` and left
+// out until `includeAll` takes them back in.
 export function heatSummary(rows, { includeAll = false } = {}) {
   const excluded = { partialCoverage: 0, edgeMinutesOnly: 0, delta: 0, none: 0 };
   const premiums = [];
