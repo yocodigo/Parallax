@@ -172,11 +172,36 @@ describe('gatherCoachingFacts', () => {
     expect(facts.trades[0].giveback).toEqual({ mfeR: 1.5, r: -0.5, givenBackR: 2, flagged: true });
   });
 
-  it('gives no giveback for an option, whose prices are premiums', async () => {
+  it("measures an option's giveback on its underlying, from its underlying entry", async () => {
+    const option = { assetClass: 'option', optionType: 'call', strike: 100, expiration: '2026-10-30', initialStop: null, entryPrice: 1, exitPrice: 1.5 };
+    await db.insert(trades).values(
+      trade({ ...option, underlyingEntry: 100, underlyingStop: 98, underlyingStopSource: 'derived', underlyingStopRule: 'band_cross_s2' })
+    );
+    // Up 3 at best inside the trade; the exit's minute (15:00) averaged 99.
+    const bars = [
+      { t: '2026-10-29T14:10:00Z', o: 100, h: 103, l: 99.5, c: 101, v: 1, vw: 101 },
+      { t: '2026-10-29T15:00:00Z', o: 99.5, h: 99.5, l: 99, c: 99, v: 1, vw: 99 },
+    ];
+
+    const facts = await gatherCoachingFacts(db, { day: '2026-10-29', fetchBars: async () => bars });
+
+    expect(facts.trades[0].giveback).toMatchObject({
+      mfe: 3,
+      result: -1,
+      givenBack: 4,
+      mfeR: 1.5,
+      r: -0.5,
+      givenBackR: 2,
+      flagged: true,
+      stopSource: 'derived',
+    });
+  });
+
+  it('gives no giveback for an option with no underlying entry recorded', async () => {
     await db.insert(trades).values(
       trade({ assetClass: 'option', optionType: 'call', strike: 100, expiration: '2026-10-30', initialStop: null, exitPrice: 1.5, entryPrice: 1 })
     );
-    const bars = [{ t: '2026-10-29T14:10:00Z', o: 100, h: 103, l: 99.5, c: 101, v: 1 }];
+    const bars = [{ t: '2026-10-29T14:10:00Z', o: 100, h: 103, l: 99.5, c: 101, v: 1, vw: 101 }];
 
     const facts = await gatherCoachingFacts(db, { day: '2026-10-29', fetchBars: async () => bars });
 

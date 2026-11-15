@@ -191,6 +191,31 @@ function dailyPlanLines(plan) {
   return [`Daily plan: ${fibs.join('; ')}.`, plan.notes && `Daily plan notes: ${plan.notes}`];
 }
 
+const pts = (value) => `${value > 0 ? '+' : value < 0 ? '-' : ''}${Math.abs(value).toFixed(2)} pts`;
+
+// A stock's giveback is in R from its own prices. An option's is on its
+// underlying (underlyingGiveback): points, and R only with a stop there.
+function givebackLine(giveback, trade) {
+  const flag = giveback.flagged ? ' (flagged)' : '';
+  if (giveback.mfe === undefined) {
+    return `Giveback: best open ${formatR(giveback.mfeR)}, closed ${formatR(giveback.r)}, gave back ${giveback.givenBackR.toFixed(1)}R${flag}`;
+  }
+  // Points, then R in brackets when there is a stop to measure it from.
+  const withR = (points, r) => (r === null ? points : `${points} (${r})`);
+  const r = (value) => (value === null ? null : formatR(value));
+  const gaveBack = `${giveback.givenBack.toFixed(2)} pts`;
+  const gaveBackR = giveback.givenBackR === null ? null : `${giveback.givenBackR.toFixed(1)}R`;
+  const stop =
+    giveback.stopSource === null
+      ? 'no stop on the underlying to judge it by'
+      : `from a ${giveback.stopSource === 'plan' ? 'planned' : 'derived'} stop`;
+  const edge = giveback.edgeMinutesOnly ? '; held under two minutes, so mostly the fill and exit minutes' : '';
+  return (
+    `Giveback on ${trade.symbol}: best open ${withR(pts(giveback.mfe), r(giveback.mfeR))}, ` +
+    `closed ${withR(pts(giveback.result), r(giveback.r))}, gave back ${withR(gaveBack, gaveBackR)}, ${stop}${flag}${edge}`
+  );
+}
+
 function tradeBlock({ trade, strategyName, dailyPlan, entries = [], entryReview, exitReview, giveback, stopAdherence }, n) {
   const result = describeResult(trade);
   const lines = [
@@ -203,10 +228,7 @@ function tradeBlock({ trade, strategyName, dailyPlan, entries = [], entryReview,
     ...entries.map(reviewLine),
     ...entryReviewLines(entryReview),
     exitLine(exitReview, trade),
-    giveback &&
-      `Giveback: best open ${formatR(giveback.mfeR)}, closed ${formatR(giveback.r)}, gave back ${giveback.givenBackR.toFixed(1)}R${
-        giveback.flagged ? ' (flagged)' : ''
-      }`,
+    giveback && givebackLine(giveback, trade),
     stopAdherence
       ? `Stop rule ${trade.stopRule}: ${stopAdherence.result} (${ADHERENCE_TEXT[stopAdherence.reason]})`
       : 'Stop rule: none recorded, or not closed',

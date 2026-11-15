@@ -7,7 +7,7 @@ import {
   listTradesOpenedOn,
 } from '@/db/trades';
 import { excursions } from '@/lib/excursions';
-import { giveback } from '@/lib/giveback';
+import { giveback, underlyingGiveback } from '@/lib/giveback';
 import { mistakeLedger } from '@/lib/mistakeLedger';
 import { reviewEntry } from '@/lib/setups/entryReview';
 import { reviewExit } from '@/lib/setups/exitReview';
@@ -139,10 +139,12 @@ export async function gatherCoachingFacts(db, { day, tradeId = null, fetchBars =
 // The giveback of a trade closed in the bars' window, measured on the bars it
 // was open for (from the minute holding the fill to the exit). Null when it
 // closed past them, as a swing trade does: they reach a day from the fill.
+// An option's prices are premiums, so it is measured on its underlying, from
+// its underlying entry (underlyingGiveback).
 function givebackOf(trade, bars) {
-  // Stocks only: an option's prices are premiums, which the underlying's bars
-  // can't be measured against.
-  if (trade.assetClass !== 'stock' || !trade.closedAt || trade.closedAt.getTime() > trade.openedAt.getTime() + DAY_MS) return null;
+  if (!trade.closedAt || trade.closedAt.getTime() > trade.openedAt.getTime() + DAY_MS) return null;
+  if (trade.assetClass === 'option') return underlyingGiveback(trade, bars);
+  if (trade.assetClass !== 'stock') return null;
   const from = Math.floor(trade.openedAt.getTime() / MINUTE_MS) * MINUTE_MS;
   const open = bars.filter((bar) => {
     const start = Date.parse(bar.t);

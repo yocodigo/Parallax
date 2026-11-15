@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { giveback } from '../giveback';
+import { giveback, underlyingGiveback } from '../giveback';
 
 // A closed long stock trade with 1R = $100 (100 shares, $1 to the stop),
 // closed for `r`.
@@ -73,5 +73,67 @@ describe('giveback', () => {
 
   it('is null for a trade that is still open', () => {
     expect(giveback(closedTrade(0, { closedAt: null, exitPrice: null }), { mfeR: 1 })).toBeNull();
+  });
+});
+
+// rules-v3 section 7: an option's giveback measured on its underlying, from
+// its underlying entry to the VWAP of the minute it was closed in.
+describe('underlyingGiveback', () => {
+  // A bought call: up is in its favor. 580.00 on the underlying at the fill,
+  // a derived stop at 579.00 (1R is a point), held 15:16:37 to 15:20:10.
+  const call = {
+    assetClass: 'option',
+    optionType: 'call',
+    direction: 'long',
+    underlyingEntry: 580,
+    underlyingStop: 579,
+    underlyingStopSource: 'derived',
+    underlyingStopRule: 'band_cross_s2',
+    openedAt: new Date('2026-11-10T15:16:37Z'),
+    closedAt: new Date('2026-11-10T15:20:10Z'),
+  };
+  const minute = (m, l, h, vw) => ({ t: `2026-11-10T15:${m}:00Z`, l, h, o: l, c: h, vw });
+  // Up 1.5 points at best (581.50 at 15:18), closed in a minute averaging 579.80.
+  const bars = [
+    minute(16, 579.9, 580.1, 580),
+    minute(17, 579.8, 580.6, 580.3),
+    minute(18, 580.4, 581.5, 581),
+    minute(19, 579.9, 580.8, 580.2),
+    minute(20, 579.6, 580, 579.8),
+  ];
+
+  it('measures what the underlying gave back, in points and in R, and flags a flat or losing close', () => {
+    const result = underlyingGiveback(call, bars);
+
+    expect(result).toMatchObject({ stopSource: 'derived', edgeMinutesOnly: false, flagged: true });
+    expect(result.mfe).toBeCloseTo(1.5);
+    expect(result.result).toBeCloseTo(-0.2);
+    expect(result.givenBack).toBeCloseTo(1.7);
+    expect(result.mfeR).toBeCloseTo(1.5);
+    expect(result.r).toBeCloseTo(-0.2);
+    expect(result.givenBackR).toBeCloseTo(1.7);
+  });
+
+  it('reads a put the other way', () => {
+    const put = { ...call, optionType: 'put', underlyingStop: 581 };
+
+    const result = underlyingGiveback(put, bars);
+
+    expect(result.mfe).toBeCloseTo(0.4);
+    expect(result.result).toBeCloseTo(0.2);
+    expect(result.flagged).toBe(false);
+  });
+
+  it('gives points only, and no flag, without a stop on the underlying', () => {
+    const result = underlyingGiveback({ ...call, underlyingStop: null, underlyingStopSource: null, underlyingStopRule: null }, bars);
+
+    expect(result).toMatchObject({ mfeR: null, r: null, givenBackR: null, flagged: null, stopSource: null });
+    expect(result.givenBack).toBeCloseTo(1.7);
+  });
+
+  it('has nothing to measure for an open trade, one without an underlying entry, or one whose exit minute has no bar', () => {
+    expect(underlyingGiveback({ ...call, closedAt: null }, bars)).toBeNull();
+    expect(underlyingGiveback({ ...call, underlyingEntry: null }, bars)).toBeNull();
+    expect(underlyingGiveback(call, bars.slice(0, 4))).toBeNull();
   });
 });

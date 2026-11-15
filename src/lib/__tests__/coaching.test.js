@@ -281,6 +281,24 @@ describe('formatCoachingInput', () => {
     expect(stock).toContain('Giveback: best open +1.5R, closed -0.5R, gave back 2.0R (flagged)');
   });
 
+  it("gives an option's giveback on its underlying, in points and in R, with where the stop came from", () => {
+    const giveback = { mfe: 1.5, result: -0.2, givenBack: 1.7, mfeR: 1.5, r: -0.2, givenBackR: 1.7, flagged: true, stopSource: 'derived', edgeMinutesOnly: false };
+    const text = formatCoachingInput(facts({ trades: [{ ...facts().trades[0], giveback }] }));
+
+    expect(text).toContain(
+      'Giveback on SPY: best open +1.50 pts (+1.5R), closed -0.20 pts (-0.2R), gave back 1.70 pts (1.7R), from a derived stop (flagged)'
+    );
+  });
+
+  it("gives an option's giveback in points only without a stop, and says when it is mostly edge minutes", () => {
+    const giveback = { mfe: 0.8, result: 0.1, givenBack: 0.7, mfeR: null, r: null, givenBackR: null, flagged: null, stopSource: null, edgeMinutesOnly: true };
+    const text = formatCoachingInput(facts({ trades: [{ ...facts().trades[0], giveback }] }));
+
+    expect(text).toContain(
+      'Giveback on SPY: best open +0.80 pts, closed +0.10 pts, gave back 0.70 pts, no stop on the underlying to judge it by; held under two minutes, so mostly the fill and exit minutes'
+    );
+  });
+
   it('gives the recent history: stop adherence, what is working, and the mistake ledger', () => {
     expect(text).toContain('<history>');
     expect(text).toContain('Stop adherence: 60% of the last 5 judged trades (3 adherent, 2 misses)');

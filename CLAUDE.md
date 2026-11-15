@@ -316,7 +316,7 @@ Vitest, JavaScript (not TypeScript).
   underlying through `tradeBias`, fill times in New York time, the strategy it was planned under, and the
   day's fib plan with its notes); Claude never sees raw bars or works out
   figures. Pure pieces: `giveback.js` (best open profit of 1R or more, closed at 0R or worse, stocks
-  with a stop only), `stopAdherence.js` (S1-S3 replayed against the exit), `whatsWorking.js` (R where a
+  with a stop; options on their underlying through `underlyingGiveback`: points, and R with an underlying stop), `stopAdherence.js` (S1-S3 replayed against the exit), `whatsWorking.js` (R where a
   trade has a stop, dollar P/L where it has none, never mixed). A day with no trades returns a null
   coaching without calling Claude; a failed call keeps the earlier text.
 - Performance Review (`/performance-review`, in the nav; separate from the per-trade coaching pass): an aggregate
