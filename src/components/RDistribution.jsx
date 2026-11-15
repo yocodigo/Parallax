@@ -75,8 +75,9 @@ export default function RDistribution({ distribution }) {
                 <CartesianGrid vertical={false} horizontalValues={yTicks} stroke={theme('gray-200')} />
                 <XAxis
                   dataKey="from"
-                  // Recharts passes the tick's index second: label the whole band, not just its start.
-                  tickFormatter={(from, i) => range(bins[i])}
+                  // Label the whole band, not just its start. The band is found by its
+                  // start: the index Recharts passes counts only the ticks it draws.
+                  tickFormatter={(from) => range(bins.find((b) => b.from === from))}
                   interval={bins.length > 8 ? Math.ceil(bins.length / 8) - 1 : 0}
                   axisLine={false}
                   tickLine={false}
