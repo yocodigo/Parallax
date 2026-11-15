@@ -189,6 +189,9 @@ describe('POST /api/imports/thinkorswim', () => {
     await Promise.all(afterWork);
 
     expect(body.trades[0]).toMatchObject({ action: 'fill', tradeId: recorded.id });
+    expect(captureUnderlying).toHaveBeenCalledWith(
+      expect.objectContaining({ id: recorded.id, openedAt: new Date('2026-10-23T18:41:05Z') })
+    );
     const [saved] = await getDb().select().from(trades).where(eq(trades.id, recorded.id));
     expect(saved).toMatchObject({
       openedAt: new Date('2026-10-23T18:41:05Z'),

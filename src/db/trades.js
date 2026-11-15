@@ -224,15 +224,19 @@ export async function listRecentTrades(db, { modes, limit = 100 }) {
 // derives none. Options only.
 export async function saveUnderlying(db, id, { entry, derivedStop }) {
   const option = and(eq(trades.id, id), eq(trades.assetClass, 'option'));
-  await db.update(trades).set({ underlyingEntry: entry }).where(option);
-  await db
-    .update(trades)
-    .set({
-      underlyingStop: derivedStop?.stop ?? null,
-      underlyingStopSource: derivedStop ? 'derived' : null,
-      underlyingStopRule: derivedStop?.rule ?? null,
-    })
-    .where(and(option, or(isNull(trades.underlyingStopSource), eq(trades.underlyingStopSource, 'derived'))));
+  // Together or not at all: a new entry beside the old time's stop is the
+  // state this replacement exists to prevent.
+  await db.transaction(async (tx) => {
+    await tx.update(trades).set({ underlyingEntry: entry }).where(option);
+    await tx
+      .update(trades)
+      .set({
+        underlyingStop: derivedStop?.stop ?? null,
+        underlyingStopSource: derivedStop ? 'derived' : null,
+        underlyingStopRule: derivedStop?.rule ?? null,
+      })
+      .where(and(option, or(isNull(trades.underlyingStopSource), eq(trades.underlyingStopSource, 'derived'))));
+  });
 }
 
 // Entered options with no underlying entry yet: what the underlying backfill
