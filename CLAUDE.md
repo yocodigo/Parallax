@@ -221,6 +221,10 @@ Vitest, JavaScript (not TypeScript).
   `source: 'none'` (never an assumed delta), beside the underlying's excursion. `heatSummary` keeps the trusted set
   (bars, full coverage, not edge-only) and counts the rest by reason; `summaryAll` takes in every premium figure. Every
   exit gets `afterExit` and `afterExitSummary`. Computed per call, never stored; a failed fetch answers 502.
+  `OptionExcursions.jsx`, the Charts tab's "Heat and after the exit" section on `/performance` (the page's Mode and
+  Year), asks only when its button is pressed: the premium heat chart in 5% bands over the trusted set, saying what it
+  leaves out and why, with the rest behind a toggle; the underlying's heat and after-the-exit run as p50/p75/p90 tables,
+  R by planned and by derived stop, points for every trade; and how often T1 came after an exit short of it.
 - Structure R columns (`rules-v3.md` section 7), options only: `underlying_entry` (the underlying's price at the fill)
   and `underlying_stop` with `underlying_stop_source` (`plan` or `derived`) and, for a derived one,
   `underlying_stop_rule` (which rule derived it), kept consistent by check constraints. A plan sends `underlyingStop`

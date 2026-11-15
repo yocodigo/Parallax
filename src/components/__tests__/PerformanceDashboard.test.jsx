@@ -158,7 +158,7 @@ describe('PerformanceDashboard', () => {
     expect(screen.getByText('-$11.30')).toBeInTheDocument();
   });
 
-  it('groups the charts under Overview, Breakdowns, Discipline, and Modes', async () => {
+  it('groups the charts under Overview, Breakdowns, Discipline, Heat and after the exit, and Modes', async () => {
     servePerformance();
     renderDashboard();
 
@@ -187,6 +187,7 @@ describe('PerformanceDashboard', () => {
       'Mistake cost ledger',
       'Discipline score by month',
       'Emotional control by month',
+      'Heat and after the exit',
       'Modes',
       'Mode comparison',
       'Graduation tracker',

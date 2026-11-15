@@ -23,6 +23,7 @@ import ModeComparison from './ModeComparison';
 import MonthlyPnl from './MonthlyPnl';
 import RDistribution from './RDistribution';
 import RollingExpectancy from './RollingExpectancy';
+import OptionExcursions from './OptionExcursions';
 import PerformanceTables from './PerformanceTables';
 import ProfitFactorByMonth from './ProfitFactorByMonth';
 import WinRateVsBreakeven from './WinRateVsBreakeven';
@@ -253,6 +254,9 @@ export default function PerformanceDashboard() {
                 <DisciplineByMonth months={data.months} discipline={data.disciplineByMonth} />
                 <EmotionalControlByMonth months={data.months} ratings={data.emotionalControlByMonth} />
               </div>
+            </Section>
+            <Section title="Heat and after the exit">
+              <OptionExcursions mode={mode} year={year} />
             </Section>
           </>
         ) : (
