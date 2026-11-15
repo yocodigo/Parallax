@@ -255,7 +255,7 @@ export default function PerformanceTables({ months, yearToDate, adherence, viola
           rows={execution.premiumBand.map((bucket) => ({ key: bucket.key, name: bucket.label, values: bucket }))}
         >
           <p className="text-xs text-gray-500">
-            Option trades only, by the premium paid a share. Allowed band: whether the bucket lies inside the premium
+            Option trades only, by the premium paid per share. Allowed band: whether the bucket lies inside the premium
             band in the option rules, partly inside it, or outside it; blank while that rule is off.
           </p>
         </Table>

@@ -247,7 +247,7 @@ describe('money R for an option', () => {
     expect(screen.queryByText('+0.4R')).not.toBeInTheDocument();
   });
 
-  it('shows the recorded stop as plain R, with no label and no settings request', async () => {
+  it('shows the recorded stop as plain R, with no assumed label', async () => {
     serveJournal(option({ initialStop: 0.8 }));
     renderJournal();
 

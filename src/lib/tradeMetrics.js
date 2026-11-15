@@ -61,5 +61,6 @@ export function moneyR(trade, backstopPct) {
 
   const entry = trade.entryPrice ?? trade.plannedEntry;
   if (trade.assetClass !== 'option' || !isSet(entry)) return null;
-  return { r: pnl / (entry * backstopPct * trade.quantity * trade.multiplier), assumed: true };
+  const risk = entry * backstopPct * trade.quantity * trade.multiplier;
+  return risk > 0 ? { r: pnl / risk, assumed: true } : null;
 }
