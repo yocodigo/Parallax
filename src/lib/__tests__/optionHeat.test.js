@@ -115,14 +115,14 @@ describe('winnerHeat', () => {
 
 describe('heatSummary', () => {
   const bars = (percent, extra = {}) => ({ source: 'bars', percent, dollars: percent * 200, barCoverage: 1, edgeMinutesOnly: false, between: null, ...extra });
-  const under = (mae, maeR, stopSource) => ({ mae, maeR, stopSource });
+  const under = (mae, maeR, stopSource, edgeMinutesOnly = false) => ({ mae, maeR, stopSource, edgeMinutesOnly });
   const row = (premium, underlying = under(0.5, null, null)) => ({ premium, underlying });
   const rows = [
     row(bars(0.02), under(0.2, 0.2, 'plan')),
     row(bars(0.08), under(0.4, 0.4, 'derived')),
     row(bars(0.12), under(0.6, 0.6, 'derived')),
     row(bars(0.3, { barCoverage: 0.4 }), under(1, 1, 'derived')),
-    row(bars(0.25, { edgeMinutesOnly: true }), under(0.8, null, null)),
+    row(bars(0.25, { edgeMinutesOnly: true }), under(0.8, null, null, true)),
     row({ source: 'delta', percent: 0.1, dollars: 20, barCoverage: null }, under(0.3, null, null)),
     row({ source: 'none' }, null),
   ];
@@ -162,8 +162,20 @@ describe('heatSummary', () => {
     expect(underlying.r.plan).toMatchObject({ trades: 1 });
     expect(underlying.r.derived).toMatchObject({ trades: 3 });
     expect(underlying.r.derived.percentiles.p50).toBeCloseTo(0.6);
-    // Every trade with an underlying measurement, stop or not.
-    expect(underlying.points.trades).toBe(6);
+    // Every trade with an underlying measurement, stop or not, but the edge-only one.
+    expect(underlying.points.trades).toBe(5);
+  });
+
+  it("leaves out an edge-only window's underlying heat too, counted, until the toggle takes it in", () => {
+    expect(heatSummary(rows).underlying.excluded).toEqual({ edgeMinutesOnly: 1 });
+    expect(heatSummary(rows, { includeAll: true }).underlying).toMatchObject({ excluded: { edgeMinutesOnly: 0 }, points: { trades: 6 } });
+  });
+
+  it('puts a heat of exactly a band edge in the band above it, despite floating-point error', () => {
+    // 3.00 down to 2.85 is 0.04999999999999997 in floating point: 5%.
+    const edge = { source: 'bars', percent: (3 - 2.85) / 3, dollars: 15, barCoverage: 1, edgeMinutesOnly: false };
+
+    expect(heatSummary([row(edge)]).premium.bands[1]).toEqual({ from: 0.05, to: 0.1, trades: 1 });
   });
 
   it('has null percentiles for an empty group', () => {

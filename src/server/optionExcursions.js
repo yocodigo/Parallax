@@ -28,7 +28,10 @@ export async function gatherOptionExcursions(
 ) {
   const closed = (await listClosedTradesBetween(db, { from, to, mode, assetClass: 'option' })).filter((t) => t.openedAt);
 
-  // The latest exit of each symbol and fill day decides how far its fetch reaches.
+  // The latest exit of each symbol and fill day decides how far its fetch
+  // reaches. fetchMinuteBars reaches back 5 days from that end, which is why an
+  // end is all it needs: a trade held longer than that (or across a long
+  // weekend) loses its fill day's bars and is measured on what remains.
   const ends = new Map();
   for (const trade of closed) {
     const key = `${trade.symbol}|${nyDay(trade.openedAt)}`;
@@ -61,9 +64,11 @@ export async function gatherOptionExcursions(
     const open = bars.filter((bar) => Date.parse(bar.t) >= minuteOf(trade.openedAt) && Date.parse(bar.t) <= trade.closedAt.getTime());
     const underlying = underlyingExcursions(trade, open);
 
-    // T1 as the exit review takes it: the day's 50%, when it was ahead of the fill.
-    const t1 = reviewExit(trade, sessionBars(bars), await planFor(trade))?.t1 ?? null;
-    const after = afterExit(trade, bars, t1);
+    // As the trade's own exit review takes them: the regular session's bars,
+    // and T1 as the day's 50% when it was ahead of the fill.
+    const session = sessionBars(bars);
+    const t1 = reviewExit(trade, session, await planFor(trade))?.t1 ?? null;
+    const after = afterExit(trade, session, t1);
     if (after) afterRows.push({ ...name, ...after });
 
     // Only a winner's contract bars are fetched.

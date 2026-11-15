@@ -1,12 +1,12 @@
 import { percentiles } from './percentiles';
+import { atLeast } from './setups/compare';
 import { edgeSplit } from './tradeWindow';
 import { profitLoss } from './tradeMetrics';
 
-// [rules-v3 8.8] Heat on winners: for an option trade that ended a win, the
-// worst move against it before it worked. Measured on the contract's premium
-// and on the underlying (structure R), so the stop that keeps most winners can
-// be read off the spread instead of chosen by feel. Computed on demand, never
-// stored.
+// [rules-v3 8.8] Heat on winners: how far an option trade that ended a win
+// went against the trader first, on the contract's premium and on the
+// underlying (structure R). Its spread is what a stop that spares most
+// winners gets set from. Computed on demand, never stored.
 
 const MINUTE = 60_000;
 const minuteOf = (date) => Math.floor(date.getTime() / MINUTE) * MINUTE;
@@ -67,6 +67,7 @@ export function premiumFromDelta(trade, delta, underlyingMae) {
 // Closed for a gross win, as wins are judged everywhere (in whole cents, so a
 // round trip at the same premium is a scratch).
 export function isWinner(trade) {
+  // profitLoss is net of fees; adding them back gives the gross P/L.
   const pnl = profitLoss(trade);
   return pnl !== null && Math.round((pnl + (trade.fees ?? 0)) * 100) > 0;
 }
@@ -115,12 +116,20 @@ export function heatSummary(rows, { includeAll = false } = {}) {
   }
 
   const bands = Array.from({ length: HEAT_BANDS }, (_, k) => {
+    // Rounded so an edge is 0.15, not 0.15000000000000002.
     const from = Math.round(k * HEAT_BAND * 100) / 100;
     const to = k === HEAT_BANDS - 1 ? null : Math.round((k + 1) * HEAT_BAND * 100) / 100;
-    return { from, to, trades: premiums.filter((p) => p >= from && (to === null || p < to)).length };
+    // Through atLeast, so a heat of exactly an edge (5% can come out as
+    // 0.04999999999999997) lands in the band it starts.
+    const inBand = (p) => atLeast(p, from) && (to === null || !atLeast(p, to));
+    return { from, to, trades: premiums.filter(inBand).length };
   });
 
-  const underlying = rows.map((row) => row.underlying).filter(Boolean);
+  // The underlying side keeps the same trust rule: an edge-only window's
+  // extremes may be ones the position never saw, so it is counted out until
+  // the toggle takes it in.
+  const measured = rows.map((row) => row.underlying).filter(Boolean);
+  const underlying = includeAll ? measured : measured.filter((u) => !u.edgeMinutesOnly);
   const rBySource = (source) => {
     const values = underlying.filter((u) => u.stopSource === source && u.maeR !== null).map((u) => u.maeR);
     return { trades: values.length, percentiles: percentiles(values) };
@@ -131,6 +140,7 @@ export function heatSummary(rows, { includeAll = false } = {}) {
     winners: rows.length,
     premium: { trades: premiums.length, excluded, bands, percentiles: percentiles(premiums) },
     underlying: {
+      excluded: { edgeMinutesOnly: measured.length - underlying.length },
       r: { plan: rBySource('plan'), derived: rBySource('derived') },
       points: { trades: points.length, percentiles: percentiles(points) },
     },

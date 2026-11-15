@@ -120,6 +120,26 @@ describe('gatherOptionExcursions', () => {
     expect(heat.premium.perShare).toBeCloseTo(0.3);
   });
 
+  it("reads only the regular session after an exit near the close, as the trade's exit review does", async () => {
+    // Closed at 15:58 New York time (20:58 UTC in November).
+    const late = await insert(
+      call({ exitPrice: 2.4, openedAt: new Date('2026-11-04T20:50:30Z'), closedAt: new Date('2026-11-04T20:58:10Z') })
+    );
+    const bars = [
+      minute('20:50', 579.9, 580.1),
+      minute('20:58', 579.9, 580.1, 580),
+      minute('20:59', 580, 580.2),
+      // 16:05 New York: after hours.
+      minute('21:05', 589, 590),
+    ];
+
+    const result = await gatherOptionExcursions(db, { mode: 'live', fetchBars: async () => bars, fetchContractBars: async () => [] });
+
+    const after = result.afterExit.rows.find((row) => row.tradeId === late.id);
+    expect(after.bars).toBe(1);
+    expect(after.ranFor).toBeCloseTo(0.2);
+  });
+
   it('leaves out the trades of other modes', async () => {
     await insert(call({ mode: 'paper', exitPrice: 2.4, openedAt: new Date('2026-11-04T15:15:30Z'), closedAt: new Date('2026-11-04T15:20:40Z') }));
     const fetchBars = vi.fn(async () => SPY_BARS);
