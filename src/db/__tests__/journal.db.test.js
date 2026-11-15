@@ -128,6 +128,27 @@ describe('savePlan', () => {
     expect(entry).toMatchObject({ kind: 'plan', tradeId: trade.id, emotion: 'calm' });
   });
 
+  it("saves an option plan's stop on the underlying with its source", async () => {
+    const { trade } = await savePlan(db, {
+      plan: {
+        ...plan,
+        assetClass: 'option',
+        optionType: 'put',
+        strike: 580,
+        expiration: '2026-10-20',
+        plannedEntry: 1.1,
+        initialStop: undefined,
+        target: undefined,
+        multiplier: 100,
+        underlyingStop: 581.2,
+        underlyingStopSource: 'plan',
+      },
+      entry: { notes: 'Short under the 50%.' },
+    });
+
+    expect(trade).toMatchObject({ underlyingStop: 581.2, underlyingStopSource: 'plan', underlyingStopRule: null });
+  });
+
   it("gives the plan entry the trade's mode", async () => {
     const { entry } = await savePlan(db, { plan, entry: { notes: 'Plan.', mode: 'live' } });
 

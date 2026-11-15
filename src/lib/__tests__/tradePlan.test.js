@@ -103,6 +103,23 @@ describe('parseTradePlan', () => {
     expect(result.data.initialStop).toBeUndefined();
   });
 
+  it("takes an option's stop on the underlying, marked as the plan's own", () => {
+    const result = parseTradePlan({ ...optionPlan, initialStop: undefined, underlyingStop: 581.2 });
+
+    expect(result.data).toMatchObject({ underlyingStop: 581.2, underlyingStopSource: 'plan' });
+  });
+
+  it('leaves out the underlying stop and its source when there is none', () => {
+    const result = parseTradePlan(optionPlan);
+
+    expect(result.data).not.toHaveProperty('underlyingStop');
+    expect(result.data).not.toHaveProperty('underlyingStopSource');
+  });
+
+  it('takes an underlying stop on options only, since a stock\'s stop is already on the underlying', () => {
+    expect(errorPaths(parseTradePlan({ ...longPlan, underlyingStop: 97 }))).toContain('underlyingStop');
+  });
+
   it("still checks an option's stop when one is given", () => {
     expect(errorPaths(parseTradePlan({ ...optionPlan, initialStop: 1.5 }))).toContain('initialStop');
   });

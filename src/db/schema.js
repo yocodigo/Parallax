@@ -24,6 +24,10 @@ export const optionType = pgEnum('option_type', ['call', 'put']);
 // back across the 5m middle band, S2 a 1m close beyond the entry candle's
 // far extreme, S3 the planned time stop. Judged by the Stop OK gate.
 export const stopRule = pgEnum('stop_rule', ['S1', 'S2', 'S3']);
+// Where an option's stop on the underlying came from: the plan, or derived
+// from a detected setup (and then which rule derived it).
+export const underlyingStopSource = pgEnum('underlying_stop_source', ['plan', 'derived']);
+export const underlyingStopRule = pgEnum('underlying_stop_rule', ['band_cross_s2']);
 export const exitReason = pgEnum('exit_reason', [
   'invalidation',
   'target',
@@ -105,6 +109,14 @@ export const trades = pgTable(
     closedAt: timestamp('closed_at', { withTimezone: true }),
     exitReason: exitReason('exit_reason'),
     exitedPerPlan: boolean('exited_per_plan'),
+    // Options only (rules-v3 section 7): the underlying's price at the fill
+    // (its 1m bar's VWAP, recorded with the context) and where the thesis is
+    // wrong on it, which structure R is measured from. A plan's stop is never
+    // replaced; a derived one may be, by a better derivation.
+    underlyingEntry: price('underlying_entry'),
+    underlyingStop: price('underlying_stop'),
+    underlyingStopSource: underlyingStopSource('underlying_stop_source'),
+    underlyingStopRule: underlyingStopRule('underlying_stop_rule'),
     // Deleting a strategy keeps its trades; they just lose the link.
     strategyId: uuid('strategy_id').references(() => strategies.id, { onDelete: 'set null' }),
     // Circuit breakers that were tripped when the entry was recorded anyway.
@@ -117,6 +129,18 @@ export const trades = pgTable(
     check(
       'trades_option_fields_only_on_options',
       sql`${t.assetClass} = 'option' OR (${t.optionType} IS NULL AND ${t.strike} IS NULL AND ${t.expiration} IS NULL)`
+    ),
+    check(
+      'trades_underlying_only_on_options',
+      sql`${t.assetClass} = 'option' OR (${t.underlyingEntry} IS NULL AND ${t.underlyingStop} IS NULL)`
+    ),
+    check(
+      'trades_underlying_stop_has_source',
+      sql`(${t.underlyingStop} IS NULL) = (${t.underlyingStopSource} IS NULL)`
+    ),
+    check(
+      'trades_underlying_stop_rule_when_derived',
+      sql`(${t.underlyingStopRule} IS NOT NULL) = (${t.underlyingStopSource} IS NOT DISTINCT FROM 'derived')`
     ),
     check(
       'trades_closed_after_opened',

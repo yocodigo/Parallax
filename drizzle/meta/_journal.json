@@ -120,6 +120,13 @@
       "when": 1794686015312,
       "tag": "0016_rule_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794765355911,
+      "tag": "0017_underlying_entry_and_stop",
+      "breakpoints": true
     }
   ]
 }

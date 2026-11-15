@@ -203,6 +203,11 @@ Vitest, JavaScript (not TypeScript).
   entries, and the losing streak. `POST /api/trades/[id]/entry` answers 409 `{ error, breakers }`
   while one is tripped for the trade's mode; resending with `override: true` records the entry and
   stores the breakers in `trades.overridden_breakers`. Plans and exits are never blocked.
+- Structure R columns (`rules-v3.md` section 7), options only: `underlying_entry` (the underlying's price at the fill)
+  and `underlying_stop` with `underlying_stop_source` (`plan` or `derived`) and, for a derived one,
+  `underlying_stop_rule` (which rule derived it), kept consistent by check constraints. A plan sends `underlyingStop`
+  (API only until the plan form gains the field) and `parseTradePlan` marks it `plan`; a plan's stop is never
+  replaced, and only a derived one may be.
 - Option execution (`rules-v3.md` section 8, `src/lib/optionExecution.js`): the performance route's `execution`
   holds tables over closed option trades, shown on the Tables tab by `PerformanceTables` when present: `holdTime`
   (trades, gross win rate, and net P/L by how long the position was held) and `exits` (`untriggeredExits`: exits a
