@@ -34,7 +34,7 @@ describe('afterExit', () => {
     expect(POST_EXIT_MIN).toBe(15);
     const result = afterExit(call, bars, null);
 
-    expect(result).toMatchObject({ exitPrice: 580.5, bars: 3, stopSource: 'derived', t1: null, t1Reached: null });
+    expect(result).toMatchObject({ exitPrice: 580.5, bars: 3, stopSource: 'derived', t1: null, t1Reached: null, exitedPastT1: null });
     expect(result.ranFor).toBeCloseTo(1.2);
     expect(result.ranForR).toBeCloseTo(1.2);
   });
@@ -42,6 +42,13 @@ describe('afterExit', () => {
   it('says whether T1 was reached after the exit', () => {
     expect(afterExit(call, bars, 581.5).t1Reached).toBe(true);
     expect(afterExit(call, bars, 582).t1Reached).toBe(false);
+  });
+
+  it('does not judge T1 when the exit was already at or past it: leaving early gave nothing up', () => {
+    // The exit's minute averaged 580.50, already through a T1 at 580.40.
+    expect(afterExit(call, bars, 580.4)).toMatchObject({ t1: 580.4, t1Reached: null, exitedPastT1: true });
+    expect(afterExit(call, bars, 580.5)).toMatchObject({ t1Reached: null, exitedPastT1: true });
+    expect(afterExit(call, bars, 581.5)).toMatchObject({ t1Reached: true, exitedPastT1: false });
   });
 
   it('reads a put the other way: down is its direction', () => {

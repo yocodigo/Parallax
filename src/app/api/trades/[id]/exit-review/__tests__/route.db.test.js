@@ -170,7 +170,7 @@ describe('GET /api/trades/[id]/exit-review', () => {
     expect(body.afterExit.ranForR).toBeCloseTo(1.1 / 0.7);
   });
 
-  it('adds nothing after the exit for a stock, measured on its own prices', async () => {
+  it('answers a null afterExit for a stock', async () => {
     await getDb().insert(dailyPlans).values(plan);
     const trade = await insertTrade();
     serveBars('SPY', BARS);

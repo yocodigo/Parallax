@@ -15,8 +15,11 @@ const MINUTE = 60_000;
 // it); `t1` the day's T1, or null without one. Returns { exitPrice, bars (how
 // many minutes after the exit had a bar), ranFor (points, never negative),
 // ranForR (structure R from the underlying stop, null without one), stopSource,
-// t1, t1Reached (null without a T1) }, or null for an open trade, one without
-// an underlying entry, or when no bar holds the exit or follows it.
+// t1, exitedPastT1, t1Reached }, or null for an open trade, one without an
+// underlying entry, or when no bar holds the exit or follows it. T1 asks
+// whether leaving early gave it up, so it is judged only for an exit short of
+// it: `exitedPastT1` says the exit was already at or beyond T1, and then, like
+// without a T1, `t1Reached` is null.
 export function afterExit(trade, bars, t1) {
   if (!trade.closedAt || trade.underlyingEntry === null || trade.underlyingEntry === undefined) return null;
   const exitIndex = fillBarIndex(bars, trade.closedAt);
@@ -36,6 +39,8 @@ export function afterExit(trade, bars, t1) {
   const ranFor = Math.max(0, long ? high - exitPrice : exitPrice - low);
   const stop = trade.underlyingStop ?? null;
   const risk = stop === null ? 0 : Math.abs(trade.underlyingEntry - stop);
+  const hasT1 = t1 !== null && t1 !== undefined;
+  const exitedPastT1 = hasT1 ? (long ? atLeast(exitPrice, t1) : atMost(exitPrice, t1)) : null;
 
   return {
     exitPrice,
@@ -44,7 +49,8 @@ export function afterExit(trade, bars, t1) {
     ranForR: risk ? ranFor / risk : null,
     stopSource: trade.underlyingStopSource ?? null,
     t1: t1 ?? null,
-    t1Reached: t1 === null || t1 === undefined ? null : long ? atLeast(high, t1) : atMost(low, t1),
+    exitedPastT1,
+    t1Reached: !hasT1 || exitedPastT1 ? null : long ? atLeast(high, t1) : atMost(low, t1),
   };
 }
 

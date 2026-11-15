@@ -136,6 +136,7 @@ describe('TradeExitReview', () => {
       ranForR: 1.57,
       stopSource: 'derived',
       t1: 100,
+      exitedPastT1: false,
       t1Reached: true,
       ...extra,
     });
@@ -144,14 +145,21 @@ describe('TradeExitReview', () => {
       serveReview({ review: review(), afterExit: after() });
       renderReview();
 
-      expect(await screen.findByText('After the exit (15 min): ran +1.10 pts (+1.6R, derived stop) further its way; reached T1')).toBeInTheDocument();
+      expect(await screen.findByText('After the exit (15 min, from 99.30): ran +1.10 pts (+1.6R, derived stop) further its way; reached T1')).toBeInTheDocument();
     });
 
     it('gives points only without a stop, and nothing about T1 without one', async () => {
       serveReview({ review: review(), afterExit: after({ ranForR: null, stopSource: null, t1: null, t1Reached: null }) });
       renderReview();
 
-      expect(await screen.findByText('After the exit (15 min): ran +1.10 pts further its way')).toBeInTheDocument();
+      expect(await screen.findByText('After the exit (15 min, from 99.30): ran +1.10 pts further its way')).toBeInTheDocument();
+    });
+
+    it('does not judge T1 for an exit already past it', async () => {
+      serveReview({ review: review(), afterExit: after({ exitedPastT1: true, t1Reached: null }) });
+      renderReview();
+
+      expect(await screen.findByText(/further its way; exited at or past T1$/)).toBeInTheDocument();
     });
 
     it('says when T1 was not reached after the exit', async () => {
@@ -169,7 +177,7 @@ describe('TradeExitReview', () => {
       renderReview();
 
       expect(
-        await screen.findByText('After the exit (15 min, 6 with bars): ran +0.40 pts (+0.6R, derived stop) further its way')
+        await screen.findByText('After the exit (15 min, 6 with bars, from 99.30): ran +0.40 pts (+0.6R, derived stop) further its way')
       ).toBeInTheDocument();
     });
   });

@@ -47,22 +47,27 @@ const VERDICT_STYLES = {
   early: 'bg-amber-100 text-amber-900',
 };
 
-// `touchAt` is the start of the minute bar that first reached T1.
 const STOP_SOURCE_TEXT = { plan: 'planned stop', derived: 'derived stop' };
 
 // rules-v3 section 8.3: how far an option's underlying ran its way in the
-// minutes after the exit, in points and, with a stop on the underlying, R.
-// Says so when some of those minutes had no bar, and whether T1 was reached.
+// minutes after the exit, from the exit minute's VWAP, in points and, with a
+// stop on the underlying, R. Never against the trade (it is zero then), so both
+// always show a plus. Says so when some of those minutes had no bar, and whether
+// T1 was reached, unless the exit was already past it.
 function afterExitText(after) {
   const minutes = after.bars < POST_EXIT_MIN ? `${POST_EXIT_MIN} min, ${after.bars} with bars` : `${POST_EXIT_MIN} min`;
-  const r =
-    after.ranForR === null
+  const r = after.ranForR === null ? '' : ` (+${after.ranForR.toFixed(1)}R, ${STOP_SOURCE_TEXT[after.stopSource]})`;
+  const t1 = after.exitedPastT1
+    ? '; exited at or past T1'
+    : after.t1Reached === null
       ? ''
-      : ` (${after.ranForR > 0 ? '+' : ''}${after.ranForR.toFixed(1)}R, ${STOP_SOURCE_TEXT[after.stopSource]})`;
-  const t1 = after.t1Reached === null ? '' : after.t1Reached ? '; reached T1' : '; did not reach T1';
-  return `After the exit (${minutes}): ran +${after.ranFor.toFixed(2)} pts${r} further its way${t1}`;
+      : after.t1Reached
+        ? '; reached T1'
+        : '; did not reach T1';
+  return `After the exit (${minutes}, from ${price(after.exitPrice)}): ran +${after.ranFor.toFixed(2)} pts${r} further its way${t1}`;
 }
 
+// `touchAt` is the start of the minute bar that first reached T1.
 function reactionText(reaction) {
   const text = REACTION_TEXT[reaction.kind]?.(reaction) ?? 'Not decided at T1';
   return `${text}, touched ${nyTime.format(new Date(reaction.touchAt))}`;
