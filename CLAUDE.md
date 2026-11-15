@@ -159,8 +159,13 @@ Vitest, JavaScript (not TypeScript).
   `holdMinutes` (exit fill minus entry fill; never stored, so imports show it in their preview's Held column).
 - MAE/MFE: `GET /api/trades/[id]/excursions` fetches Alpaca bars (IEX feed, `adjustment: raw` to
   match fill prices) from the start of the bar holding the fill to the exit, or to now while open;
-  `barWindow` picks minute, hourly, or daily bars by holding time. Stocks only so far. Computed on
-  demand, never stored; a closed trade's bars are cached for a day.
+  `barWindow` picks minute, hourly, or daily bars by holding time. Computed on demand, never stored; a
+  closed trade's bars are cached for a day. An option is measured on its underlying's bars
+  (`underlyingExcursions`, answered with `measuredOn: 'underlying'`): SPY points from `underlying_entry`, R only
+  from an `underlying_stop`, with the stop's source; none without an underlying entry. A trade held under
+  `EDGE_MINUTES_HOLD` (2) minutes is flagged `edgeMinutesOnly` (`tradeWindow.js`: the fill and exit minutes hold
+  prices from outside the trade) and also measured on the bars strictly between them (`between`). `TradeProgress`
+  shows it as points, R, the stop's source, and the flag. Crypto not yet.
 - Insights (`/insights`): history-based views. `MistakeLedger.jsx` loads `GET /api/insights/mistakes`
   (`?mode=` optional), built from `listClosedTradesWithMistakes` and `mistakeLedger`: per mistake,
   the closed trades tagged with it (on any of their entries, once per trade) and their total and

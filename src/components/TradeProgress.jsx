@@ -337,17 +337,58 @@ function AssumedR({ trade, tone }) {
   );
 }
 
+// "-0.50 pts", "+1.50 pts": a move of the underlying.
+const points = (value) => `${value > 0 ? '+' : value < 0 ? '-' : ''}${Math.abs(value).toFixed(2)} pts`;
+const STOP_SOURCE_LABELS = { plan: 'planned stop', derived: 'derived stop' };
+
+// An option's excursions, measured on its underlying (rules-v3 section 7): in
+// points, and in R when it has a stop on the underlying, named by where that
+// stop came from. A trade held under two minutes is flagged: its range is
+// mostly the minutes it was filled and closed in.
+function UnderlyingExcursions({ symbol, result }) {
+  // The MAE is shown as a move against, so its R is negated: but never a missing one.
+  const inR = (r, sign = 1) => (r === null ? '' : ` (${formatR(sign * r)})`);
+  return (
+    <span data-testid="underlying-excursions" className="text-gray-500">
+      {`${symbol} `}
+      <abbr title="Maximum adverse excursion: the furthest the underlying went against the trade" className="no-underline">
+        MAE
+      </abbr>{' '}
+      <span className="text-red-700">{`${points(-result.mae)}${inR(result.maeR, -1)}`}</span>
+      {' · '}
+      <abbr title="Maximum favorable excursion: the furthest the underlying went in the trade's favor" className="no-underline">
+        MFE
+      </abbr>{' '}
+      <span className="text-green-700">{`${points(result.mfe)}${inR(result.mfeR)}`}</span>
+      {result.stopSource && ` · ${STOP_SOURCE_LABELS[result.stopSource]}`}
+      {result.edgeMinutesOnly && (
+        <>
+          {' · '}
+          <abbr
+            title="Held under two minutes: the range is mostly the minutes it was filled and closed in, which include prices from before the fill and after the exit"
+            className="no-underline"
+          >
+            edge minutes
+          </abbr>
+        </>
+      )}
+    </span>
+  );
+}
+
 // How far the price went against the trade and in its favor while it was open,
-// in R. Only stocks that have been entered are measured; anything else, or a
-// failed request, simply shows nothing.
+// in R. Stocks are measured on their own bars, options on their underlying's;
+// a plan, crypto, or a failed request simply shows nothing.
 function Excursions({ trade, status }) {
-  const measurable = status !== 'planned' && trade.assetClass === 'stock';
+  const measurable = status !== 'planned' && (trade.assetClass === 'stock' || trade.assetClass === 'option');
   const { data } = useSWR(measurable ? `/api/trades/${trade.id}/excursions` : null, fetchJson, {
     revalidateOnFocus: false,
   });
 
   const result = data?.excursions;
-  if (!result || result.maeR === null) return null;
+  if (!result) return null;
+  if (data.measuredOn === 'underlying') return <UnderlyingExcursions symbol={trade.symbol} result={result} />;
+  if (result.maeR === null) return null;
 
   return (
     <span className="text-gray-500">

@@ -93,14 +93,75 @@ describe('GET /api/trades/[id]/excursions', () => {
     });
   });
 
+  it("measures an option on its underlying's bars, in points and in R from its underlying stop", async () => {
+    // A bought SPY call, 580.00 on the underlying at the fill, derived stop at
+    // 579.00, held 15:16:37 to 15:20:10.
+    const option = await insertTrade({
+      symbol: 'SPY',
+      assetClass: 'option',
+      optionType: 'call',
+      strike: 580,
+      expiration: '2026-11-10',
+      multiplier: 100,
+      quantity: 1,
+      plannedEntry: 1.2,
+      entryPrice: 1.2,
+      initialStop: null,
+      exitPrice: 1.5,
+      underlyingEntry: 580,
+      underlyingStop: 579,
+      underlyingStopSource: 'derived',
+      underlyingStopRule: 'band_cross_s2',
+      openedAt: new Date('2026-11-10T15:16:37Z'),
+      closedAt: new Date('2026-11-10T15:20:10Z'),
+    });
+    const queries = [];
+    server.use(
+      http.get(BARS_URL, ({ request }) => {
+        queries.push(Object.fromEntries(new URL(request.url).searchParams));
+        return HttpResponse.json({
+          bars: {
+            SPY: [
+              { t: '2026-11-10T15:16:00Z', o: 580, h: 580.1, l: 579.5, c: 580 },
+              { t: '2026-11-10T15:19:00Z', o: 580, h: 581.5, l: 579.9, c: 581 },
+            ],
+          },
+        });
+      })
+    );
+
+    const body = await (await get(option.id)).json();
+
+    expect(queries[0]).toMatchObject({ symbols: 'SPY', start: '2026-11-10T15:16:00.000Z', end: '2026-11-10T15:20:10.000Z' });
+    expect(body).toEqual({
+      excursions: {
+        mae: 0.5,
+        mfe: 1.5,
+        maeR: 0.5,
+        mfeR: 1.5,
+        stopSource: 'derived',
+        stopRule: 'band_cross_s2',
+        edgeMinutesOnly: false,
+        between: null,
+      },
+      measuredOn: 'underlying',
+      timeframe: '1Min',
+    });
+  });
+
   it('says why when there is nothing to measure', async () => {
     const option = await insertTrade({ assetClass: 'option', multiplier: 100 });
+    const crypto = await insertTrade({ symbol: 'BTC/USD', assetClass: 'crypto' });
     const quiet = await insertTrade();
     serveBars([]);
 
     expect(await (await get(option.id)).json()).toEqual({
       excursions: null,
-      reason: 'MAE and MFE are only available for stocks so far',
+      reason: 'No underlying entry recorded for this option yet',
+    });
+    expect(await (await get(crypto.id)).json()).toEqual({
+      excursions: null,
+      reason: 'MAE and MFE are only available for stocks and options so far',
     });
     expect(await (await get(quiet.id)).json()).toEqual({
       excursions: null,

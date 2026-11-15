@@ -1,3 +1,6 @@
+import { tradeBias } from './setups/replayTrades';
+import { edgeSplit } from './tradeWindow';
+
 // Maximum adverse and favorable excursion: how far the price went against a
 // trade, and in its favor, while it was open. Computed from bars on demand,
 // never stored.
@@ -46,5 +49,39 @@ export function excursions(trade, bars) {
     mfe,
     maeR: risk ? mae / risk : null,
     mfeR: risk ? mfe / risk : null,
+  };
+}
+
+// How far the underlying went against an option's bet and in its favor
+// (rules-v3 section 7: structure R), from `bars`, the underlying's minute bars
+// from the start of the fill's minute to the exit. In points from
+// `underlyingEntry`, and in R from `underlyingStop` when there is one (with
+// where that stop came from, so a planned and a derived one stay apart).
+// A trade held under two minutes is flagged `edgeMinutesOnly` and also
+// measured on the bars strictly between its fill and exit minutes (`between`,
+// null when there are none, or when the trade isn't edge-only). Null without
+// an underlying entry or bars.
+export function underlyingExcursions(trade, bars) {
+  const entry = trade.underlyingEntry;
+  if (entry === null || entry === undefined || bars.length === 0) return null;
+
+  const stop = trade.underlyingStop ?? null;
+  const risk = stop === null ? 0 : Math.abs(entry - stop);
+  const long = tradeBias(trade) === 'long';
+  const measure = (list) => {
+    const high = Math.max(...list.map((bar) => bar.h));
+    const low = Math.min(...list.map((bar) => bar.l));
+    const mae = Math.max(0, long ? entry - low : high - entry);
+    const mfe = Math.max(0, long ? high - entry : entry - low);
+    return { mae, mfe, maeR: risk ? mae / risk : null, mfeR: risk ? mfe / risk : null };
+  };
+
+  const { edgeMinutesOnly, between } = edgeSplit(bars, trade.openedAt, trade.closedAt ?? null);
+  return {
+    ...measure(bars),
+    stopSource: trade.underlyingStopSource ?? null,
+    stopRule: trade.underlyingStopRule ?? null,
+    edgeMinutesOnly,
+    between: edgeMinutesOnly && between.length > 0 ? measure(between) : null,
   };
 }

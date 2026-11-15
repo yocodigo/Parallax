@@ -291,6 +291,70 @@ describe('MAE and MFE', () => {
     expect(requested).toEqual([]);
   });
 
+  describe('for an option, on its underlying', () => {
+    const option = plannedTrade({
+      ...closed,
+      symbol: 'SPY',
+      assetClass: 'option',
+      optionType: 'call',
+      strike: 580,
+      expiration: '2026-11-10',
+      multiplier: 100,
+      quantity: 1,
+      plannedEntry: 1.2,
+      entryPrice: 1.2,
+      exitPrice: 1.5,
+      initialStop: null,
+      target: null,
+    });
+    const measured = (extra = {}) => ({
+      excursions: {
+        mae: 0.5,
+        mfe: 1.5,
+        maeR: 0.5,
+        mfeR: 1.5,
+        stopSource: 'derived',
+        stopRule: 'band_cross_s2',
+        edgeMinutesOnly: false,
+        between: null,
+        ...extra,
+      },
+      measuredOn: 'underlying',
+      timeframe: '1Min',
+    });
+    const serveRules = () =>
+      server.use(http.get('*/api/rule-settings', () => HttpResponse.json({ settings: { backstopOn: false, backstopPct: 0.25 } })));
+
+    it("shows the underlying's move in points and in R, naming where the stop came from", async () => {
+      serveJournal(option, { excursions: measured() });
+      serveRules();
+      renderJournal();
+
+      const line = await screen.findByTestId('underlying-excursions');
+      expect(line).toHaveTextContent('SPY MAE -0.50 pts (-0.5R) · MFE +1.50 pts (+1.5R) · derived stop');
+    });
+
+    it('shows points only when there is no stop', async () => {
+      serveJournal(option, { excursions: measured({ maeR: null, mfeR: null, stopSource: null, stopRule: null }) });
+      serveRules();
+      renderJournal();
+
+      const line = await screen.findByTestId('underlying-excursions');
+      expect(line).toHaveTextContent('SPY MAE -0.50 pts · MFE +1.50 pts');
+      expect(line).not.toHaveTextContent('R');
+    });
+
+    it('flags a trade under two minutes, whose range is mostly its edge minutes', async () => {
+      serveJournal(option, { excursions: measured({ edgeMinutesOnly: true, stopSource: 'plan', stopRule: null }) });
+      serveRules();
+      renderJournal();
+
+      const line = await screen.findByTestId('underlying-excursions');
+      expect(line).toHaveTextContent('planned stop');
+      expect(within(line).getByTitle(/held under two minutes/i)).toHaveTextContent('edge minutes');
+    });
+  });
+
   it('shows nothing when there is nothing to measure', async () => {
     serveJournal(plannedTrade(closed));
     renderJournal();
