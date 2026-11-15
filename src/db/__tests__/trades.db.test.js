@@ -55,51 +55,6 @@ describe('getTrade', () => {
   });
 });
 
-// rules-v3 section 7: an option's entry and stop on the underlying, the stop
-// with where it came from.
-describe('underlying entry and stop columns', () => {
-  const option = {
-    assetClass: 'option',
-    optionType: 'call',
-    strike: 580,
-    expiration: '2026-10-20',
-    plannedEntry: 1.2,
-    initialStop: null,
-    target: null,
-  };
-
-  it('stores a stop from the plan, and a derived one with the rule that derived it', async () => {
-    const planned = await insertTrade({ ...option, underlyingStop: 579.5, underlyingStopSource: 'plan' });
-    const derived = await insertTrade({
-      ...option,
-      underlyingEntry: 580.12,
-      underlyingStop: 579.4,
-      underlyingStopSource: 'derived',
-      underlyingStopRule: 'band_cross_s2',
-    });
-
-    expect(planned).toMatchObject({ underlyingStop: 579.5, underlyingStopSource: 'plan', underlyingStopRule: null });
-    expect(derived).toMatchObject({ underlyingEntry: 580.12, underlyingStopSource: 'derived', underlyingStopRule: 'band_cross_s2' });
-  });
-
-  it('refuses a stop without its source, or a source without a stop', async () => {
-    await expect(insertTrade({ ...option, underlyingStop: 579.5 })).rejects.toThrow();
-    await expect(insertTrade({ ...option, underlyingStopSource: 'plan' })).rejects.toThrow();
-  });
-
-  it('names the rule for a derived stop and only for one', async () => {
-    await expect(insertTrade({ ...option, underlyingStop: 579.4, underlyingStopSource: 'derived' })).rejects.toThrow();
-    await expect(
-      insertTrade({ ...option, underlyingStop: 579.4, underlyingStopSource: 'plan', underlyingStopRule: 'band_cross_s2' })
-    ).rejects.toThrow();
-  });
-
-  it('keeps them to options: a stock is already on its underlying', async () => {
-    await expect(insertTrade({ underlyingEntry: 100.1 })).rejects.toThrow();
-    await expect(insertTrade({ underlyingStop: 97, underlyingStopSource: 'plan' })).rejects.toThrow();
-  });
-});
-
 describe('recordEntry', () => {
   it('records the fill on a planned trade', async () => {
     const trade = await insertTrade();

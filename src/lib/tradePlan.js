@@ -63,8 +63,8 @@ const fields = z.object({
   optionType: z.enum(['call', 'put']).optional(),
   strike: price.optional(),
   expiration: z.iso.date({ error: 'Enter the expiration as a date' }).optional(),
-  // For options: where the thesis is wrong on the underlying ("stop if SPY
-  // closes below 581.20"), the stop structure R is measured from
+  // For options: the underlying's level where the trade's idea is wrong (for
+  // a call, a close under some SPY price), the stop structure R is measured from
   // (rules-v3 section 7). Its side can't be checked here: the underlying's
   // price at the fill isn't known until the entry.
   underlyingStop: price.optional(),
@@ -94,11 +94,11 @@ const schema = fields
   // Options control 100 shares per contract unless told otherwise.
   // A stop on the underlying given with the plan is the plan's own: one derived
   // later never replaces it.
-  .transform((plan) => ({
-    ...plan,
-    multiplier: plan.multiplier ?? (plan.assetClass === 'option' ? 100 : 1),
-    ...(plan.underlyingStop !== undefined && { underlyingStopSource: 'plan' }),
-  }));
+  .transform((plan) => {
+    const parsed = { ...plan, multiplier: plan.multiplier ?? (plan.assetClass === 'option' ? 100 : 1) };
+    if (plan.underlyingStop !== undefined) parsed.underlyingStopSource = 'plan';
+    return parsed;
+  });
 
 export function parseTradePlan(input) {
   return schema.safeParse(input);

@@ -110,9 +110,11 @@ export const trades = pgTable(
     exitReason: exitReason('exit_reason'),
     exitedPerPlan: boolean('exited_per_plan'),
     // Options only (rules-v3 section 7): the underlying's price at the fill
-    // (its 1m bar's VWAP, recorded with the context) and where the thesis is
-    // wrong on it, which structure R is measured from. A plan's stop is never
-    // replaced; a derived one may be, by a better derivation.
+    // (taken from the 1m bar holding it; which price of that bar is a choice
+    // for Joel to confirm) and the level on it where the trade's idea is
+    // wrong, which structure R is measured from. A plan's stop is never
+    // replaced; a derived one may be, by a better derivation. The rule names
+    // what derived the level, not the stop rule (S1-S3) the plan follows.
     underlyingEntry: price('underlying_entry'),
     underlyingStop: price('underlying_stop'),
     underlyingStopSource: underlyingStopSource('underlying_stop_source'),
@@ -134,6 +136,9 @@ export const trades = pgTable(
       'trades_underlying_only_on_options',
       sql`${t.assetClass} = 'option' OR (${t.underlyingEntry} IS NULL AND ${t.underlyingStop} IS NULL)`
     ),
+    // Both or neither. A CHECK passes when its expression is NULL, so the rule
+    // check compares with IS NOT DISTINCT FROM: a plain `= 'derived'` would be
+    // NULL for a null source and let a rule through.
     check(
       'trades_underlying_stop_has_source',
       sql`(${t.underlyingStop} IS NULL) = (${t.underlyingStopSource} IS NULL)`

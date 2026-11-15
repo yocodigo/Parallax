@@ -64,6 +64,48 @@ describe('trades table', () => {
     });
   });
 
+  describe("an option's entry and stop on the underlying", () => {
+    const option = { ...plan, assetClass: 'option', optionType: 'call', strike: 580, expiration: '2026-10-20' };
+    const insert = (values) => db.insert(trades).values({ ...option, ...values }).returning();
+    const refusedBy = (constraint) => ({ cause: { constraint } });
+
+    it('stores a stop from the plan, and a derived one with the rule that derived it', async () => {
+      const [planned] = await insert({ underlyingStop: 579.5, underlyingStopSource: 'plan' });
+      const [derived] = await insert({
+        underlyingEntry: 580.12,
+        underlyingStop: 579.4,
+        underlyingStopSource: 'derived',
+        underlyingStopRule: 'band_cross_s2',
+      });
+
+      expect(planned).toMatchObject({ underlyingStop: 579.5, underlyingStopSource: 'plan', underlyingStopRule: null });
+      expect(derived).toMatchObject({ underlyingEntry: 580.12, underlyingStopSource: 'derived', underlyingStopRule: 'band_cross_s2' });
+    });
+
+    it('rejects a stop without its source, or a source without a stop', async () => {
+      await expect(insert({ underlyingStop: 579.5 })).rejects.toMatchObject(refusedBy('trades_underlying_stop_has_source'));
+      await expect(insert({ underlyingStopSource: 'plan' })).rejects.toMatchObject(refusedBy('trades_underlying_stop_has_source'));
+    });
+
+    it('rejects a derived stop with no rule, and a rule on a stop the plan gave', async () => {
+      await expect(insert({ underlyingStop: 579.4, underlyingStopSource: 'derived' })).rejects.toMatchObject(
+        refusedBy('trades_underlying_stop_rule_when_derived')
+      );
+      await expect(
+        insert({ underlyingStop: 579.4, underlyingStopSource: 'plan', underlyingStopRule: 'band_cross_s2' })
+      ).rejects.toMatchObject(refusedBy('trades_underlying_stop_rule_when_derived'));
+    });
+
+    it('rejects them on a stock, whose own prices are already on the underlying', async () => {
+      await expect(db.insert(trades).values({ ...plan, underlyingEntry: 100.1 })).rejects.toMatchObject(
+        refusedBy('trades_underlying_only_on_options')
+      );
+      await expect(
+        db.insert(trades).values({ ...plan, underlyingStop: 97, underlyingStopSource: 'plan' })
+      ).rejects.toMatchObject(refusedBy('trades_underlying_only_on_options'));
+    });
+  });
+
   it('rejects closing a trade that was never opened', async () => {
     await expect(
       db.insert(trades).values({ ...plan, closedAt: new Date() })
