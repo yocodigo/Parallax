@@ -216,28 +216,23 @@ export async function listRecentTrades(db, { modes, limit = 100 }) {
 }
 
 // Records an option's entry and derived stop on the underlying
-// (underlyingAtEntry's result). The entry is set once and then kept. A derived
-// stop is written unless the plan gave one: a plan's stop is never replaced,
-// and an earlier derived one is. Nothing is cleared by a null.
+// (underlyingAtEntry's result), replacing any earlier measurement as a whole:
+// a measurement belongs to one fill time, and an import can correct that
+// time, so an entry or derived stop from the old one never stays. A null
+// clears (the backfill measures it again later). A plan's own stop is never
+// touched; a derived one is replaced, or cleared when the new measurement
+// derives none. Options only.
 export async function saveUnderlying(db, id, { entry, derivedStop }) {
-  if (entry !== null) {
-    await db
-      .update(trades)
-      .set({ underlyingEntry: entry })
-      .where(and(eq(trades.id, id), eq(trades.assetClass, 'option'), isNull(trades.underlyingEntry)));
-  }
-  if (derivedStop) {
-    await db
-      .update(trades)
-      .set({ underlyingStop: derivedStop.stop, underlyingStopSource: 'derived', underlyingStopRule: derivedStop.rule })
-      .where(
-        and(
-          eq(trades.id, id),
-          eq(trades.assetClass, 'option'),
-          or(isNull(trades.underlyingStopSource), eq(trades.underlyingStopSource, 'derived'))
-        )
-      );
-  }
+  const option = and(eq(trades.id, id), eq(trades.assetClass, 'option'));
+  await db.update(trades).set({ underlyingEntry: entry }).where(option);
+  await db
+    .update(trades)
+    .set({
+      underlyingStop: derivedStop?.stop ?? null,
+      underlyingStopSource: derivedStop ? 'derived' : null,
+      underlyingStopRule: derivedStop?.rule ?? null,
+    })
+    .where(and(option, or(isNull(trades.underlyingStopSource), eq(trades.underlyingStopSource, 'derived'))));
 }
 
 // Entered options with no underlying entry yet: what the underlying backfill

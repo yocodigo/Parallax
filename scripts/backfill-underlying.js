@@ -41,8 +41,9 @@ async function main() {
     for (const { symbol, end, trades } of backfillFetches(list).fetches) {
       let done = 0;
       try {
-        // Bars after an earlier trade's fill are safe: underlyingAtEntry reads
-        // only the bar holding each fill and the bars closed before it.
+        // The bars run past every fill but the day's latest. That is safe:
+        // underlyingAtEntry reads only the bar holding each fill, and the
+        // entry review resamples as of the fill, leaving out everything after.
         const bars = await fetchMinuteBars(symbol, fillMinuteEnd(end));
         for (const trade of trades) {
           const result = underlyingAtEntry(trade, bars);

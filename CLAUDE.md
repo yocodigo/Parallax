@@ -214,7 +214,9 @@ Vitest, JavaScript (not TypeScript).
   `after()` runs `captureUnderlying` (`src/server/underlying.js`: minute bars through the fill's minute) and
   `saveUnderlying`: the entry is the VWAP of the 1m bar holding the fill (`underlyingAtEntry.js`), and a stop is derived
   (`band_cross_s2`) only when the entry review's band-cross setup fired the trade's way before the fill and its S2 level
-  is on the losing side of that entry; nothing else is ever guessed. Route tests mock `captureUnderlying`.
+  is on the losing side of that entry; nothing else is ever guessed. Each capture replaces the earlier one as a
+  whole (an import can correct the fill time), clearing a derived stop it no longer finds; a fill whose minute bar
+  isn't on the feed yet is left null for `db:backfill-underlying`. Route tests mock `captureUnderlying`.
 - Option execution (`rules-v3.md` section 8, `src/lib/optionExecution.js`): the performance route's `execution`
   holds tables over closed option trades, shown on the Tables tab by `PerformanceTables` when present: `holdTime`
   (trades, gross win rate, and net P/L by how long the position was held) and `exits` (`untriggeredExits`: exits a

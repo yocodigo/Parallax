@@ -96,22 +96,44 @@ describe('saveUnderlying', () => {
     });
   });
 
-  it('replaces an earlier derived stop, but keeps the entry it already has', async () => {
+  it('replaces an earlier measurement as a whole, as when an import corrects the fill time', async () => {
     const trade = await insertTrade(option);
     await saveUnderlying(db, trade.id, { entry: 580.12, derivedStop: derived });
 
-    await saveUnderlying(db, trade.id, { entry: 581, derivedStop: { ...derived, stop: 579.6 } });
+    await saveUnderlying(db, trade.id, { entry: 581, derivedStop: { ...derived, stop: 580.5 } });
 
-    expect(await getTrade(db, trade.id)).toMatchObject({ underlyingEntry: 580.12, underlyingStop: 579.6 });
+    expect(await getTrade(db, trade.id)).toMatchObject({ underlyingEntry: 581, underlyingStop: 580.5 });
   });
 
-  it('clears nothing when it has nothing', async () => {
+  it('clears a derived stop the new measurement no longer finds, so none outlives its setup', async () => {
     const trade = await insertTrade(option);
     await saveUnderlying(db, trade.id, { entry: 580.12, derivedStop: derived });
 
-    await saveUnderlying(db, trade.id, { entry: null, derivedStop: null });
+    await saveUnderlying(db, trade.id, { entry: 581, derivedStop: null });
 
-    expect(await getTrade(db, trade.id)).toMatchObject({ underlyingEntry: 580.12, underlyingStop: 579.4 });
+    expect(await getTrade(db, trade.id)).toMatchObject({
+      underlyingEntry: 581,
+      underlyingStop: null,
+      underlyingStopSource: null,
+      underlyingStopRule: null,
+    });
+  });
+
+  it("replaces the entry but keeps the plan's stop when measuring again", async () => {
+    const trade = await insertTrade({ ...option, underlyingStop: 579, underlyingStopSource: 'plan' });
+    await saveUnderlying(db, trade.id, { entry: 580.12, derivedStop: null });
+
+    await saveUnderlying(db, trade.id, { entry: null, derivedStop: derived });
+
+    expect(await getTrade(db, trade.id)).toMatchObject({ underlyingEntry: null, underlyingStop: 579, underlyingStopSource: 'plan' });
+  });
+
+  it('touches only options', async () => {
+    const stock = await insertTrade(entry);
+
+    await saveUnderlying(db, stock.id, { entry: 100.1, derivedStop: null });
+
+    expect((await getTrade(db, stock.id)).underlyingEntry).toBeNull();
   });
 
   it('lists entered options with no underlying entry yet, oldest fill first', async () => {

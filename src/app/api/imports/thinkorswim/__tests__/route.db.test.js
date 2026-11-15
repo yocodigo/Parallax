@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getDb } from '@/db';
 import { getTradeContext } from '@/db/contexts';
@@ -154,6 +155,48 @@ describe('POST /api/imports/thinkorswim', () => {
 
     expect(body.trades[0]).toMatchObject({ action: 'fill', tradeId: plan.id });
     expect(body).toMatchObject({ created: 1, filled: 1 });
+  });
+
+  it("measures the underlying again at the broker's fill time when it corrects a hand-recorded entry", async () => {
+    // Recorded by hand at 18:43 UTC, then measured there: the broker's fill
+    // was 18:41:05 (11:41:05 Pacific), so those values are from the wrong minute.
+    const [recorded] = await getDb()
+      .insert(trades)
+      .values({
+        mode: 'live',
+        symbol: 'SPY',
+        assetClass: 'option',
+        optionType: 'put',
+        strike: 761,
+        expiration: '2026-10-23',
+        multiplier: 100,
+        direction: 'long',
+        quantity: 1,
+        plannedEntry: 1.3,
+        entryPrice: 1.3,
+        openedAt: new Date('2026-10-23T18:43:00Z'),
+        underlyingEntry: 760,
+        underlyingStop: 760.8,
+        underlyingStopSource: 'derived',
+        underlyingStopRule: 'band_cross_s2',
+        createdAt: new Date('2026-10-23T16:00:00Z'),
+      })
+      .returning();
+    // At the real fill no setup had fired.
+    vi.mocked(captureUnderlying).mockResolvedValue({ entry: 761.4, derivedStop: null });
+
+    const body = await (await post({ confirm: true })).json();
+    await Promise.all(afterWork);
+
+    expect(body.trades[0]).toMatchObject({ action: 'fill', tradeId: recorded.id });
+    const [saved] = await getDb().select().from(trades).where(eq(trades.id, recorded.id));
+    expect(saved).toMatchObject({
+      openedAt: new Date('2026-10-23T18:41:05Z'),
+      underlyingEntry: 761.4,
+      underlyingStop: null,
+      underlyingStopSource: null,
+      underlyingStopRule: null,
+    });
   });
 
   it('rejects a file that is not an account statement', async () => {
