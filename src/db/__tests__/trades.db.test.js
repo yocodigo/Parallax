@@ -11,8 +11,10 @@ import {
   listClosedTradesWithRuleChecks,
   listPlanFacts,
   listReviewRatings,
+  listOptionsWithoutUnderlying,
   listRecentTrades,
   recordEntry,
+  saveUnderlying,
   recordExit,
 } from '../trades';
 
@@ -52,6 +54,75 @@ describe('getTrade', () => {
 
     expect(await getTrade(db, trade.id)).toMatchObject({ id: trade.id, symbol: 'SPY' });
     expect(await getTrade(db, '00000000-0000-4000-8000-000000000000')).toBeNull();
+  });
+});
+
+describe('saveUnderlying', () => {
+  const option = {
+    assetClass: 'option',
+    optionType: 'call',
+    strike: 580,
+    expiration: '2026-10-20',
+    plannedEntry: 1.2,
+    initialStop: null,
+    target: null,
+    ...entry,
+  };
+  const derived = { stop: 579.4, rule: 'band_cross_s2' };
+
+  it('records the entry and a derived stop with its rule', async () => {
+    const trade = await insertTrade(option);
+
+    await saveUnderlying(db, trade.id, { entry: 580.12, derivedStop: derived });
+
+    expect(await getTrade(db, trade.id)).toMatchObject({
+      underlyingEntry: 580.12,
+      underlyingStop: 579.4,
+      underlyingStopSource: 'derived',
+      underlyingStopRule: 'band_cross_s2',
+    });
+  });
+
+  it("never replaces the plan's own stop", async () => {
+    const trade = await insertTrade({ ...option, underlyingStop: 579, underlyingStopSource: 'plan' });
+
+    await saveUnderlying(db, trade.id, { entry: 580.12, derivedStop: derived });
+
+    expect(await getTrade(db, trade.id)).toMatchObject({
+      underlyingEntry: 580.12,
+      underlyingStop: 579,
+      underlyingStopSource: 'plan',
+      underlyingStopRule: null,
+    });
+  });
+
+  it('replaces an earlier derived stop, but keeps the entry it already has', async () => {
+    const trade = await insertTrade(option);
+    await saveUnderlying(db, trade.id, { entry: 580.12, derivedStop: derived });
+
+    await saveUnderlying(db, trade.id, { entry: 581, derivedStop: { ...derived, stop: 579.6 } });
+
+    expect(await getTrade(db, trade.id)).toMatchObject({ underlyingEntry: 580.12, underlyingStop: 579.6 });
+  });
+
+  it('clears nothing when it has nothing', async () => {
+    const trade = await insertTrade(option);
+    await saveUnderlying(db, trade.id, { entry: 580.12, derivedStop: derived });
+
+    await saveUnderlying(db, trade.id, { entry: null, derivedStop: null });
+
+    expect(await getTrade(db, trade.id)).toMatchObject({ underlyingEntry: 580.12, underlyingStop: 579.4 });
+  });
+
+  it('lists entered options with no underlying entry yet, oldest fill first', async () => {
+    const later = await insertTrade({ ...option, openedAt: new Date('2026-10-21T14:00:00Z') });
+    const earlier = await insertTrade(option);
+    const done = await insertTrade(option);
+    await saveUnderlying(db, done.id, { entry: 580.12, derivedStop: null });
+    await insertTrade({ ...option, entryPrice: null, openedAt: null });
+    await insertTrade(entry);
+
+    expect((await listOptionsWithoutUnderlying(db)).map((t) => t.id)).toEqual([earlier.id, later.id]);
   });
 });
 

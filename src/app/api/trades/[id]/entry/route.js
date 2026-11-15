@@ -4,12 +4,13 @@ import { getDb } from '@/db';
 import { saveTradeContext } from '@/db/contexts';
 import { loadBreakerStatus } from '@/db/settings';
 import { getStrategy } from '@/db/strategies';
-import { getTrade, recordEntry } from '@/db/trades';
+import { getTrade, recordEntry, saveUnderlying } from '@/db/trades';
 import { logError, requestId, withErrorLogging } from '@/lib/log';
 import { parseRuleChecks, unmetRules } from '@/lib/strategy';
 import { parseTradeEntry } from '@/lib/tradeFill';
 import { tradeStatus } from '@/lib/tradeMetrics';
 import { captureContext } from '@/server/marketContext';
+import { captureUnderlying } from '@/server/underlying';
 
 const notFound = () => NextResponse.json({ error: 'Trade not found' }, { status: 404 });
 const alreadyEntered = () =>
@@ -79,6 +80,14 @@ export const POST = withErrorLogging('/api/trades/[id]/entry', async (request, {
       await saveTradeContext(getDb(), updated.id, await captureContext(updated, { requestId: reqId }));
     } catch (error) {
       logError('Context capture failed', { route: '/api/trades/[id]/entry', requestId: reqId, error });
+    }
+    // An option's entry and stop on the underlying, for structure R. A
+    // failure leaves them for the backfill to fill in.
+    if (updated.assetClass !== 'option') return;
+    try {
+      await saveUnderlying(getDb(), updated.id, await captureUnderlying(updated));
+    } catch (error) {
+      logError('Underlying capture failed', { route: '/api/trades/[id]/entry', requestId: reqId, error });
     }
   });
 

@@ -7,7 +7,9 @@ import { resetDb } from '@/db/testing';
 import { DEFAULT_BREAKER_SETTINGS } from '@/lib/circuitBreakerSettings';
 import { getTradeContext } from '@/db/contexts';
 import { captureErrorLogs } from '@/mocks/logs';
+import { getTrade } from '@/db/trades';
 import { captureContext } from '@/server/marketContext';
+import { captureUnderlying } from '@/server/underlying';
 import { POST } from '../route';
 
 // `after` only works inside a real Next request. Here it runs the work right
@@ -20,6 +22,7 @@ vi.mock('next/server', async (importOriginal) => ({
 
 // The market context comes from Alpaca and Cboe; these tests stay offline.
 vi.mock('@/server/marketContext', () => ({ captureContext: vi.fn() }));
+vi.mock('@/server/underlying', () => ({ captureUnderlying: vi.fn() }));
 
 // Swap the app's database for the test database. Everything else is real.
 vi.mock('@/db', async () => {
@@ -73,6 +76,8 @@ beforeEach(async () => {
   await resetDb(getDb());
   captureContext.mockReset();
   captureContext.mockResolvedValue({ version: 1, market: { spyTrend: 'up' } });
+  captureUnderlying.mockReset();
+  captureUnderlying.mockResolvedValue({ entry: 580.12, derivedStop: { stop: 579.4, rule: 'band_cross_s2' } });
 });
 afterAll(() => getDb().$client.end());
 
@@ -247,3 +252,66 @@ describe('POST /api/trades/[id]/entry captures the market context', () => {
     expect(captureContext).not.toHaveBeenCalled();
   });
 });
+
+describe("POST /api/trades/[id]/entry records an option's entry and stop on the underlying", () => {
+  const option = {
+    assetClass: 'option',
+    optionType: 'call',
+    strike: 580,
+    expiration: '2026-10-20',
+    multiplier: 100,
+    quantity: 1,
+    plannedEntry: 1.2,
+    initialStop: null,
+  };
+  const fill = { entryPrice: 1.21, openedAt: entry.openedAt };
+
+  it('saves the underlying entry and a derived stop once the response is sent', async () => {
+    const trade = await insertTrade(option);
+
+    const response = await post(trade.id, fill);
+    await Promise.all(afterWork);
+
+    expect(response.status).toBe(200);
+    expect(captureUnderlying).toHaveBeenCalledWith(expect.objectContaining({ id: trade.id, openedAt: new Date(entry.openedAt) }));
+    expect(await getTrade(getDb(), trade.id)).toMatchObject({
+      underlyingEntry: 580.12,
+      underlyingStop: 579.4,
+      underlyingStopSource: 'derived',
+      underlyingStopRule: 'band_cross_s2',
+    });
+  });
+
+  it("keeps the plan's own stop", async () => {
+    const trade = await insertTrade({ ...option, underlyingStop: 579, underlyingStopSource: 'plan' });
+
+    await post(trade.id, fill);
+    await Promise.all(afterWork);
+
+    expect(await getTrade(getDb(), trade.id)).toMatchObject({ underlyingStop: 579, underlyingStopSource: 'plan' });
+  });
+
+  it('keeps the entry and the context, and logs, when the bars cannot be fetched', async () => {
+    captureUnderlying.mockRejectedValue(new Error('Alpaca is down'));
+    const logs = captureErrorLogs();
+    const trade = await insertTrade(option);
+
+    const response = await post(trade.id, fill);
+    await Promise.all(afterWork);
+
+    expect(response.status).toBe(200);
+    expect(await getTradeContext(getDb(), trade.id)).not.toBeNull();
+    expect((await getTrade(getDb(), trade.id)).underlyingEntry).toBeNull();
+    expect(logs()).toEqual([expect.objectContaining({ message: 'Underlying capture failed', route: '/api/trades/[id]/entry' })]);
+  });
+
+  it('asks nothing for a stock, whose own prices are on the underlying', async () => {
+    const trade = await insertTrade();
+
+    await post(trade.id, entry);
+    await Promise.all(afterWork);
+
+    expect(captureUnderlying).not.toHaveBeenCalled();
+  });
+});
+

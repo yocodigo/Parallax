@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, or, sql } from 'drizzle-orm';
 import { nyDay } from '@/lib/setups/session';
 import { journalEntries, tradeRuleChecks, trades } from './schema';
 
@@ -213,4 +213,39 @@ export async function listRecentTrades(db, { modes, limit = 100 }) {
     .where(and(isNotNull(trades.openedAt), inArray(trades.mode, modes)))
     .orderBy(desc(sql`coalesce(${trades.closedAt}, ${trades.openedAt})`))
     .limit(limit);
+}
+
+// Records an option's entry and derived stop on the underlying
+// (underlyingAtEntry's result). The entry is set once and then kept. A derived
+// stop is written unless the plan gave one: a plan's stop is never replaced,
+// and an earlier derived one is. Nothing is cleared by a null.
+export async function saveUnderlying(db, id, { entry, derivedStop }) {
+  if (entry !== null) {
+    await db
+      .update(trades)
+      .set({ underlyingEntry: entry })
+      .where(and(eq(trades.id, id), eq(trades.assetClass, 'option'), isNull(trades.underlyingEntry)));
+  }
+  if (derivedStop) {
+    await db
+      .update(trades)
+      .set({ underlyingStop: derivedStop.stop, underlyingStopSource: 'derived', underlyingStopRule: derivedStop.rule })
+      .where(
+        and(
+          eq(trades.id, id),
+          eq(trades.assetClass, 'option'),
+          or(isNull(trades.underlyingStopSource), eq(trades.underlyingStopSource, 'derived'))
+        )
+      );
+  }
+}
+
+// Entered options with no underlying entry yet: what the underlying backfill
+// (scripts/backfill-underlying.js) works through, oldest fill first.
+export async function listOptionsWithoutUnderlying(db) {
+  return db
+    .select()
+    .from(trades)
+    .where(and(eq(trades.assetClass, 'option'), isNotNull(trades.openedAt), isNull(trades.underlyingEntry)))
+    .orderBy(trades.openedAt);
 }

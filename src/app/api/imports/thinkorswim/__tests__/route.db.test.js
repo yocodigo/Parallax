@@ -4,6 +4,7 @@ import { getTradeContext } from '@/db/contexts';
 import { journalEntries, trades } from '@/db/schema';
 import { resetDb } from '@/db/testing';
 import { captureContext } from '@/server/marketContext';
+import { captureUnderlying } from '@/server/underlying';
 import { POST } from '../route';
 
 // `after` only works inside a real Next request. Here it runs the work right
@@ -16,6 +17,7 @@ vi.mock('next/server', async (importOriginal) => ({
 
 // The market context comes from Alpaca and Cboe; these tests stay offline.
 vi.mock('@/server/marketContext', () => ({ captureContext: vi.fn() }));
+vi.mock('@/server/underlying', () => ({ captureUnderlying: vi.fn() }));
 
 // Swap the app's database for the test database. Everything else is real.
 vi.mock('@/db', async () => {
@@ -53,6 +55,7 @@ beforeEach(async () => {
   await Promise.all(afterWork);
   afterWork.length = 0;
   vi.mocked(captureContext).mockReset().mockResolvedValue({ version: 1 });
+  vi.mocked(captureUnderlying).mockReset().mockResolvedValue({ entry: 761.4, derivedStop: null });
   await resetDb(getDb());
 });
 afterAll(() => getDb().$client.end());
@@ -105,6 +108,18 @@ describe('POST /api/imports/thinkorswim', () => {
     await Promise.all(afterWork);
     expect(captureContext).toHaveBeenCalledTimes(2);
     expect(await getTradeContext(getDb(), saved[0].id)).toEqual({ version: 1 });
+  });
+
+  it("records each imported option's entry on the underlying afterwards", async () => {
+    await post({ confirm: true });
+    await Promise.all(afterWork);
+
+    expect(captureUnderlying).toHaveBeenCalledTimes(2);
+    const saved = await getDb().select().from(trades);
+    expect(saved.map((t) => [t.underlyingEntry, t.underlyingStop])).toEqual([
+      [761.4, null],
+      [761.4, null],
+    ]);
   });
 
   it('skips trades imported before, so overlapping statements are safe', async () => {

@@ -3,12 +3,14 @@ import { z } from 'zod';
 import { getDb } from '@/db';
 import { saveTradeContext } from '@/db/contexts';
 import { applyImport, listImportCandidates } from '@/db/imports';
+import { saveUnderlying } from '@/db/trades';
 import { matchImport } from '@/lib/import/matchImport';
 import { pairFills } from '@/lib/import/pairFills';
 import { parseThinkorswimStatement } from '@/lib/import/thinkorswim';
 import { logError, requestId, withErrorLogging } from '@/lib/log';
 import { holdMinutes, profitLoss } from '@/lib/tradeMetrics';
 import { captureContext } from '@/server/marketContext';
+import { captureUnderlying } from '@/server/underlying';
 
 const ROUTE = '/api/imports/thinkorswim';
 // A year of statements is well under this.
@@ -97,6 +99,11 @@ export const POST = withErrorLogging(ROUTE, async (request) => {
         await saveTradeContext(db, trade.id, await captureContext(trade, { requestId: reqId }));
       } catch (error) {
         logError('Context capture failed', { route: ROUTE, requestId: reqId, tradeId: trade.id, error });
+      }
+      try {
+        await saveUnderlying(db, trade.id, await captureUnderlying(trade));
+      } catch (error) {
+        logError('Underlying capture failed', { route: ROUTE, requestId: reqId, tradeId: trade.id, error });
       }
     }
   });

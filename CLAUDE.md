@@ -20,6 +20,9 @@ Vitest, JavaScript (not TypeScript).
 - `npm run db:backfill-setups`: add `setups` (the four-touch grade) to context snapshots saved before
   version 2, in `DATABASE_URL`, from Alpaca's minute bars (one fetch per symbol and New York day).
   Safe to rerun: it only touches snapshots without `setups`; a failed fetch is retried next run.
+- `npm run db:backfill-underlying`: record `underlying_entry` (and a derived `underlying_stop` where the band-cross
+  setup fired) for entered options without one, in `DATABASE_URL`, from Alpaca's minute bars (one fetch per symbol and
+  New York day). Safe to rerun: it only touches options with no underlying entry, and never a plan's stop.
 - `npm run test:unit`: unit and component tests (no database needed)
 - `npm run test:db`: database integration tests (needs Postgres running)
 - `npm run test:run`: all tests
@@ -207,7 +210,11 @@ Vitest, JavaScript (not TypeScript).
   and `underlying_stop` with `underlying_stop_source` (`plan` or `derived`) and, for a derived one,
   `underlying_stop_rule` (which rule derived it), kept consistent by check constraints. A plan sends `underlyingStop`
   (API only until the plan form gains the field) and `parseTradePlan` marks it `plan`; a plan's stop is never
-  replaced, and only a derived one may be.
+  replaced, and only a derived one may be. After an option's entry is recorded (by hand or by the thinkorswim import),
+  `after()` runs `captureUnderlying` (`src/server/underlying.js`: minute bars through the fill's minute) and
+  `saveUnderlying`: the entry is the VWAP of the 1m bar holding the fill (`underlyingAtEntry.js`), and a stop is derived
+  (`band_cross_s2`) only when the entry review's band-cross setup fired the trade's way before the fill and its S2 level
+  is on the losing side of that entry; nothing else is ever guessed. Route tests mock `captureUnderlying`.
 - Option execution (`rules-v3.md` section 8, `src/lib/optionExecution.js`): the performance route's `execution`
   holds tables over closed option trades, shown on the Tables tab by `PerformanceTables` when present: `holdTime`
   (trades, gross win rate, and net P/L by how long the position was held) and `exits` (`untriggeredExits`: exits a
