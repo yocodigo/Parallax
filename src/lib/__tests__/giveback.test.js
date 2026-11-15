@@ -131,6 +131,12 @@ describe('underlyingGiveback', () => {
     expect(result.givenBack).toBeCloseTo(1.7);
   });
 
+  it('has nothing to measure when the exit minute has no VWAP to take the close from', () => {
+    const noVwap = [...bars.slice(0, 4), { ...bars[4], vw: undefined }];
+
+    expect(underlyingGiveback(call, noVwap)).toBeNull();
+  });
+
   it('has nothing to measure for an open trade, one without an underlying entry, or one whose exit minute has no bar', () => {
     expect(underlyingGiveback({ ...call, closedAt: null }, bars)).toBeNull();
     expect(underlyingGiveback({ ...call, underlyingEntry: null }, bars)).toBeNull();

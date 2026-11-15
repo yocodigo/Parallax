@@ -286,8 +286,15 @@ describe('formatCoachingInput', () => {
     const text = formatCoachingInput(facts({ trades: [{ ...facts().trades[0], giveback }] }));
 
     expect(text).toContain(
-      'Giveback on SPY: best open +1.50 pts (+1.5R), closed -0.20 pts (-0.2R), gave back 1.70 pts (1.7R), from a derived stop (flagged)'
+      'Giveback on SPY: best open +1.50 pts (+1.5R), closed -0.20 pts (-0.2R), gave back 1.70 pts (1.7R), R on SPY from a derived stop (flagged)'
     );
+  });
+
+  it("names a planned stop on the underlying apart from a derived one", () => {
+    const giveback = { mfe: 0.6, result: 0.4, givenBack: 0.2, mfeR: 0.6, r: 0.4, givenBackR: 0.2, flagged: false, stopSource: 'plan', edgeMinutesOnly: false };
+    const text = formatCoachingInput(facts({ trades: [{ ...facts().trades[0], giveback }] }));
+
+    expect(text).toContain('gave back 0.20 pts (0.2R), R on SPY from a planned stop');
   });
 
   it("gives an option's giveback in points only without a stop, and says when it is mostly edge minutes", () => {
@@ -295,7 +302,7 @@ describe('formatCoachingInput', () => {
     const text = formatCoachingInput(facts({ trades: [{ ...facts().trades[0], giveback }] }));
 
     expect(text).toContain(
-      'Giveback on SPY: best open +0.80 pts, closed +0.10 pts, gave back 0.70 pts, no stop on the underlying to judge it by; held under two minutes, so mostly the fill and exit minutes'
+      'Giveback on SPY: best open +0.80 pts, closed +0.10 pts, gave back 0.70 pts, no stop on the underlying to judge it by; held under 2 minutes, so mostly the fill and exit minutes'
     );
   });
 

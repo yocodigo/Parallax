@@ -3,6 +3,7 @@ import { EMOTION_LABELS, MISTAKE_LABELS } from './journalEntry';
 import { tradeBias } from './setups/replayTrades';
 import { EXIT_REASON_LABELS } from './tradeFill';
 import { describeResult, describeTrade } from './weeklyReview';
+import { EDGE_MINUTES_HOLD } from './tradeWindow';
 
 // [11] The coaching pass: what Claude is told, and the day's computed facts as
 // the text it reads. Never raw bars: every figure here was worked out by the
@@ -197,7 +198,7 @@ const pts = (value) => `${value > 0 ? '+' : value < 0 ? '-' : ''}${Math.abs(valu
 // underlying (underlyingGiveback): points, and R only with a stop there.
 function givebackLine(giveback, trade) {
   const flag = giveback.flagged ? ' (flagged)' : '';
-  if (giveback.mfe === undefined) {
+  if (trade.assetClass !== 'option') {
     return `Giveback: best open ${formatR(giveback.mfeR)}, closed ${formatR(giveback.r)}, gave back ${giveback.givenBackR.toFixed(1)}R${flag}`;
   }
   // Points, then R in brackets when there is a stop to measure it from.
@@ -205,11 +206,14 @@ function givebackLine(giveback, trade) {
   const r = (value) => (value === null ? null : formatR(value));
   const gaveBack = `${giveback.givenBack.toFixed(2)} pts`;
   const gaveBackR = giveback.givenBackR === null ? null : `${giveback.givenBackR.toFixed(1)}R`;
+  // This R is on the underlying, not the money R a Result line gives.
   const stop =
     giveback.stopSource === null
       ? 'no stop on the underlying to judge it by'
-      : `from a ${giveback.stopSource === 'plan' ? 'planned' : 'derived'} stop`;
-  const edge = giveback.edgeMinutesOnly ? '; held under two minutes, so mostly the fill and exit minutes' : '';
+      : `R on ${trade.symbol} from a ${giveback.stopSource === 'plan' ? 'planned' : 'derived'} stop`;
+  const edge = giveback.edgeMinutesOnly
+    ? `; held under ${EDGE_MINUTES_HOLD} minutes, so mostly the fill and exit minutes`
+    : '';
   return (
     `Giveback on ${trade.symbol}: best open ${withR(pts(giveback.mfe), r(giveback.mfeR))}, ` +
     `closed ${withR(pts(giveback.result), r(giveback.r))}, gave back ${withR(gaveBack, gaveBackR)}, ${stop}${flag}${edge}`
