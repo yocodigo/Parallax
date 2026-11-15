@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { addContextSetups, getTradeContext, listContextGrades, listContextsWithoutSetups, saveTradeContext } from '../contexts';
+import { addContextSetups, getTradeContext, listContextDeltas, listContextGrades, listContextsWithoutSetups, saveTradeContext } from '../contexts';
 import { trades } from '../schema';
 import { createTestDb, resetDb } from '../testing';
 
@@ -116,3 +116,27 @@ describe('listContextGrades', () => {
     expect((await listContextGrades(db, [])).size).toBe(0);
   });
 });
+
+describe('listContextDeltas', () => {
+  it("gives the option delta each trade's snapshot kept, or null when it kept none", async () => {
+    const [kept, stale, stock, bare] = [await insertTrade(), await insertTrade(), await insertTrade(), await insertTrade()];
+    await saveTradeContext(db, kept.id, { version: 2, option: { delta: 0.48, iv: 0.2 } });
+    // Captured too long after the fill: the live values were left null.
+    await saveTradeContext(db, stale.id, { version: 2, option: { delta: null } });
+    await saveTradeContext(db, stock.id, { version: 2, option: null });
+
+    const deltas = await listContextDeltas(db, [kept.id, stale.id, stock.id, bare.id]);
+
+    expect([...deltas]).toEqual([
+      [kept.id, 0.48],
+      [stale.id, null],
+      [stock.id, null],
+      [bare.id, null],
+    ]);
+  });
+
+  it('asks nothing for no trades', async () => {
+    expect((await listContextDeltas(db, [])).size).toBe(0);
+  });
+});
+

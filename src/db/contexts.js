@@ -63,3 +63,17 @@ export async function listContextGrades(db, tradeIds) {
   }
   return grades;
 }
+
+// The option delta each of these trades' snapshots kept, as a Map by trade id,
+// null when there is none: no snapshot, not an option, or captured more than 15
+// minutes after the fill, when the live values aren't kept (buildContext).
+export async function listContextDeltas(db, tradeIds) {
+  const deltas = new Map(tradeIds.map((id) => [id, null]));
+  if (tradeIds.length === 0) return deltas;
+  const rows = await db
+    .select({ tradeId: tradeContexts.tradeId, context: tradeContexts.context })
+    .from(tradeContexts)
+    .where(inArray(tradeContexts.tradeId, tradeIds));
+  for (const { tradeId, context } of rows) deltas.set(tradeId, context?.option?.delta ?? null);
+  return deltas;
+}

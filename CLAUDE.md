@@ -211,6 +211,16 @@ Vitest, JavaScript (not TypeScript).
   entries, and the losing streak. `POST /api/trades/[id]/entry` answers 409 `{ error, breakers }`
   while one is tripped for the trade's mode; resending with `override: true` records the entry and
   stores the breakers in `trades.overridden_breakers`. Plans and exits are never blocked.
+- Heat on winners and after the exit (`rules-v3.md` section 8, items 8 and 3): `GET /api/insights/option-excursions`
+  (`?mode`, live by default; `?year`, the New York year or `all`) runs `gatherOptionExcursions`
+  (`src/server/optionExcursions.js`) over the closed option trades: the underlying's minute bars once per symbol and
+  fill day, and each winner's own contract bars (`fetchOptionBars`, v1beta1, a bar only for minutes that traded).
+  Per winner (gross win) `winnerHeat` (`src/lib/optionHeat.js`) gives the premium heat from the contract's bars
+  (`source: 'bars'`, with `barCoverage`, the share of window minutes with a bar, and `edgeMinutesOnly` with a `between`
+  figure), else from the delta the context snapshot kept (`listContextDeltas`, `source: 'delta'`, an estimate), else
+  `source: 'none'` (never an assumed delta), beside the underlying's excursion. `heatSummary` keeps the trusted set
+  (bars, full coverage, not edge-only) and counts the rest by reason; `summaryAll` takes in every premium figure. Every
+  exit gets `afterExit` and `afterExitSummary`. Computed per call, never stored; a failed fetch answers 502.
 - Structure R columns (`rules-v3.md` section 7), options only: `underlying_entry` (the underlying's price at the fill)
   and `underlying_stop` with `underlying_stop_source` (`plan` or `derived`) and, for a derived one,
   `underlying_stop_rule` (which rule derived it), kept consistent by check constraints. A plan sends `underlyingStop`
