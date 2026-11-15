@@ -71,6 +71,7 @@ export function underlyingExcursions(trade, bars) {
   const measure = (list) => {
     const high = Math.max(...list.map((bar) => bar.h));
     const low = Math.min(...list.map((bar) => bar.l));
+    // A side the price never reached is zero, not negative.
     const mae = Math.max(0, long ? entry - low : high - entry);
     const mfe = Math.max(0, long ? high - entry : entry - low);
     return { mae, mfe, maeR: risk ? mae / risk : null, mfeR: risk ? mfe / risk : null };

@@ -344,14 +344,16 @@ describe('MAE and MFE', () => {
       expect(line).not.toHaveTextContent('R');
     });
 
-    it('flags a trade under two minutes, whose range is mostly its edge minutes', async () => {
-      serveJournal(option, { excursions: measured({ edgeMinutesOnly: true, stopSource: 'plan', stopRule: null }) });
+    it('flags a trade under two minutes, whose range is mostly its edge minutes, and gives the minutes between', async () => {
+      const between = { mae: 0.2, mfe: 0.4, maeR: 0.2, mfeR: 0.4 };
+      serveJournal(option, { excursions: measured({ edgeMinutesOnly: true, stopSource: 'plan', stopRule: null, between }) });
       serveRules();
       renderJournal();
 
       const line = await screen.findByTestId('underlying-excursions');
       expect(line).toHaveTextContent('planned stop');
-      expect(within(line).getByTitle(/held under two minutes/i)).toHaveTextContent('edge minutes');
+      expect(within(line).getByTitle(/held under 2 minutes/i)).toHaveTextContent('edge minutes');
+      expect(line).toHaveTextContent('between them: MAE -0.20 pts (-0.2R) · MFE +0.40 pts (+0.4R)');
     });
   });
 

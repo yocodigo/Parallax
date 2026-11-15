@@ -48,8 +48,10 @@ export const GET = withErrorLogging('/api/trades/[id]/excursions', async (reques
     start: start.toISOString(),
     end: end.toISOString(),
     limit: '10000',
-    // Fills are the actual prices of the day, so compare them with unadjusted bars.
-    adjustment: 'raw',
+    // A stock's fills are the actual prices of the day, so compare them with
+    // unadjusted bars. An option's underlying entry and stop were recorded from
+    // split-adjusted bars (underlying.js), so its bars are adjusted the same way.
+    adjustment: option ? 'split' : 'raw',
     feed: 'iex',
   });
 

@@ -6,6 +6,7 @@ import { BREAKER_LABELS, describeBreaker } from '@/lib/circuitBreakers';
 import { apiErrorMessage, fetchJson } from '@/lib/fetchJson';
 import { formatProfitLoss, formatR } from '@/lib/format';
 import { moneyR, profitLoss, rMultiple, tradeStatus } from '@/lib/tradeMetrics';
+import { EDGE_MINUTES_HOLD } from '@/lib/tradeWindow';
 import { EXIT_REASONS, EXIT_REASON_LABELS } from '@/lib/tradeFill';
 import Field, { inputClass } from './Field';
 import TradeContext from './TradeContext';
@@ -346,8 +347,11 @@ const STOP_SOURCE_LABELS = { plan: 'planned stop', derived: 'derived stop' };
 // stop came from. A trade held under two minutes is flagged: its range is
 // mostly the minutes it was filled and closed in.
 function UnderlyingExcursions({ symbol, result }) {
-  // The MAE is shown as a move against, so its R is negated: but never a missing one.
+  // R in brackets after the points when there is a stop. The MAE is a move
+  // against, so it and its R show negative; a missing R shows nothing.
   const inR = (r, sign = 1) => (r === null ? '' : ` (${formatR(sign * r)})`);
+  const moves = ({ mae, maeR, mfe, mfeR }) =>
+    `MAE ${points(-mae)}${inR(maeR, -1)} · MFE ${points(mfe)}${inR(mfeR)}`;
   return (
     <span data-testid="underlying-excursions" className="text-gray-500">
       {`${symbol} `}
@@ -365,11 +369,12 @@ function UnderlyingExcursions({ symbol, result }) {
         <>
           {' · '}
           <abbr
-            title="Held under two minutes: the range is mostly the minutes it was filled and closed in, which include prices from before the fill and after the exit"
+            title={`Held under ${EDGE_MINUTES_HOLD} minutes: the range is mostly the minutes it was filled and closed in, which include prices from before the fill and after the exit`}
             className="no-underline"
           >
             edge minutes
           </abbr>
+          {result.between && `; between them: ${moves(result.between)}`}
         </>
       )}
     </span>

@@ -132,7 +132,8 @@ describe('GET /api/trades/[id]/excursions', () => {
 
     const body = await (await get(option.id)).json();
 
-    expect(queries[0]).toMatchObject({ symbols: 'SPY', start: '2026-11-10T15:16:00.000Z', end: '2026-11-10T15:20:10.000Z' });
+    // Adjusted like the bars the underlying entry and stop were recorded from.
+    expect(queries[0]).toMatchObject({ symbols: 'SPY', start: '2026-11-10T15:16:00.000Z', end: '2026-11-10T15:20:10.000Z', adjustment: 'split' });
     expect(body).toEqual({
       excursions: {
         mae: 0.5,
