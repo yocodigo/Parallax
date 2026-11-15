@@ -128,6 +128,52 @@ describe('TradeExitReview', () => {
     expect(screen.queryByText(/T1 \d/)).not.toBeInTheDocument();
   });
 
+  describe("an option's underlying after the exit", () => {
+    const after = (extra = {}) => ({
+      exitPrice: 99.3,
+      bars: 15,
+      ranFor: 1.1,
+      ranForR: 1.57,
+      stopSource: 'derived',
+      t1: 100,
+      t1Reached: true,
+      ...extra,
+    });
+
+    it('says how far the underlying ran its way in the 15 minutes after, in points and R, and whether it reached T1', async () => {
+      serveReview({ review: review(), afterExit: after() });
+      renderReview();
+
+      expect(await screen.findByText('After the exit (15 min): ran +1.10 pts (+1.6R, derived stop) further its way; reached T1')).toBeInTheDocument();
+    });
+
+    it('gives points only without a stop, and nothing about T1 without one', async () => {
+      serveReview({ review: review(), afterExit: after({ ranForR: null, stopSource: null, t1: null, t1Reached: null }) });
+      renderReview();
+
+      expect(await screen.findByText('After the exit (15 min): ran +1.10 pts further its way')).toBeInTheDocument();
+    });
+
+    it('says when T1 was not reached after the exit', async () => {
+      serveReview({ review: review(), afterExit: after({ t1Reached: false }) });
+      renderReview();
+
+      expect(await screen.findByText(/further its way; did not reach T1$/)).toBeInTheDocument();
+    });
+
+    it('still shows it when the review had no T1 to grade, and says when fewer minutes had bars', async () => {
+      serveReview({
+        review: review({ skipped: 'no_daily_plan', t1: null, t2: null, reaction: null, verdict: null }),
+        afterExit: after({ bars: 6, ranFor: 0.4, ranForR: 0.57, t1: null, t1Reached: null }),
+      });
+      renderReview();
+
+      expect(
+        await screen.findByText('After the exit (15 min, 6 with bars): ran +0.40 pts (+0.6R, derived stop) further its way')
+      ).toBeInTheDocument();
+    });
+  });
+
   it('explains why there is no review', async () => {
     serveReview({ review: null, reason: 'The exit review is only available for stocks and options so far' });
     renderReview();

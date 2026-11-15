@@ -277,8 +277,11 @@ Vitest, JavaScript (not TypeScript).
   the fill), the reaction at T1 comes from `reactionAt` and reads bars after the exit, and the
   verdict is by timing alone (`matched` means not early; an oscillation is `not_judged`, since one
   exit per trade can't show a partial). The recorded exit reason is shown beside the verdict, never
-  used in it. Both review routes: 404, 409 until the entry or exit is recorded, and a null review
-  with a reason for crypto. Stocks and options only.
+  used in it. For options the exit review route also answers `afterExit` (`afterExit.js`, rules-v3 8.3): how far
+  the underlying ran the trade's way in the `POST_EXIT_MIN` (15) minutes after the exit's minute, from that minute's
+  VWAP, in points and (with an underlying stop) R, how many of those minutes had bars, and whether the review's T1
+  was reached; `TradeExitReview` shows it, even when the review skipped T1. Both review routes: 404, 409 until the
+  entry or exit is recorded, and a null review with a reason for crypto. Stocks and options only.
 - thinkorswim import (`/import`, `ThinkorswimImport.jsx`, `POST /api/imports/thinkorswim`): the
   account statement CSV is read from its Cash Balance section (`src/lib/import/thinkorswim.js`; it
   lists every fill with fees and a ref and ignores the statement's symbol filter; a paper-money statement leaves it empty, so the fills then come from its Account Trade History section, with no fees and a time-and-position ref). Times are in the

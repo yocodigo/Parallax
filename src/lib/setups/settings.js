@@ -145,3 +145,7 @@ export const PREMIUM_MIN = 0.5;
 // trade (0.02 is two cents a share, so $2 on one contract). The quotes aren't
 // stored, so friction assumes it. **(confirm)**
 export const ASSUMED_SPREAD = 0.02;
+
+// [rules-v3 8.3] How many minutes after an exit "after the exit" watches the
+// underlying.
+export const POST_EXIT_MIN = 15;

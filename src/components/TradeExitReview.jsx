@@ -2,6 +2,7 @@
 
 import useSWR from 'swr';
 import { fetchJson } from '@/lib/fetchJson';
+import { POST_EXIT_MIN } from '@/lib/setups/settings';
 import { EXIT_REASON_LABELS } from '@/lib/tradeFill';
 
 const nyTime = new Intl.DateTimeFormat('en-US', {
@@ -47,6 +48,21 @@ const VERDICT_STYLES = {
 };
 
 // `touchAt` is the start of the minute bar that first reached T1.
+const STOP_SOURCE_TEXT = { plan: 'planned stop', derived: 'derived stop' };
+
+// rules-v3 section 8.3: how far an option's underlying ran its way in the
+// minutes after the exit, in points and, with a stop on the underlying, R.
+// Says so when some of those minutes had no bar, and whether T1 was reached.
+function afterExitText(after) {
+  const minutes = after.bars < POST_EXIT_MIN ? `${POST_EXIT_MIN} min, ${after.bars} with bars` : `${POST_EXIT_MIN} min`;
+  const r =
+    after.ranForR === null
+      ? ''
+      : ` (${after.ranForR > 0 ? '+' : ''}${after.ranForR.toFixed(1)}R, ${STOP_SOURCE_TEXT[after.stopSource]})`;
+  const t1 = after.t1Reached === null ? '' : after.t1Reached ? '; reached T1' : '; did not reach T1';
+  return `After the exit (${minutes}): ran +${after.ranFor.toFixed(2)} pts${r} further its way${t1}`;
+}
+
 function reactionText(reaction) {
   const text = REACTION_TEXT[reaction.kind]?.(reaction) ?? 'Not decided at T1';
   return `${text}, touched ${nyTime.format(new Date(reaction.touchAt))}`;
@@ -63,12 +79,19 @@ export default function TradeExitReview({ tradeId, exitReason }) {
   if (isLoading) return <p className="text-xs text-gray-500">Loading review…</p>;
   if (error) return <p className="text-xs text-red-700">{error.message}</p>;
 
-  const { review, reason } = data;
+  const { review, reason, afterExit } = data;
   if (!review) return <p className="text-xs text-gray-500">{reason ?? 'No exit review for this trade.'}</p>;
   // reviewExit leaves t1, t2, and exitUnderlying null only when it skipped, so
   // past this line they are all there. The reaction is also null when price
-  // never reached T1.
-  if (review.skipped) return <p className="text-xs text-gray-500">{SKIPPED_TEXT[review.skipped]}</p>;
+  // never reached T1. What the underlying did after the exit needs no T1.
+  if (review.skipped) {
+    return (
+      <div className="space-y-1.5 text-xs text-gray-500">
+        <p>{SKIPPED_TEXT[review.skipped]}</p>
+        {afterExit && <p className="tabular-nums text-gray-700">{afterExitText(afterExit)}</p>}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-1.5 text-xs text-gray-700">
@@ -78,6 +101,7 @@ export default function TradeExitReview({ tradeId, exitReason }) {
         <li>
           {`Underlying at exit ${price(review.exitUnderlying)}, recorded reason: ${EXIT_REASON_LABELS[exitReason] ?? 'none'}`}
         </li>
+        {afterExit && <li>{afterExitText(afterExit)}</li>}
       </ul>
       <span className={`inline-block rounded px-1.5 py-0.5 ${VERDICT_STYLES[review.verdict] ?? 'bg-gray-100 text-gray-500'}`}>
         {VERDICT_TEXT[review.verdict]}

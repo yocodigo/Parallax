@@ -4,6 +4,7 @@ import { getDb } from '@/db';
 import { getDailyPlan } from '@/db/dailyPlans';
 import { getTrade } from '@/db/trades';
 import { withErrorLogging } from '@/lib/log';
+import { afterExit } from '@/lib/setups/afterExit';
 import { reviewExit } from '@/lib/setups/exitReview';
 import { sessionBars } from '@/lib/setups/session';
 import { fetchMinuteBars } from '@/server/minuteBars';
@@ -14,9 +15,11 @@ const nyDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }
 
 const notFound = () => NextResponse.json({ error: 'Trade not found' }, { status: 404 });
 
-// Returns { review }: a closed trade's exit review (setups.md section 10, after
-// the exit): the reaction at T1 and whether the exit matched step 5. `review`
-// is null, with a reason, when there's nothing to grade it from.
+// Returns { review, afterExit }: a closed trade's exit review (setups.md
+// section 10, after the exit): the reaction at T1 and whether the exit matched
+// step 5. `review` is null, with a reason, when there's nothing to grade it
+// from. `afterExit` is an option's underlying in the minutes after the exit
+// (afterExit.js), null for a stock or with nothing to measure.
 export const GET = withErrorLogging('/api/trades/[id]/exit-review', async (request, { params }) => {
   const { id } = await params;
   // Postgres rejects a malformed uuid with an error; to the client it's just not found.
@@ -47,5 +50,9 @@ export const GET = withErrorLogging('/api/trades/[id]/exit-review', async (reque
   const bars = sessionBars(await fetchMinuteBars(trade.symbol, end));
   const dailyPlan = await getDailyPlan(getDb(), nyDate.format(trade.openedAt));
 
-  return NextResponse.json({ review: reviewExit(trade, bars, dailyPlan) });
+  const review = reviewExit(trade, bars, dailyPlan);
+  // An option's underlying in the minutes after its exit (rules-v3 section
+  // 8.3), against the T1 the review used (none when it skipped the fib).
+  const after = trade.assetClass === 'option' ? afterExit(trade, bars, review?.t1 ?? null) : null;
+  return NextResponse.json({ review, afterExit: after });
 });

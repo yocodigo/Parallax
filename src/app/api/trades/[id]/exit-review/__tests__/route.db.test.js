@@ -137,6 +137,47 @@ describe('GET /api/trades/[id]/exit-review', () => {
     expect((await response.json()).review).toMatchObject({ bias: 'long', verdict: 'matched' });
   });
 
+  it("adds what the underlying did in the minutes after an option's exit", async () => {
+    // 98.20 on the underlying at the fill, a derived stop at 97.50 (0.70 a R).
+    const trade = await insertTrade({
+      assetClass: 'option',
+      optionType: 'call',
+      strike: 600,
+      expiration: '2026-10-27',
+      multiplier: 100,
+      quantity: 2,
+      entryPrice: 1.5,
+      exitPrice: 1.2,
+      underlyingEntry: 98.2,
+      underlyingStop: 97.5,
+      underlyingStopSource: 'derived',
+      underlyingStopRule: 'band_cross_s2',
+    });
+    await getDb().insert(dailyPlans).values(plan);
+    // The exit's minute (9:52) averages 99.30; at 9:53 price reaches 100.40,
+    // through T1 at 100.
+    const at = (k) => new Date(OPEN + k * MINUTE).toISOString();
+    serveBars('SPY', [
+      ...BARS,
+      { t: at(22), v: 100, vw: 99.3, ...bar(99.3, 99.5, 99.1, 99.4) },
+      { t: at(23), v: 100, vw: 100, ...bar(99.4, 100.4, 99.3, 100.2) },
+    ]);
+
+    const body = await (await get(trade.id)).json();
+
+    expect(body.afterExit).toMatchObject({ exitPrice: 99.3, bars: 1, stopSource: 'derived', t1: 100, t1Reached: true });
+    expect(body.afterExit.ranFor).toBeCloseTo(1.1);
+    expect(body.afterExit.ranForR).toBeCloseTo(1.1 / 0.7);
+  });
+
+  it('adds nothing after the exit for a stock, measured on its own prices', async () => {
+    await getDb().insert(dailyPlans).values(plan);
+    const trade = await insertTrade();
+    serveBars('SPY', BARS);
+
+    expect((await (await get(trade.id)).json()).afterExit).toBeNull();
+  });
+
   it('404s for a trade that does not exist', async () => {
     const response = await get('00000000-0000-0000-0000-000000000000');
     expect(response.status).toBe(404);
