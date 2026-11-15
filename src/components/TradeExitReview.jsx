@@ -64,7 +64,7 @@ function afterExitText(after) {
       : after.t1Reached
         ? '; reached T1'
         : '; did not reach T1';
-  return `After the exit (${minutes}, from ${price(after.exitPrice)}): ran +${after.ranFor.toFixed(2)} pts${r} further its way${t1}`;
+  return `After the exit (${minutes}, from the exit minute's VWAP ${price(after.exitPrice)}): ran +${after.ranFor.toFixed(2)} pts${r} further its way${t1}`;
 }
 
 // `touchAt` is the start of the minute bar that first reached T1.

@@ -51,6 +51,12 @@ describe('afterExit', () => {
     expect(afterExit(call, bars, 581.5)).toMatchObject({ t1Reached: true, exitedPastT1: false });
   });
 
+  it("judges a put's T1 the other way: an exit at or under it was already past it", () => {
+    const put = { ...call, optionType: 'put', underlyingStop: 581 };
+
+    expect(afterExit(put, bars, 581)).toMatchObject({ t1Reached: null, exitedPastT1: true });
+  });
+
   it('reads a put the other way: down is its direction', () => {
     const put = { ...call, optionType: 'put', underlyingStop: 581 };
 
@@ -90,14 +96,16 @@ describe('afterExitSummary', () => {
       row(1, 1, 'derived', false),
       row(0.5, 0.25, 'derived', null),
       row(0.8, null, null, true),
+      // Exited already past T1: not judged.
+      row(0.1, null, null, null),
     ]);
 
-    expect(summary.trades).toBe(4);
+    expect(summary.trades).toBe(5);
     expect(summary.points.percentiles.p50).toBeCloseTo(0.5);
     expect(summary.r.plan.trades).toBe(1);
     expect(summary.r.derived).toMatchObject({ trades: 2 });
     expect(summary.r.derived.percentiles.p50).toBeCloseTo(0.25);
-    // T1 judged only where the day had one.
+    // T1 judged only where the day had one and the exit was short of it.
     expect(summary.t1).toEqual({ judged: 3, reached: 2 });
   });
 

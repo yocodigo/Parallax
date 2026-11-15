@@ -57,7 +57,7 @@ export function afterExit(trade, bars, t1) {
 // The after-the-exit insight over trades' afterExit results: how far the
 // underlying ran on in points for every trade, in R kept apart by where the
 // stop came from (never pooled), and how often T1 was reached among the trades
-// whose day had one.
+// whose day had one and that exited short of it (t1Reached not null).
 export function afterExitSummary(rows) {
   const rBySource = (source) => {
     const values = rows.filter((row) => row.stopSource === source && row.ranForR !== null).map((row) => row.ranForR);
