@@ -14,7 +14,10 @@ const summary = (trades, counts, percentiles, excluded, underlyingOut = 0) => ({
   underlying: {
     excluded: { edgeMinutesOnly: underlyingOut },
     r: { plan: { trades: 1, percentiles: p(0.2, 0.2, 0.2) }, derived: { trades: 3, percentiles: p(0.6, 1, 1) } },
-    points: { trades: 6, percentiles: p(0.5, 0.8, 1) },
+    points: [
+      { symbol: 'SPY', trades: 5, percentiles: p(0.5, 0.8, 1) },
+      { symbol: 'MSFT', trades: 1, percentiles: p(3, 3, 3) },
+    ],
   },
 });
 const body = {
@@ -27,7 +30,7 @@ const body = {
     rows: [],
     summary: {
       trades: 4,
-      points: { percentiles: p(0.5, 0.8, 1) },
+      points: [{ symbol: 'SPY', trades: 4, percentiles: p(0.5, 0.8, 1) }],
       r: { plan: { trades: 1, percentiles: p(0.2, 0.2, 0.2) }, derived: { trades: 2, percentiles: p(0.25, 1, 1) } },
       t1: { judged: 3, reached: 2 },
     },
@@ -89,7 +92,7 @@ describe('OptionExcursions', () => {
 
     await userEvent.click(await screen.findByRole('checkbox', { name: /include the rest/i }));
 
-    expect(screen.getByText(/^6 of 7 winners, every one with a premium figure/)).toBeInTheDocument();
+    expect(screen.getByText(/^6 of 7 winners, every one with a premium figure/)).toHaveTextContent('1 of them estimated from delta');
     expect(screen.getByText(/median 10%, p75 25%, p90 30%/)).toBeInTheDocument();
   });
 
@@ -101,8 +104,17 @@ describe('OptionExcursions', () => {
     const table = await screen.findByRole('table', { name: 'Underlying heat on winners' });
     expect(cells(table, 'Planned stop (R)')).toEqual(['1', '0.2R', '0.2R', '0.2R']);
     expect(cells(table, 'Derived stop (R)')).toEqual(['3', '0.6R', '1.0R', '1.0R']);
-    expect(cells(table, 'Every winner (SPY points)')).toEqual(['6', '0.50', '0.80', '1.00']);
+    // Points each underlying apart: a point of SPY isn't a point of MSFT.
+    expect(cells(table, 'SPY (points)')).toEqual(['5', '0.50', '0.80', '1.00']);
+    expect(cells(table, 'MSFT (points)')).toEqual(['1', '3.00', '3.00', '3.00']);
     expect(screen.getByText('Left out of the underlying heat: 1 mostly edge minutes.')).toBeInTheDocument();
+  });
+
+  it('says which of the page filters it follows', async () => {
+    serve();
+    renderIt();
+
+    expect(screen.getByText(/follows the page's Mode and Year only/)).toBeInTheDocument();
   });
 
   it('says the heat can read a little high, since the fill and exit minutes hold prices from outside the trade', async () => {
@@ -120,7 +132,7 @@ describe('OptionExcursions', () => {
 
     const table = await screen.findByRole('table', { name: 'After the exit' });
     expect(cells(table, 'Derived stop (R)')).toEqual(['2', '0.3R', '1.0R', '1.0R']);
-    expect(cells(table, 'Every exit (SPY points)')).toEqual(['4', '0.50', '0.80', '1.00']);
+    expect(cells(table, 'SPY (points)')).toEqual(['4', '0.50', '0.80', '1.00']);
     expect(screen.getByText('T1 reached within 15 minutes after the exit: 2 of the 3 exits whose day had a T1 and that exited short of it.')).toBeInTheDocument();
   });
 

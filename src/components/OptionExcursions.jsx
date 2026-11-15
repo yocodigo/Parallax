@@ -26,10 +26,13 @@ const EXCLUDED_TEXT = [
 
 // Who is counted, in words: the trusted set and why each other winner is out,
 // or, with the rest taken in, how many that is.
-function coverage({ winners, premium }, all) {
+function coverage({ winners, premium }, all, estimates) {
   if (all) {
     const out = premium.excluded.none ? ` (${premium.excluded.none} with no premium figure left out)` : '';
-    return `${premium.trades} of ${winners} winners, every one with a premium figure: partial coverage, edge minutes, and delta estimates included${out}.`;
+    return (
+      `${premium.trades} of ${winners} winners, every one with a premium figure: partial coverage, edge minutes, and ` +
+      `delta estimates included, ${estimates} of them estimated from delta${out}.`
+    );
   }
   const out = EXCLUDED_TEXT.filter(([key]) => premium.excluded[key] > 0).map(([key, text]) => `${premium.excluded[key]} ${text}`);
   return (
@@ -100,7 +103,7 @@ function Heat({ heat }) {
         <input type="checkbox" checked={all} onChange={() => setAll(!all)} />
         Include the rest (partial coverage, edge minutes, delta estimates)
       </label>
-      <p className="text-xs text-gray-500">{coverage(summary, all)}</p>
+      <p className="text-xs text-gray-500">{coverage(summary, all, heat.summary.premium.excluded.delta)}</p>
       {summary.premium.trades > 0 && (
         <>
           <div className="h-56">
@@ -109,7 +112,7 @@ function Heat({ heat }) {
                 <CartesianGrid vertical={false} horizontalValues={yTicks} stroke={theme('gray-200')} />
                 <XAxis
                   dataKey="from"
-                  tickFormatter={(from, i) => bandLabel(bands[i])}
+                  tickFormatter={(from) => bandLabel(bands.find((band) => band.from === from))}
                   interval={1}
                   axisLine={false}
                   tickLine={false}
@@ -141,7 +144,7 @@ function Heat({ heat }) {
         rows={[
           { name: 'Planned stop (R)', ...r.plan, format: inR },
           { name: 'Derived stop (R)', ...r.derived, format: inR },
-          { name: 'Every winner (SPY points)', ...points, format: pts },
+          ...points.map((row) => ({ name: `${row.symbol} (points)`, ...row, format: pts })),
         ]}
       />
       {summary.underlying.excluded.edgeMinutesOnly > 0 && (
@@ -166,7 +169,7 @@ function AfterExit({ summary }) {
         rows={[
           { name: 'Planned stop (R)', ...summary.r.plan, format: inR },
           { name: 'Derived stop (R)', ...summary.r.derived, format: inR },
-          { name: 'Every exit (SPY points)', trades: summary.trades, ...summary.points, format: pts },
+          ...summary.points.map((row) => ({ name: `${row.symbol} (points)`, ...row, format: pts })),
         ]}
       />
       <p className="text-xs text-gray-500">
@@ -178,10 +181,10 @@ function AfterExit({ summary }) {
 
 // Heat on winners and after the exit (rules-v3 section 8, items 8 and 3), for
 // the page's mode and year: measured on request, since the route reads
-// Alpaca's bars for every option trade. Heat is the worst move against each
-// winner before it worked, on its premium (the trusted set by default, the
-// rest behind a toggle) and on the underlying; after the exit is how far the
-// underlying ran on in the trade's direction.
+// Alpaca's bars for every option trade. Heat is how far a winning trade went
+// against the trader on the way, on its premium (the trusted set by default,
+// the rest behind a toggle) and on the underlying; after the exit is how far
+// the underlying ran on in the trade's direction.
 export default function OptionExcursions({ mode, year }) {
   const [requested, setRequested] = useState(false);
   const key = requested ? `/api/insights/option-excursions?${new URLSearchParams({ mode, year })}` : null;
@@ -227,8 +230,8 @@ export default function OptionExcursions({ mode, year }) {
   return (
     <div className="space-y-3">
       <p className="text-xs text-gray-500">
-        Option trades only, measured on their bars when asked. Points are on the underlying; R is from a stop on the
-        underlying, planned or derived, never pooled.
+        Option trades only, measured on their bars when asked; it follows the page&apos;s Mode and Year only. Points are on
+        each underlying, kept apart by symbol; R is from a stop on the underlying, planned or derived, never pooled.
       </p>
       {body}
     </div>

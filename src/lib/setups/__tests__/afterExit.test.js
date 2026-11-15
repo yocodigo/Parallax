@@ -88,7 +88,7 @@ describe('afterExit', () => {
 });
 
 describe('afterExitSummary', () => {
-  const row = (ranFor, ranForR, stopSource, t1Reached) => ({ ranFor, ranForR, stopSource, t1Reached });
+  const row = (ranFor, ranForR, stopSource, t1Reached, symbol = 'SPY') => ({ symbol, ranFor, ranForR, stopSource, t1Reached });
 
   it('gives how far the underlying ran after the exits, in points for all and in R apart by stop source', () => {
     const summary = afterExitSummary([
@@ -101,12 +101,22 @@ describe('afterExitSummary', () => {
     ]);
 
     expect(summary.trades).toBe(5);
-    expect(summary.points.percentiles.p50).toBeCloseTo(0.5);
+    expect(summary.points).toEqual([{ symbol: 'SPY', trades: 5, percentiles: expect.any(Object) }]);
+    expect(summary.points[0].percentiles.p50).toBeCloseTo(0.5);
     expect(summary.r.plan.trades).toBe(1);
     expect(summary.r.derived).toMatchObject({ trades: 2 });
     expect(summary.r.derived.percentiles.p50).toBeCloseTo(0.25);
     // T1 judged only where the day had one and the exit was short of it.
     expect(summary.t1).toEqual({ judged: 3, reached: 2 });
+  });
+
+  it('keeps points apart by underlying', () => {
+    const summary = afterExitSummary([row(0.2, null, null, null), row(4, null, null, null, 'MSFT')]);
+
+    expect(summary.points.map((p) => [p.symbol, p.trades])).toEqual([
+      ['MSFT', 1],
+      ['SPY', 1],
+    ]);
   });
 
   it('is empty without trades', () => {

@@ -4,7 +4,7 @@
 // in (the price the underlying entry uses too), over the minutes after that
 // one, since the exit's own minute holds prices from before it.
 
-import { percentiles } from '../percentiles';
+import { percentiles, percentilesBySymbol } from '../percentiles';
 import { atLeast, atMost } from './compare';
 import { fillBarIndex, tradeBias } from './replayTrades';
 import { POST_EXIT_MIN } from './settings';
@@ -54,8 +54,9 @@ export function afterExit(trade, bars, t1) {
   };
 }
 
-// The after-the-exit insight over trades' afterExit results: how far the
-// underlying ran on in points for every trade, in R kept apart by where the
+// The after-the-exit insight over trades' afterExit results (each with its
+// `symbol`): how far the underlying ran on in points for every trade, each
+// underlying apart, in R kept apart by where the
 // stop came from (never pooled), and how often T1 was reached among the trades
 // whose day had one and that exited short of it (t1Reached not null).
 export function afterExitSummary(rows) {
@@ -66,7 +67,7 @@ export function afterExitSummary(rows) {
   const judged = rows.filter((row) => row.t1Reached !== null);
   return {
     trades: rows.length,
-    points: { percentiles: percentiles(rows.map((row) => row.ranFor)) },
+    points: percentilesBySymbol(rows, (row) => row.ranFor),
     r: { plan: rBySource('plan'), derived: rBySource('derived') },
     t1: { judged: judged.length, reached: judged.filter((row) => row.t1Reached).length },
   };

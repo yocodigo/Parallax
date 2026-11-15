@@ -1,4 +1,4 @@
-import { percentiles } from './percentiles';
+import { percentiles, percentilesBySymbol } from './percentiles';
 import { atLeast } from './setups/compare';
 import { edgeSplit } from './tradeWindow';
 import { profitLoss } from './tradeMetrics';
@@ -105,7 +105,8 @@ function exclusion(premium) {
 // premium figure (partial coverage, edge minutes, and delta estimates) and
 // leaves out only those with none. The underlying's heat is in R, kept apart
 // by where the stop came from (a planned and a derived stop are never pooled),
-// and in points for every trade measured, stop or not. It follows the same
+// and in points for every trade measured, stop or not, each underlying apart
+// (a point of SPY isn't a point of MSFT). It follows the same
 // edge-only rule: those windows are counted in `underlying.excluded` and left
 // out until `includeAll` takes them back in.
 export function heatSummary(rows, { includeAll = false } = {}) {
@@ -130,13 +131,13 @@ export function heatSummary(rows, { includeAll = false } = {}) {
   // The underlying side keeps the same trust rule: an edge-only window's
   // extremes may be ones the position never saw, so it is counted out until
   // the toggle takes it in.
-  const measured = rows.map((row) => row.underlying).filter(Boolean);
-  const underlying = includeAll ? measured : measured.filter((u) => !u.edgeMinutesOnly);
+  const measured = rows.filter((row) => row.underlying);
+  const kept = includeAll ? measured : measured.filter((row) => !row.underlying.edgeMinutesOnly);
+  const underlying = kept.map((row) => row.underlying);
   const rBySource = (source) => {
     const values = underlying.filter((u) => u.stopSource === source && u.maeR !== null).map((u) => u.maeR);
     return { trades: values.length, percentiles: percentiles(values) };
   };
-  const points = underlying.map((u) => u.mae);
 
   return {
     winners: rows.length,
@@ -144,7 +145,7 @@ export function heatSummary(rows, { includeAll = false } = {}) {
     underlying: {
       excluded: { edgeMinutesOnly: measured.length - underlying.length },
       r: { plan: rBySource('plan'), derived: rBySource('derived') },
-      points: { trades: points.length, percentiles: percentiles(points) },
+      points: percentilesBySymbol(kept, (row) => row.underlying.mae),
     },
   };
 }

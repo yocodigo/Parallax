@@ -116,7 +116,7 @@ describe('winnerHeat', () => {
 describe('heatSummary', () => {
   const bars = (percent, extra = {}) => ({ source: 'bars', percent, dollars: percent * 200, barCoverage: 1, edgeMinutesOnly: false, between: null, ...extra });
   const under = (mae, maeR, stopSource, edgeMinutesOnly = false) => ({ mae, maeR, stopSource, edgeMinutesOnly });
-  const row = (premium, underlying = under(0.5, null, null)) => ({ premium, underlying });
+  const row = (premium, underlying = under(0.5, null, null), symbol = 'SPY') => ({ symbol, premium, underlying });
   const rows = [
     row(bars(0.02), under(0.2, 0.2, 'plan')),
     row(bars(0.08), under(0.4, 0.4, 'derived')),
@@ -163,12 +163,25 @@ describe('heatSummary', () => {
     expect(underlying.r.derived).toMatchObject({ trades: 3 });
     expect(underlying.r.derived.percentiles.p50).toBeCloseTo(0.6);
     // Every trade with an underlying measurement, stop or not, but the edge-only one.
-    expect(underlying.points.trades).toBe(5);
+    expect(underlying.points).toEqual([{ symbol: 'SPY', trades: 5, percentiles: expect.any(Object) }]);
+  });
+
+  it("keeps points apart by underlying, since a point of SPY isn't a point of MSFT", () => {
+    const { underlying } = heatSummary([
+      row(bars(0.1), under(0.5, null, null), 'SPY'),
+      row(bars(0.1), under(3, null, null), 'MSFT'),
+      row(bars(0.1), under(0.7, null, null), 'SPY'),
+    ]);
+
+    expect(underlying.points.map((p) => [p.symbol, p.trades, p.percentiles.p90])).toEqual([
+      ['SPY', 2, 0.7],
+      ['MSFT', 1, 3],
+    ]);
   });
 
   it("leaves out an edge-only window's underlying heat too, counted, until the toggle takes it in", () => {
     expect(heatSummary(rows).underlying.excluded).toEqual({ edgeMinutesOnly: 1 });
-    expect(heatSummary(rows, { includeAll: true }).underlying).toMatchObject({ excluded: { edgeMinutesOnly: 0 }, points: { trades: 6 } });
+    expect(heatSummary(rows, { includeAll: true }).underlying).toMatchObject({ excluded: { edgeMinutesOnly: 0 }, points: [{ symbol: 'SPY', trades: 6 }] });
   });
 
   it('puts a heat of exactly a band edge in the band above it, despite floating-point error', () => {
