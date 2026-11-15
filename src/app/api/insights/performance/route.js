@@ -7,7 +7,8 @@ import { listStrategies } from '@/db/strategies';
 import { listClosedTradesBetween, listPlanFacts, listReviewRatings } from '@/db/trades';
 import { adherence, disciplineByMonth, emotionalControlByMonth, violationCosts } from '@/lib/adherence';
 import { withErrorLogging } from '@/lib/log';
-import { holdTime, untriggeredExits } from '@/lib/optionExecution';
+import { friction, holdTime, untriggeredExits } from '@/lib/optionExecution';
+import { ASSUMED_SPREAD } from '@/lib/setups/settings';
 import { byGrade, byUnderlying, bySetup, callsVsPuts, equityCurve, monthlySummary, rDistribution, rollingExpectancy, summarize, timeOfDay } from '@/lib/performance';
 
 // Read fresh from the database on every request, never prerendered.
@@ -98,6 +99,10 @@ export const GET = withErrorLogging('/api/insights/performance', async (request)
     bySetup: bySetup(closed).map((setup) => ({ ...setup, name: names.get(setup.strategyId) ?? null })),
     byGrade: byGrade(withGrades),
     rDistribution: rDistribution(closed),
-    execution: { holdTime: holdTime(closed), exits: untriggeredExits(closed, rules) },
+    execution: {
+      holdTime: holdTime(closed),
+      exits: untriggeredExits(closed, rules),
+      friction: friction(closed, { spread: ASSUMED_SPREAD }),
+    },
   });
 });

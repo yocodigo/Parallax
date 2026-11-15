@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { holdTime, untriggeredExits } from '../optionExecution';
+import { friction, holdTime, untriggeredExits } from '../optionExecution';
 
 // A closed long option, one contract, held `seconds`: gross P/L is
 // (exit - entry) * 100, less `fees`.
@@ -111,5 +111,58 @@ describe('untriggeredExits', () => {
 
   it('has no share without trades', () => {
     expect(untriggeredExits([], RULES)).toMatchObject({ trades: 0, untriggeredShare: null });
+  });
+});
+
+describe('friction', () => {
+  // One contract at a 1.00 premium, with $2 of fees: at a 0.02 spread each
+  // round trip also gives up $2, so friction is $4.
+  const trades = [option(10, { fees: 2 }), option(20, { fees: 2 }), option(-10, { fees: 2 })];
+
+  it('sets fees and the estimated spread against the median win', () => {
+    expect(friction(trades, { spread: 0.02 })).toEqual({
+      trades: 3,
+      medianWin: 15,
+      medianFees: 2,
+      medianFriction: 4,
+      shareOfMedianWin: 4 / 15,
+      breakEvenMove: 0.04,
+      breakEvenMovePct: 0.04,
+    });
+  });
+
+  it('measures the win by gross P/L, as wins are judged', () => {
+    // Net of fees the first is a $1 win and the second a loss; gross they are $3 and $2 wins.
+    const result = friction([option(3, { fees: 2 }), option(2, { fees: 4 })], { spread: 0 });
+
+    expect(result.medianWin).toBe(2.5);
+  });
+
+  it('scales the spread by contracts', () => {
+    const result = friction([option(10, { fees: 0, quantity: 3 })], { spread: 0.02 });
+
+    expect(result.medianFriction).toBeCloseTo(6);
+    // $6 over three contracts of 100 shares: 0.02 a share.
+    expect(result.breakEvenMove).toBeCloseTo(0.02);
+  });
+
+  it('has no share of the median win without a win', () => {
+    expect(friction([option(-5, { fees: 2 })], { spread: 0.02 })).toMatchObject({
+      trades: 1,
+      medianWin: null,
+      shareOfMedianWin: null,
+    });
+  });
+
+  it('is all nulls for no trades', () => {
+    expect(friction([], { spread: 0.02 })).toEqual({
+      trades: 0,
+      medianWin: null,
+      medianFees: null,
+      medianFriction: null,
+      shareOfMedianWin: null,
+      breakEvenMove: null,
+      breakEvenMovePct: null,
+    });
   });
 });

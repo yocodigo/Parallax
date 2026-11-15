@@ -207,7 +207,8 @@ Vitest, JavaScript (not TypeScript).
   holds tables over closed option trades, shown on the Tables tab by `PerformanceTables` when present: `holdTime`
   (trades, gross win rate, and net P/L by how long the position was held) and `exits` (`untriggeredExits`: exits a
   backstop fill or the time stop explains against those with no trigger, by the saved rule settings; only those two
-  triggers count so far). `moneyR` (`tradeMetrics.js`) is net P/L
+  triggers count so far). `friction` (median fees plus an assumed spread, `ASSUMED_SPREAD` in `settings.js`
+  since quotes aren't stored, against the median gross win, and the premium move to break even). `moneyR` (`tradeMetrics.js`) is net P/L
   over the recorded stop's risk, or, with none, over the backstop's share of the premium, labelled assumed
   (`TradeProgress`); `rMultiple` and its consumers still leave options without R.
 - Option rules as settings (`rules-v3.md` section 5): `rule_settings` (one row, id 1) holds the entry windows

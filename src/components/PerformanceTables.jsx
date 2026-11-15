@@ -123,6 +123,17 @@ const EXIT_COLUMNS = [
   ['Net P/L', (e) => (e.trades === 0 ? '–' : signed(e.netPnl))],
 ];
 
+const money = orDash(plainMoney.format);
+const FRICTION_COLUMNS = [
+  ['Trades', (f) => f.trades],
+  ['Median win (gross)', (f) => money(f.medianWin)],
+  ['Median fees', (f) => money(f.medianFees)],
+  ['Median friction', (f) => money(f.medianFriction)],
+  ['Share of median win', (f) => pct(f.shareOfMedianWin)],
+  ['Break-even move', (f) => money(f.breakEvenMove)],
+  ['Move, of premium', (f) => pct(f.breakEvenMovePct)],
+];
+
 // The section 3 tables (dashboard.md): the monthly summary, year to date, and
 // rule adherence and the violation costs, from the performance route's `months`,
 // `yearToDate`, `adherence`, and `violationCosts`, and, for option trades, the `execution` tables. `yearToDate` is the totals for whatever range was asked for, so
@@ -213,6 +224,20 @@ export default function PerformanceTables({ months, yearToDate, adherence, viola
           <p className="text-xs text-gray-500">
             Option trades only. An exit is triggered when it sold at or under the backstop level or held as long as the
             time stop; every other exit was nobody&apos;s rule. Only those two triggers count for now.
+          </p>
+        </Table>
+      )}
+      {execution && (
+        <Table
+          label="Friction"
+          firstColumn="Per round trip"
+          columns={FRICTION_COLUMNS}
+          rows={[{ key: 'friction', name: 'Median option trade', values: execution.friction }]}
+        >
+          <p className="text-xs text-gray-500">
+            Option trades only. Friction is the fees plus an estimated spread (the quotes aren&apos;t stored, so the
+            spread is assumed). Break-even move is the premium, per share and as a share of what was paid, the
+            position has to gain before a round trip makes money.
           </p>
         </Table>
       )}

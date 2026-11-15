@@ -139,3 +139,8 @@ export const BACKSTOP_PCT = 0.25;
 
 // [rules-v3 1.1] The cheapest premium the band allows. **(confirm)**
 export const PREMIUM_MIN = 0.5;
+
+// [rules-v3 8.4] The premium a round trip gives up to the spread, per share
+// (0.02 is two cents on a contract: a cent on the way in, a cent on the way
+// out). The quotes aren't stored, so friction assumes it. **(confirm)**
+export const ASSUMED_SPREAD = 0.02;

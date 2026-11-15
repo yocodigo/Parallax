@@ -372,6 +372,22 @@ describe('GET /api/insights/performance', () => {
     });
   });
 
+  it('returns the friction of option trades: fees and the assumed spread against the median win', async () => {
+    await closedOption(40, '2026-04-13T20:30:00Z', { fees: 2 });
+    await closedOption(-25, '2026-04-14T17:00:00Z', { fees: 2 });
+
+    const { execution } = await (await get('?year=2026')).json();
+
+    // $2 of fees plus the $2 a 0.02 spread costs on one contract, against a $40 win.
+    expect(execution.friction).toMatchObject({
+      trades: 2,
+      medianWin: 40,
+      medianFees: 2,
+      medianFriction: 4,
+      shareOfMedianWin: 0.1,
+    });
+  });
+
   it('counts a trade by the New York year it closed in', async () => {
     // 03:00Z on January 1 is still December 31 in New York.
     await closedOption(40, '2026-01-01T03:00:00Z');

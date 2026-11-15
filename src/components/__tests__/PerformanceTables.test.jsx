@@ -211,6 +211,15 @@ describe('PerformanceTables: option execution', () => {
       untriggered: { trades: 6, netPnl: 12.5 },
       untriggeredShare: 0.6,
     },
+    friction: {
+      trades: 76,
+      medianWin: 5,
+      medianFees: 1.76,
+      medianFriction: 3.76,
+      shareOfMedianWin: 0.752,
+      breakEvenMove: 0.0376,
+      breakEvenMovePct: 0.05,
+    },
   };
 
   it('shows each hold bucket with its trades, gross win rate, and net P/L', () => {
@@ -232,6 +241,30 @@ describe('PerformanceTables: option execution', () => {
     expect(within(triggered).getAllByRole('cell').map((c) => c.textContent)).toEqual(['4', '40%', '-$30.00']);
     expect(within(none).getByRole('rowheader')).toHaveTextContent('No trigger');
     expect(within(none).getAllByRole('cell').map((c) => c.textContent)).toEqual(['6', '60%', '+$12.50']);
+  });
+
+  it('sets friction against the median win, with the move needed to break even', () => {
+    renderTables({ execution });
+    const table = screen.getByRole('table', { name: 'Friction' });
+    const [, row] = within(table).getAllByRole('row');
+
+    expect(within(row).getAllByRole('cell').map((c) => c.textContent)).toEqual([
+      '76',
+      '$5.00',
+      '$1.76',
+      '$3.76',
+      '75%',
+      '$0.04',
+      '5%',
+    ]);
+  });
+
+  it('shows dashes for friction when no option trade has closed', () => {
+    const empty = { trades: 0, medianWin: null, medianFees: null, medianFriction: null, shareOfMedianWin: null, breakEvenMove: null, breakEvenMovePct: null };
+    renderTables({ execution: { ...execution, friction: empty } });
+    const [, row] = within(screen.getByRole('table', { name: 'Friction' })).getAllByRole('row');
+
+    expect(within(row).getAllByRole('cell').map((c) => c.textContent)).toEqual(['0', '–', '–', '–', '–', '–', '–']);
   });
 
   it('leaves the execution tables out when the response has none', () => {

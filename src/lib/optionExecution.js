@@ -58,3 +58,46 @@ export function untriggeredExits(trades, rules) {
     untriggeredShare: options.length ? untriggered.length / options.length : null,
   };
 }
+
+const median = (values) => {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+};
+
+// Whole cents, so decimal prices don't leave a trailing 0.000000000000009.
+const cents = (dollars) => Math.round(dollars * 100) / 100;
+
+// [8.4] Friction: what a round trip costs before it can make money. Fees plus
+// an estimated spread (`spread`, the premium a round trip gives up per share:
+// the quotes aren't stored, so it is assumed, see ASSUMED_SPREAD) against the
+// median win, and the premium move needed to break even. Medians, so a few big
+// trades don't set the picture. A win is judged on gross P/L, as everywhere.
+export function friction(trades, { spread }) {
+  const options = countedOptions(trades);
+  const rows = options.map((trade) => {
+    const fees = trade.fees ?? 0;
+    const shares = trade.multiplier * trade.quantity;
+    const cost = cents(fees + spread * shares);
+    return {
+      gross: cents(profitLoss(trade) + fees),
+      fees,
+      cost,
+      move: cost / shares,
+      movePct: cost / shares / trade.entryPrice,
+    };
+  });
+
+  const medianWin = median(rows.filter((row) => row.gross > 0).map((row) => row.gross));
+  const medianCost = median(rows.map((row) => row.cost));
+  return {
+    trades: rows.length,
+    medianWin,
+    medianFees: median(rows.map((row) => row.fees)),
+    medianFriction: medianCost,
+    shareOfMedianWin: medianWin === null ? null : medianCost / medianWin,
+    breakEvenMove: median(rows.map((row) => row.move)),
+    breakEvenMovePct: median(rows.map((row) => row.movePct)),
+  };
+}
