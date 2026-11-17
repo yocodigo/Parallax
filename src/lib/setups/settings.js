@@ -157,3 +157,7 @@ export const OPENING_RANGE_MIN = 15;
 // [rules-v3 3] Round numbers are the multiples of this many dollars, tier 3
 // levels: something to aim at, not to enter from.
 export const ROUND_STEP = 5;
+
+// [rules-v3 4] Location OK: an entry within this many 1m ATRs of a tier 1 or
+// 2 level counts as at it. **(confirm)**
+export const LEVEL_NEAR = 0.5;
