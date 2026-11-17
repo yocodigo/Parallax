@@ -187,9 +187,11 @@ function dailyPlanLines(plan) {
   if (!plan) return ['Daily plan: none recorded for this day'];
   const fib = (label, direction, fib50, fib100) =>
     `${label} fib ${direction}, 50% ${price(fib50)} and 100% ${price(fib100)}`;
-  const fibs = [fib('lower-timeframe', plan.ltfDirection, plan.ltfFib50, plan.ltfFib100)];
+  const fibs = [];
+  if (plan.ltfDirection) fibs.push(fib('lower-timeframe', plan.ltfDirection, plan.ltfFib50, plan.ltfFib100));
   if (plan.htfDirection) fibs.push(fib('higher-timeframe', plan.htfDirection, plan.htfFib50, plan.htfFib100));
-  return [`Daily plan: ${fibs.join('; ')}.`, plan.notes && `Daily plan notes: ${plan.notes}`];
+  const line = fibs.length ? `Daily plan: ${fibs.join('; ')}.` : 'Daily plan: no fib recorded.';
+  return [line, plan.notes && `Daily plan notes: ${plan.notes}`];
 }
 
 const pts = (value) => `${value > 0 ? '+' : value < 0 ? '-' : ''}${Math.abs(value).toFixed(2)} pts`;

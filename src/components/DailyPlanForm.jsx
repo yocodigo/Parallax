@@ -14,6 +14,10 @@ const keyFor = (tradeDate) => `/api/daily-plan?tradeDate=${tradeDate}`;
 // out, so a dropped second fib clears rather than saving a price of 0.
 const toNumber = (value) => (value === '' ? undefined : Number(value));
 const orUndefined = (value) => (value === '' ? undefined : value);
+// The working fib's direction select has no blank option, so it always holds
+// a value; it is sent only with a level, so a plan saved before the fib is
+// anchored leaves the working fib out instead of sending half of one.
+const ltfDirectionOf = (form) => (form.ltfFib50 === '' && form.ltfFib100 === '' ? undefined : form.ltfDirection);
 
 function formFromPlan(tradeDate, plan) {
   return {
@@ -60,7 +64,7 @@ function FibFields({ tradeDate, plan, onDateChange, onSaved }) {
 
     const body = {
       tradeDate: form.tradeDate,
-      ltfDirection: form.ltfDirection,
+      ltfDirection: ltfDirectionOf(form),
       ltfFib50: toNumber(form.ltfFib50),
       ltfFib100: toNumber(form.ltfFib100),
       htfDirection: orUndefined(form.htfDirection),
@@ -113,10 +117,10 @@ function FibFields({ tradeDate, plan, onDateChange, onSaved }) {
           </select>
         </Field>
         <Field id="daily-plan-ltfFib50" label="LTF 50%" error={errorFor('ltfFib50')}>
-          <input {...fieldProps('ltfFib50')} type="number" step="any" required className={inputClass} />
+          <input {...fieldProps('ltfFib50')} type="number" step="any" className={inputClass} />
         </Field>
         <Field id="daily-plan-ltfFib100" label="LTF 100%" error={errorFor('ltfFib100')}>
-          <input {...fieldProps('ltfFib100')} type="number" step="any" required className={inputClass} />
+          <input {...fieldProps('ltfFib100')} type="number" step="any" className={inputClass} />
         </Field>
       </div>
 

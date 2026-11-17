@@ -161,6 +161,11 @@ describe('reviewExit', () => {
       });
     });
 
+    it('is skipped like no plan when the plan has no working fib', () => {
+      const noFib = { ltfDirection: null, ltfFib50: null, ltfFib100: null };
+      expect(reviewExit(trade(), at(...rejects), noFib)).toMatchObject({ skipped: 'no_daily_plan', t1: null });
+    });
+
     it('is skipped when the fib is not on the trade\'s side of the fill', () => {
       // A long filled near 98 with its 50% at 95.
       const below = { ltfDirection: 'bearish', ltfFib50: 95, ltfFib100: 93 };

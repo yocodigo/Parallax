@@ -38,6 +38,24 @@ describe('saveDailyPlan', () => {
     expect(saved).toMatchObject({ htfDirection: null, htfFib50: null, htfFib100: null, notes: null });
   });
 
+  it('saves a plan with no fib yet, the fields read back as null', async () => {
+    const saved = await saveDailyPlan(db, { tradeDate: '2026-10-28', notes: 'before the open' });
+
+    expect(saved).toMatchObject({ ltfDirection: null, ltfFib50: null, ltfFib100: null, notes: 'before the open' });
+  });
+
+  it('clears the working fib when the day is saved again without one', async () => {
+    await saveDailyPlan(db, onePlan);
+
+    const saved = await saveDailyPlan(db, { tradeDate: '2026-10-28' });
+
+    expect(saved).toMatchObject({ ltfDirection: null, ltfFib50: null, ltfFib100: null });
+  });
+
+  it('refuses half a working fib', async () => {
+    await expect(saveDailyPlan(db, { tradeDate: '2026-10-28', ltfFib50: 681.2 })).rejects.toThrow();
+  });
+
   it('replaces the plan when the same day is saved again', async () => {
     await saveDailyPlan(db, twoPlan);
 

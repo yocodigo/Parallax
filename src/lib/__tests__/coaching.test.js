@@ -196,6 +196,9 @@ describe('formatCoachingInput', () => {
     expect(partial).not.toContain('higher-timeframe');
     expect(partial).not.toContain('Daily plan notes');
     expect(withPlan(null)).toContain('Daily plan: none recorded for this day');
+    const noFib = withPlan({ ...plan, ltfDirection: null, ltfFib50: null, ltfFib100: null, htfDirection: null });
+    expect(noFib).toContain('Daily plan: no fib recorded.');
+    expect(noFib).not.toContain('lower-timeframe');
   });
 
   it("gives the trader's own review of it", () => {

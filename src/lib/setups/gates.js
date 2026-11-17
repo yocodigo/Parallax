@@ -59,11 +59,11 @@ export function sizeGate(contracts) {
   return contracts >= SIZE_MIN && contracts <= SIZE_MAX ? MET : MISSED;
 }
 
-// Target OK: the day's fib extensions were recorded, so there was a target
-// before the entry. A daily_plans row always carries its LTF levels (both
-// columns are NOT NULL), so having the row is having the levels.
+// Target OK: the day's working fib was recorded, so there was a target before
+// the entry. A plan saved before the open may not have one yet; that counts
+// as no plan (the fib's fields are all set or all null).
 export function targetGate(dailyPlan) {
-  return dailyPlan ? MET : MISSED;
+  return dailyPlan?.ltfFib50 != null ? MET : MISSED;
 }
 
 // State OK, read from the trade's plan entry, where section 9.1 puts the state

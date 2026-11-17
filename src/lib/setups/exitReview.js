@@ -77,7 +77,8 @@ export function reviewExit(trade, bars = [], dailyPlan = null) {
   // Step 5 is an intraday call; a trade held past the session closed on
   // another day's reasons.
   if (tradingDay({ t: trade.closedAt.toISOString() }) !== day) return skipped(bias, 'not_intraday');
-  if (!dailyPlan) return skipped(bias, 'no_daily_plan');
+  // A plan with no working fib yet gives no T1, the same as no plan.
+  if (dailyPlan?.ltfFib50 == null) return skipped(bias, 'no_daily_plan');
 
   // Bars through the fill's session only, so the 14-bar ATR doesn't read into
   // a later day across the overnight gap.

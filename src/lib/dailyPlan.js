@@ -14,19 +14,27 @@ const extendsPast50 = (direction, fib50, fib100) =>
 
 const ORDER_MESSAGE = 'The 100% must be above the 50% for a bullish fib and below it for a bearish one';
 
-const SECOND_FIB_FIELDS = [
-  ['htfDirection', 'direction'],
-  ['htfFib50', '50%'],
-  ['htfFib100', '100%'],
+const fibFields = (prefix) => [
+  [`${prefix}Direction`, 'direction'],
+  [`${prefix}Fib50`, '50%'],
+  [`${prefix}Fib100`, '100%'],
 ];
 
-// The second fib is optional, but half of one is no use: a target needs both
-// levels and the direction a pivot would be against.
-function checkSecondFib(plan, ctx) {
-  if (SECOND_FIB_FIELDS.every(([field]) => plan[field] === undefined)) return;
-  for (const [field, label] of SECOND_FIB_FIELDS) {
-    if (plan[field] === undefined) {
-      ctx.addIssue({ code: 'custom', path: [field], message: `The second fib needs its ${label}` });
+const FIBS = [
+  { name: 'working', fields: fibFields('ltf') },
+  { name: 'second', fields: fibFields('htf') },
+];
+
+// Both fibs are optional (the working one is anchored after the open, so a
+// plan started before it has none yet), but half of one is no use: a target
+// needs both levels and the fib's direction.
+function checkWholeFibs(plan, ctx) {
+  for (const { name, fields } of FIBS) {
+    if (fields.every(([field]) => plan[field] === undefined)) continue;
+    for (const [field, label] of fields) {
+      if (plan[field] === undefined) {
+        ctx.addIssue({ code: 'custom', path: [field], message: `The ${name} fib needs its ${label}` });
+      }
     }
   }
 }
@@ -36,9 +44,9 @@ function checkSecondFib(plan, ctx) {
 // higher-timeframe one is the next target if price pivots against it.
 const fields = z.object({
   tradeDate: z.iso.date({ error: 'Enter the day as a date' }),
-  ltfDirection: fibDirection,
-  ltfFib50: price,
-  ltfFib100: price,
+  ltfDirection: fibDirection.optional(),
+  ltfFib50: price.optional(),
+  ltfFib100: price.optional(),
   htfDirection: fibDirection.optional(),
   htfFib50: price.optional(),
   htfFib100: price.optional(),
@@ -46,9 +54,9 @@ const fields = z.object({
 });
 
 // These checks only run once every field above parses, so a half-filled second
-// fib is reported after the working fib is fixed rather than alongside it. That
-// is also what the undefined guards in extendsPast50 are for: an absent second
-// fib, whose levels are optional.
+// fib is reported after the other fields are fixed rather than alongside them.
+// The undefined guards in extendsPast50 are for an absent fib, whose levels
+// are optional.
 const schema = fields
   .refine((plan) => extendsPast50(plan.ltfDirection, plan.ltfFib50, plan.ltfFib100), {
     path: ['ltfFib100'],
@@ -58,7 +66,7 @@ const schema = fields
     path: ['htfFib100'],
     message: ORDER_MESSAGE,
   })
-  .superRefine(checkSecondFib);
+  .superRefine(checkWholeFibs);
 
 export function parseDailyPlan(input) {
   return schema.safeParse(input);

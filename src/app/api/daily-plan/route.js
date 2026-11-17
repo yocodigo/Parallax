@@ -26,9 +26,9 @@ export const GET = withErrorLogging('/api/daily-plan', async (request) => {
   return NextResponse.json({ plan });
 });
 
-// Body: the day's fib extensions (tradeDate, ltfDirection, ltfFib50, ltfFib100,
-// and optionally htfDirection/htfFib50/htfFib100 and notes). Replaces the
-// day's plan. Returns { plan }.
+// Body: tradeDate and, all optional, the working fib (ltfDirection, ltfFib50,
+// ltfFib100), the second fib (htfDirection/htfFib50/htfFib100), and notes; a
+// fib is given whole or not at all. Replaces the day's plan. Returns { plan }.
 export const PUT = withErrorLogging('/api/daily-plan', async (request) => {
   const body = await request.json().catch(() => null);
   const parsed = parseDailyPlan(body);

@@ -88,7 +88,7 @@ const trade = (overrides = {}) => ({
   ...overrides,
 });
 
-const records = { dailyPlan: { id: 1 }, planEntry: { emotion: 'calm', mistakes: [] } };
+const records = { dailyPlan: { id: 1, ltfFib50: 681.2, ltfFib100: 684.5 }, planEntry: { emotion: 'calm', mistakes: [] } };
 
 describe('gradeTradeGates', () => {
   it('grades every gate of a trade taken on the 15m cross', () => {

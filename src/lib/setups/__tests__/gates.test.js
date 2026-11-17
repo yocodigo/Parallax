@@ -79,8 +79,12 @@ describe('sizeGate', () => {
 });
 
 describe('targetGate', () => {
-  it('is met when the day has a plan, which always carries fib levels', () => {
-    expect(targetGate({ tradeDate: '2026-10-28' })).toBe('met');
+  it('is met when the day has a plan with its working fib', () => {
+    expect(targetGate({ tradeDate: '2026-10-28', ltfFib50: 681.2, ltfFib100: 684.5 })).toBe('met');
+  });
+
+  it('misses when the plan has no working fib yet', () => {
+    expect(targetGate({ tradeDate: '2026-10-28', ltfFib50: null, ltfFib100: null })).toBe('missed');
   });
 
   it('misses when no plan was recorded for the day', () => {
@@ -203,7 +207,7 @@ describe('gradeGates', () => {
     direction: 'long',
     entryPrice: 10,
     stopRule: 'S1',
-    dailyPlan: { tradeDate: '2026-10-28' },
+    dailyPlan: { tradeDate: '2026-10-28', ltfFib50: 681.2, ltfFib100: 684.5 },
     planEntry: { emotion: 'calm', mistakes: [] },
     bars15: flatThen(12),
     directionBarIndex: 20,

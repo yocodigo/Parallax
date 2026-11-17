@@ -2,13 +2,13 @@ import { and, asc, eq, gte, lte } from 'drizzle-orm';
 import { dailyPlans } from './schema';
 
 // A plan without its bookkeeping columns. The optional fields come back as
-// null rather than missing, so a dropped second fib reads the same as one that
-// was never recorded.
+// null rather than missing, so a dropped fib reads the same as one that was
+// never recorded.
 const pickPlan = (row) => ({
   tradeDate: row.tradeDate,
-  ltfDirection: row.ltfDirection,
-  ltfFib50: row.ltfFib50,
-  ltfFib100: row.ltfFib100,
+  ltfDirection: row.ltfDirection ?? null,
+  ltfFib50: row.ltfFib50 ?? null,
+  ltfFib100: row.ltfFib100 ?? null,
   htfDirection: row.htfDirection ?? null,
   htfFib50: row.htfFib50 ?? null,
   htfFib100: row.htfFib100 ?? null,
@@ -23,8 +23,8 @@ export async function getDailyPlan(db, tradeDate) {
 }
 
 // Replaces the day's plan; there's only ever one per day. Writing the optional
-// fields as explicit nulls is what clears a second fib that was dropped when
-// the anchors were redrawn.
+// fields as explicit nulls is what clears a fib that was dropped when the
+// anchors were redrawn.
 export async function saveDailyPlan(db, plan) {
   const values = pickPlan(plan);
   const [row] = await db

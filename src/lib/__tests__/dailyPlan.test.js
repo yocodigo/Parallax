@@ -46,12 +46,17 @@ describe('parseDailyPlan', () => {
     expect(errorPaths(parseDailyPlan({ ...onePlan, tradeDate: '2026-10-28T13:30:00Z' }))).toContain('tradeDate');
   });
 
-  it('needs the whole working fib', () => {
-    const result = parseDailyPlan({ tradeDate: '2026-10-28' });
+  it('accepts a plan with no fib yet, saved before the open', () => {
+    const result = parseDailyPlan({ tradeDate: '2026-10-28', notes: 'Asia swept the prior low' });
 
-    expect(errorPaths(result)).toEqual(
-      expect.arrayContaining(['ltfDirection', 'ltfFib50', 'ltfFib100'])
-    );
+    expect(result.success).toBe(true);
+    expect(result.data.ltfDirection).toBeUndefined();
+  });
+
+  it('needs the whole working fib once any of it is given', () => {
+    const result = parseDailyPlan({ tradeDate: '2026-10-28', ltfFib50: 681.2 });
+
+    expect(errorPaths(result)).toEqual(expect.arrayContaining(['ltfDirection', 'ltfFib100']));
   });
 
   it('needs the whole second fib once any of it is given', () => {

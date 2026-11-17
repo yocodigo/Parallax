@@ -90,6 +90,18 @@ describe('DailyPlanForm', () => {
     expect(await screen.findByText('Saved.')).toBeInTheDocument();
   });
 
+  it('saves a plan with no fib yet, leaving the working fib out', async () => {
+    serveDailyPlan({});
+    const bodies = capturePuts();
+    renderForm();
+
+    await userEvent.type(await screen.findByLabelText('Notes'), 'Asia swept the prior low');
+    await save();
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0]).toEqual({ tradeDate: '2026-10-28', notes: 'Asia swept the prior low' });
+  });
+
   it('shows the field errors the server sends back', async () => {
     serveDailyPlan({});
     capturePuts(() =>
