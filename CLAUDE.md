@@ -295,7 +295,7 @@ Vitest, JavaScript (not TypeScript).
   reversal, and three-gate detectors on the bars closed before the fill, the trade's way only, each with
   `status`, `grade` (four-touch only), `completedAt`, and `barsSince` in its own timeframe's bars) and `levels`
   (the level map at the fill, with the day's plan, which the callers pass as `dailyPlan`; kept since a plan can
-  be edited later). `clearsWindow` is the window rule: within `DETECTED_MAX_BARS` (3) bars, complete, or for a
+  be edited later, though an import reads the plan as it stands at import time, which can be days after the fill). `clearsWindow` is the window rule: within `DETECTED_MAX_BARS` (3) bars, complete, or for a
   four-touch break valid and grade A. A failing source is logged and left null. Live option values are kept only within 15 minutes of the fill.
   `TradeContext.jsx` shows it on demand via `GET /api/trades/[id]/context`. Entry route tests mock
   `after` and `captureContext`. Macro dates in `src/lib/context/macroCalendar.js` cover 2026-10-22

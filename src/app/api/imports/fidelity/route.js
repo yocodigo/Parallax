@@ -85,7 +85,8 @@ export const POST = withErrorLogging(ROUTE, async (request) => {
   after(async () => {
     for (const trade of [...created, ...filled]) {
       try {
-        await saveTradeContext(db, trade.id, await captureContext(trade, { requestId: reqId, dailyPlan: await getDailyPlan(db, nyDay(trade.openedAt)) }));
+        const dailyPlan = await getDailyPlan(db, nyDay(trade.openedAt));
+        await saveTradeContext(db, trade.id, await captureContext(trade, { requestId: reqId, dailyPlan }));
       } catch (error) {
         logError('Context capture failed', { route: ROUTE, requestId: reqId, tradeId: trade.id, error });
       }

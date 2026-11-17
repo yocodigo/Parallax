@@ -87,8 +87,9 @@ export function levelsAt(trade, bars, { dailyBars = [], dailyPlan = null } = {})
 
 // The setups the underlying's minute bars showed at entry, or null without
 // them: the four-touch break the trade went with (null when none), kept for
-// its quality grade, and every setup detected the trade's way (rules-v3 6),
-// the three-gate entry at `levels`.
+// its quality grade, and every setup detected the trade's way (rules-v3 6).
+// `levels` is the level map at the fill, where the three-gate detector looks
+// for its sweeps.
 export function setupsAt(trade, bars, levels = []) {
   if (!bars?.length) return null;
   return { fourTouch: fourTouchAt(trade, bars), detected: detectSetups(trade, bars, { levels: levels ?? [] }) };

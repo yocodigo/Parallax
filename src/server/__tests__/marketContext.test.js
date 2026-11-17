@@ -91,6 +91,24 @@ describe('captureContext', () => {
     expect(context.levels).toContainEqual(expect.objectContaining({ kind: 'prior_day_high', price: 180 }));
   });
 
+  it("leaves the setups and levels out, and keeps the rest, when the underlying's own bars fail", async () => {
+    serveBars();
+    serveVix();
+    server.use(
+      http.get(BARS_URL, ({ request }) =>
+        new URL(request.url).searchParams.get('symbols') === 'NVDA' ? new HttpResponse('down', { status: 503 }) : undefined
+      )
+    );
+    const logs = captureErrorLogs();
+
+    const context = await captureContext(stockTrade, { now: openedAt, requestId: 'req-2' });
+
+    expect(context).toMatchObject({ setups: null, levels: null, stock: { price: 190 }, market: { vix: { close: 17 } } });
+    expect(logs()).toEqual([
+      expect.objectContaining({ message: 'Context source failed', source: 'underlyingMinuteBars', requestId: 'req-2' }),
+    ]);
+  });
+
   it('logs a source that fails and leaves its part empty', async () => {
     serveBars();
     server.use(http.get(VIX_URL, () => new HttpResponse('down', { status: 503 })));

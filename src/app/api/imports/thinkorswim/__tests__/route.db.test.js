@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getDb } from '@/db';
 import { getTradeContext } from '@/db/contexts';
+import { saveDailyPlan } from '@/db/dailyPlans';
 import { journalEntries, trades } from '@/db/schema';
 import { resetDb } from '@/db/testing';
 import { captureContext } from '@/server/marketContext';
@@ -96,6 +97,7 @@ describe('POST /api/imports/thinkorswim', () => {
   });
 
   it('saves the trades when confirmed and captures their context afterwards', async () => {
+    await saveDailyPlan(getDb(), { tradeDate: '2026-10-23', premarketHigh: 762 });
     const body = await (await post({ confirm: true })).json();
 
     expect(body).toMatchObject({ applied: true, created: 2, filled: 0 });
@@ -108,6 +110,11 @@ describe('POST /api/imports/thinkorswim', () => {
 
     await Promise.all(afterWork);
     expect(captureContext).toHaveBeenCalledTimes(2);
+    // With the fill day's plan, for the level map.
+    expect(captureContext).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ dailyPlan: expect.objectContaining({ tradeDate: '2026-10-23', premarketHigh: 762 }) })
+    );
     expect(await getTradeContext(getDb(), saved[0].id)).toEqual({ version: 1 });
   });
 
