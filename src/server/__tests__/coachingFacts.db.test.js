@@ -166,7 +166,7 @@ describe('gatherCoachingFacts', () => {
       { t: '2026-10-29T15:05:00Z', o: 100, h: 120, l: 99, c: 99, v: 1 },
     ];
 
-    const facts = await gatherCoachingFacts(db, { day: '2026-10-29', fetchBars: async () => bars });
+    const facts = await gatherCoachingFacts(db, { day: '2026-10-29', fetchBars: async () => bars, fetchDaily: async () => [] });
 
     // Best open profit 3 on a risk of 2; closed at -0.5R.
     expect(facts.trades[0].giveback).toEqual({ mfeR: 1.5, r: -0.5, givenBackR: 2, flagged: true });
@@ -183,7 +183,7 @@ describe('gatherCoachingFacts', () => {
       { t: '2026-10-29T15:00:00Z', o: 99.5, h: 99.5, l: 99, c: 99, v: 1, vw: 99 },
     ];
 
-    const facts = await gatherCoachingFacts(db, { day: '2026-10-29', fetchBars: async () => bars });
+    const facts = await gatherCoachingFacts(db, { day: '2026-10-29', fetchBars: async () => bars, fetchDaily: async () => [] });
 
     expect(facts.trades[0].giveback).toMatchObject({
       mfe: 3,
@@ -203,9 +203,38 @@ describe('gatherCoachingFacts', () => {
     );
     const bars = [{ t: '2026-10-29T14:10:00Z', o: 100, h: 103, l: 99.5, c: 101, v: 1, vw: 101 }];
 
-    const facts = await gatherCoachingFacts(db, { day: '2026-10-29', fetchBars: async () => bars });
+    const facts = await gatherCoachingFacts(db, { day: '2026-10-29', fetchBars: async () => bars, fetchDaily: async () => [] });
 
     expect(facts.trades[0].giveback).toBeNull();
+  });
+
+  it('grades Location OK on the day\'s levels, fetching the daily bars once per symbol and day', async () => {
+    // 9:45 breaks the prior day's high of 101 and holds; the 9:53 fill sits
+    // just above it.
+    const minute = (k, h, l, c, v = 100) => ({
+      t: new Date(Date.parse('2026-10-29T13:30:00Z') + k * 60_000).toISOString(),
+      o: c,
+      h,
+      l,
+      c,
+      v,
+    });
+    const bars = [
+      ...Array.from({ length: 15 }, (_, k) => minute(k, 100.7, 100.3, 100.5)),
+      minute(15, 101.4, 100.6, 101.3, 200),
+      minute(16, 101.5, 101.2, 101.4),
+      minute(17, 101.4, 101.1, 101.3),
+      ...Array.from({ length: 5 }, (_, k) => minute(18 + k, 101.2, 101.0, 101.1)),
+    ];
+    const fill = { openedAt: new Date('2026-10-29T13:53:00Z'), entryPrice: 101.1, initialStop: 100.5 };
+    await db.insert(trades).values([trade(fill), trade({ ...fill, closedAt: new Date('2026-10-29T15:05:00Z') })]);
+    const fetchDaily = vi.fn(async () => [{ t: '2026-10-28T04:00:00Z', o: 99, h: 101, l: 98, c: 100, v: 1000 }]);
+
+    const facts = await gatherCoachingFacts(db, { day: '2026-10-29', fetchBars: async () => bars, fetchDaily });
+
+    expect(fetchDaily).toHaveBeenCalledTimes(1);
+    expect(fetchDaily).toHaveBeenCalledWith('SPY', '2026-10-29');
+    expect(facts.whatsWorking.gates).toContainEqual(expect.objectContaining({ gate: 'location', met: expect.objectContaining({ trades: 2 }) }));
   });
 
   it('judges stop adherence per trade and over the recent history', async () => {

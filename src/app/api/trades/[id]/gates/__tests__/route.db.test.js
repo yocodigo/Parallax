@@ -138,19 +138,41 @@ describe('GET /api/trades/[id]/gates', () => {
       window: 'unknown',
       direction: 'met',
       entry: 'met',
-      location: body.location.status,
+      location: 'missed',
       target: 'missed',
       state: 'met',
       stop: 'met',
     });
-    expect(['met', 'missed']).toContain(body.location.status);
-    expect(body.room).toMatchObject({ risk: null, ratio: null });
+    // The prior day's high of 11.80 was crossed and given back at once, and
+    // is too far from the 11.50 the long was filled at: floating.
+    expect(body.location).toEqual({ status: 'missed', level: null, event: null, at: null });
+    expect(body.room).toMatchObject({ level: { kind: 'session_high', price: 12.05 }, risk: null, ratio: null });
     expect(minuteQuery(queries)).toMatchObject({
       symbols: 'SPY',
       end: '2026-10-27T14:47:00.000Z',
       adjustment: 'split',
     });
     expect(dailyQuery(queries)).toMatchObject({ symbols: 'SPY', end: '2026-10-26' });
+  });
+
+  it('locates an entry at a level from the daily bars, or from the plan', async () => {
+    // A put filled at 10:47, after 10:46 swept 11.60 from below.
+    const put = { assetClass: 'option', optionType: 'put', strike: 600, expiration: '2026-10-27', quantity: 1, entryPrice: 1.5 };
+    const fromDaily = await insertTrade(put);
+    serveBars('SPY', BARS, [{ ...DAILY_BARS[0], h: 11.6 }]);
+
+    expect((await (await get(fromDaily.id)).json()).location).toEqual({
+      status: 'met',
+      level: { kind: 'prior_day_high', price: 11.6, tier: 1 },
+      event: 'swept',
+      at: '2026-10-27T14:46:00.000Z',
+    });
+
+    await getDb().insert(dailyPlans).values({ tradeDate: '2026-10-27', londonHigh: 11.6 });
+    serveBars('SPY', BARS, []);
+    const body = await (await get(fromDaily.id)).json();
+    expect(body.location).toMatchObject({ status: 'met', level: { kind: 'london_high' } });
+    expect(body.gates.location).toBe('met');
   });
 
   it("measures room to the stock's own stop", async () => {

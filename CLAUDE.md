@@ -243,7 +243,8 @@ Vitest, JavaScript (not TypeScript).
   ratio to the distance back to the stop on the underlying (an option's `underlying_stop`, a stock's
   `initial_stop`); no `ROOM_R_MIN` until enough trades have it. `levelsAtEntry` (`tradeGates.js`) runs both at the
   fill; `GET /api/trades/[id]/gates` returns `{ gates, location, room }` and `TradeGates` shows the level and the
-  room under the badges. Computed on demand, never stored. The plan's fibs count at any time of day, as the exit
+  room under the badges; the coaching pass grades Location the same way (`gatherCoachingFacts`, daily bars once per
+  symbol and day). Computed on demand, never stored. The plan's fibs count at any time of day, as the exit
   review's T1 does, even before they were typed in.
 - Structure R columns (`rules-v3.md` section 7), options only: `underlying_entry` (the underlying's price at the fill)
   and `underlying_stop` with `underlying_stop_source` (`plan` or `derived`) and, for a derived one,

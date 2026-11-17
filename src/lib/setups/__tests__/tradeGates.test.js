@@ -226,6 +226,18 @@ describe('levelsAtEntry', () => {
     expect(levelsAtEntry({ ...call, underlyingStop: null }, BARS, { dailyBars }).room.risk).toBeNull();
   });
 
+  it("takes the plan's overnight levels into the map", () => {
+    // 10:44 closes above a London high of 11.60 and 10:45 closes back under
+    // it; 10:46 trades above it and closes back under: a sweep, the put's way.
+    const put = trade({ assetClass: 'option', optionType: 'put', quantity: 1 });
+    expect(levelsAtEntry(put, BARS, { dailyPlan: { londonHigh: 11.6 } }).location).toEqual({
+      status: 'met',
+      level: { kind: 'london_high', price: 11.6, tier: 1 },
+      event: 'swept',
+      at: at('10:46').toISOString(),
+    });
+  });
+
   it('is null for a plan never entered', () => {
     expect(levelsAtEntry(trade({ openedAt: null }), BARS, { dailyBars })).toBeNull();
   });

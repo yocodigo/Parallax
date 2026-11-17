@@ -61,11 +61,12 @@ const LEVEL_WORDS = {
   round: 'round number',
 };
 
+// Kinds made of a name and a timeframe, such as equal_highs_5m.
+const TIMED_WORDS = { equal_highs: 'equal highs', equal_lows: 'equal lows', four_touch: 'four-touch line' };
+
 function levelWords({ kind, price }) {
   const timed = kind.match(/^(equal_highs|equal_lows|four_touch)_(\d+m)$/);
-  const words = timed
-    ? `${timed[2]} ${{ equal_highs: 'equal highs', equal_lows: 'equal lows', four_touch: 'four-touch line' }[timed[1]]}`
-    : (LEVEL_WORDS[kind] ?? kind);
+  const words = timed ? `${timed[2]} ${TIMED_WORDS[timed[1]]}` : (LEVEL_WORDS[kind] ?? kind);
   return `the ${words} ${price.toFixed(2)}`;
 }
 

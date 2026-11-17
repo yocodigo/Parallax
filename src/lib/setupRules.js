@@ -33,7 +33,7 @@ Pre-entry gates:
 - Size: ${SIZE_MIN}-${SIZE_MAX} contracts.
 - Direction: the 15m has closed beyond the middle band the trade's way.
 - Entry: the 5m entry candle's overlap is within its limit.
-- Location: entered close to a level of the first or second rank (prior day or week high or low, the overnight highs and lows, equal highs or lows, the opening range, the session's high or low, a broken four-touch line) after price had broken it and held beyond, or swept it and closed back, the trade's way. Anything else is a floating entry. Fibs, round numbers, and a range's middle are targets, never a location.
+- Location: entered close to a level of the first or second rank after price had broken it and held beyond, or swept it and closed back, the trade's way. First rank: prior day or week high or low, the overnight highs and lows, equal highs or lows on the 5m or 15m. Second rank, which also needs volume rising on the bar that broke or swept it: the opening range, the session's high or low, a broken four-touch line. Anything else is a floating entry. Fibs, round numbers, a range's middle, and 1m equal highs or lows are targets, never a location.
 - Stop: one of the stop rules picked before the entry, not after.
 - Target: the day's fib levels are recorded.
 - State: the trader is calm and rested, and not bored, anxious, or chasing back a loss.`;

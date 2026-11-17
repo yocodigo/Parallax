@@ -56,8 +56,11 @@ export function underlyingAt(bars, asOf, day) {
 // [rules-v3 4] Where a trade's entry sat among the day's levels: { location,
 // room } from levelLocation and levelRoom, on the level map as of the fill
 // (levelMap; `dailyBars` and `dailyPlan` as it takes them). Room runs from the
-// underlying's price at the fill to the invalidation level: an option's stop
-// on the underlying, never its premium stop; a stock's own stop. Null for a
+// underlying's price at the fill (the last minute close before it, the price
+// Location OK is judged at) to the invalidation level: an option's stop on the
+// underlying, never its premium stop; a stock's own stop. A derived option
+// stop was placed against `underlying_entry`, the fill minute's VWAP, so one
+// sitting between that and this price leaves no risk to compare. Null for a
 // plan that was never entered.
 export function levelsAtEntry(trade, bars = [], { dailyBars = [], dailyPlan = null } = {}) {
   if (!trade.openedAt) return null;

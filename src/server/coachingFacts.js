@@ -12,9 +12,10 @@ import { mistakeLedger } from '@/lib/mistakeLedger';
 import { reviewEntry } from '@/lib/setups/entryReview';
 import { reviewExit } from '@/lib/setups/exitReview';
 import { nyDay, sessionBars, tradingDay } from '@/lib/setups/session';
-import { gradeTradeGates } from '@/lib/setups/tradeGates';
+import { gradeTradeGates, levelsAtEntry } from '@/lib/setups/tradeGates';
 import { RECENT_TRADES, adherenceRate, judgeStopAdherence, stopRuleTrigger } from '@/lib/stopAdherence';
 import { whatsWorking } from '@/lib/whatsWorking';
+import { fetchDailyBars } from './dailyBars';
 import { fetchMinuteBars } from './minuteBars';
 
 // [11] Gathers the facts the coaching pass reads (formatCoachingInput's
@@ -34,9 +35,15 @@ const newestFirst = (a, b) => b.closedAt - a.closedAt;
 // stop adherence) is of closed trades in the mode of the first trade coached,
 // so a paper day isn't coached against live results. `fetchBars(symbol, end)`
 // returns the underlying's minute bars, oldest first; it runs once per symbol
-// and day. A failed fetch rejects the whole call, history included: a coaching
+// and day. `fetchDaily(symbol, day)` returns the daily bars before a New York
+// day, for the level map Location OK is judged on; it runs once per symbol and
+// day too, and only for a day with minute bars (the map is empty without
+// them). A failed fetch rejects the whole call, history included: a coaching
 // pass built on part of the history would read as if it were the whole.
-export async function gatherCoachingFacts(db, { day, tradeId = null, fetchBars = fetchMinuteBars, now = new Date() }) {
+export async function gatherCoachingFacts(
+  db,
+  { day, tradeId = null, fetchBars = fetchMinuteBars, fetchDaily = fetchDailyBars, now = new Date() }
+) {
   const openedThatDay = await listTradesOpenedOn(db, day);
   const dayTrades = tradeId ? openedThatDay.filter((trade) => trade.id === tradeId) : openedThatDay;
   if (dayTrades.length === 0) return null;
@@ -66,6 +73,15 @@ export async function gatherCoachingFacts(db, { day, tradeId = null, fetchBars =
     return barsByKey.get(key);
   };
 
+  const dailyByKey = new Map();
+  const dailyFor = (trade, bars) => {
+    if (bars.length === 0) return Promise.resolve([]);
+    const date = nyDay(trade.openedAt);
+    const key = `${trade.symbol}|${date}`;
+    if (!dailyByKey.has(key)) dailyByKey.set(key, fetchDaily(trade.symbol, date));
+    return dailyByKey.get(key);
+  };
+
   const plansByDay = new Map();
   const planFor = (trade) => {
     const date = nyDay(trade.openedAt);
@@ -77,7 +93,12 @@ export async function gatherCoachingFacts(db, { day, tradeId = null, fetchBars =
   // bars. The bars come back too, for the giveback.
   async function analyze(trade) {
     const bars = await barsFor(trade);
-    const [dailyPlan, planEntry] = await Promise.all([planFor(trade), getPlanEntry(db, trade.id)]);
+    const [dailyPlan, planEntry, dailyBars] = await Promise.all([
+      planFor(trade),
+      getPlanEntry(db, trade.id),
+      dailyFor(trade, bars),
+    ]);
+    const location = levelsAtEntry(trade, bars, { dailyBars, dailyPlan })?.location ?? null;
     const exitReview = reviewExit(trade, bars, dailyPlan);
     const entryReview = reviewEntry(trade, bars);
     const mistakes = withMistakes.find((t) => t.id === trade.id)?.mistakes ?? [];
@@ -85,7 +106,7 @@ export async function gatherCoachingFacts(db, { day, tradeId = null, fetchBars =
       bars,
       entryReview,
       exitReview,
-      gates: gradeTradeGates(trade, bars, { dailyPlan, planEntry }),
+      gates: gradeTradeGates(trade, bars, { dailyPlan, planEntry, location }),
       setups: entryReview?.setup ? [entryReview.setup.name] : [],
       stopAdherence: judgeStopAdherence(trade, mistakes, stopRuleTrigger(trade, bars, exitReview?.t1 ?? null)),
     };

@@ -15,7 +15,9 @@
 //   to aim at; one traded at already has been used up;
 // - formedAt is when a level found in the bars came to exist (the close of
 //   the last bar that defined it), or null for one known before the open
-//   (daily bars, the plan, round numbers).
+//   (daily bars, the plan, round numbers). A four-touch line is the
+//   exception: it counts from the start of its 4th approach, so the location
+//   gate can see a break on that approach's first bar.
 // A four-touch line is sloped: its `price` is its value at the last closed
 // minute bar, and it carries `slope`, in dollars per minute bar (the 5m line's
 // slope over five). That is per clock minute only when no minute was skipped,
