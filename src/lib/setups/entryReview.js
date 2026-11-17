@@ -19,9 +19,9 @@ import { inWindow } from './gates';
 import { tradeBias } from './replayTrades';
 import { resample } from './resample';
 import { roomToBand } from './room';
-import { sessionBars, tradingDay } from './session';
+import { sessionBars, sessionOf, tradingDay } from './session';
 import { dealingRange, isMidRange, swings } from './swings';
-import { crossIndex, sessionOf } from './tradeGates';
+import { crossIndex } from './tradeGates';
 
 // The 3.1 setup the trade could have been taken on: the first 5m entry candle
 // after the newest 15m cross, when the cross points the way the trade bet.

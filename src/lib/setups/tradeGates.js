@@ -12,24 +12,10 @@ import { bandCross } from './direction';
 import { gradeGates } from './gates';
 import { tradeBias } from './replayTrades';
 import { resample } from './resample';
-import { tradingDay } from './session';
+import { sessionOf, tradingDay } from './session';
 import { dealingRange, swings } from './swings';
 
 const MINUTE = 60_000;
-
-// The bars from the start of `day`, a trailing slice: they are chronological
-// and resampling with `asOf` the fill has already dropped everything that
-// hadn't closed. So the last bar left is the last one that closed before the
-// entry, and the slice is empty when none had closed yet that session.
-//
-// The entry candle, the bar before it, and the swings all stop at the
-// overnight gap, the way findEntry stops a bias there. Comparing the
-// session's first 5m bar against the previous afternoon's last one would
-// measure a seventeen-hour gap as a clean break.
-export function sessionOf(bars, day) {
-  const start = bars.findIndex((bar) => tradingDay(bar) === day);
-  return start < 0 ? [] : bars.slice(start);
-}
 
 // The 15m bar that set the bias: the newest close before the entry that
 // crossed the middle band (section 3.1's cross). Searched back over the
