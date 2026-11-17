@@ -68,7 +68,7 @@ function entryCandleOf(bars5) {
 
 // The side a four-touch break offers a trade on: an unbroken 4xBO is long and
 // a 4xBD short, but a trap offers the trade the other way (`trade.side`).
-const sideOf = (found) => found.trade?.side ?? (found.kind === '4xBO' ? 'long' : 'short');
+export const sideOf = (found) => found.trade?.side ?? (found.kind === '4xBO' ? 'long' : 'short');
 
 // A four-touch break on `candles` that the trade would have been taken in the
 // direction of. The latest one, as of the last bar.

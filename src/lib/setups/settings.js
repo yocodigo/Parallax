@@ -161,3 +161,8 @@ export const ROUND_STEP = 5;
 // [rules-v3 4] Location OK: an entry within this many 1m ATRs of a tier 1 or
 // 2 level counts as at it. **(confirm)**
 export const LEVEL_NEAR = 0.5;
+
+// [rules-v3 6] A detected setup counts as the trade's own when it completed
+// within this many bars of its own timeframe before the fill (15 minutes on
+// the 5m, 3 on the 1m). Older ones are kept with their bar count, not counted.
+export const DETECTED_MAX_BARS = 3;
