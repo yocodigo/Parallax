@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lastClosedBy, roomToBand } from '../room';
+import { lastClosedBy, levelRoom, roomToBand } from '../room';
 
 // Twenty 1m closes alternating 9 and 11: the bands are 8, 10, and 12, and
 // each bar's true range is 2.25, so the ATR is 2.25 and the room needed is
@@ -56,5 +56,53 @@ describe('lastClosedBy', () => {
 
   it('is -1 when none had', () => {
     expect(lastClosedBy(minutes, Date.parse('2026-10-26T13:30:59Z'))).toBe(-1);
+  });
+});
+
+describe('levelRoom', () => {
+  const level = (kind, price, tier, touchedToday = false) => ({ kind, price, tier, touchedToday });
+  // Entry at 680.3. Above: a touched session high (spent), then the untouched
+  // prior day high and a round number. Below: the untouched prior day low.
+  const levels = [
+    level('prior_day_low', 678.4, 1),
+    level('opening_range_low', 679, 2, true),
+    level('session_high', 680.8, 2, true),
+    level('prior_day_high', 681.5, 1),
+    level('round', 685, 3),
+  ];
+
+  it('measures to the nearest untouched level ahead, over the distance to the invalidation level', () => {
+    const room = levelRoom({ levels, price: 680.3, bias: 'long', invalidation: 679.9 });
+    expect(room.level).toEqual({ kind: 'prior_day_high', price: 681.5, tier: 1 });
+    expect(room.points).toBeCloseTo(1.2, 9);
+    expect(room.risk).toBeCloseTo(0.4, 9);
+    expect(room.ratio).toBeCloseTo(3, 9);
+  });
+
+  it('looks below for a short', () => {
+    const room = levelRoom({ levels, price: 680.3, bias: 'short', invalidation: 680.8 });
+    expect(room.level).toMatchObject({ kind: 'prior_day_low' });
+    expect(room.points).toBeCloseTo(1.9, 9);
+    expect(room.ratio).toBeCloseTo(3.8, 9);
+  });
+
+  it('gives points alone without an invalidation level, or with one on the winning side', () => {
+    expect(levelRoom({ levels, price: 680.3, bias: 'long', invalidation: null })).toMatchObject({ risk: null, ratio: null });
+    expect(levelRoom({ levels, price: 680.3, bias: 'long', invalidation: 681 })).toMatchObject({ risk: null, ratio: null });
+    expect(levelRoom({ levels, price: 680.3, bias: 'long', invalidation: null }).points).toBeCloseTo(1.2, 9);
+  });
+
+  it('has no level when nothing untouched lies ahead', () => {
+    expect(levelRoom({ levels, price: 686, bias: 'long', invalidation: 685.5 })).toEqual({
+      level: null,
+      points: null,
+      risk: 0.5,
+      ratio: null,
+    });
+  });
+
+  it('is null without a direction or a price', () => {
+    expect(levelRoom({ levels, price: 680.3, bias: null, invalidation: 679.9 })).toBeNull();
+    expect(levelRoom({ levels, price: null, bias: 'long', invalidation: 679.9 })).toBeNull();
   });
 });

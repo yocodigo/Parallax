@@ -3,7 +3,7 @@
 // nothing after `k` is read.
 
 import { bollinger } from './bollinger';
-import { atLeast } from './compare';
+import { atLeast, atMost } from './compare';
 import { atr } from './relative';
 import { ROOM_MIN } from './settings';
 
@@ -32,4 +32,32 @@ export function roomToBand(bars, k, bias, price, { min = ROOM_MIN } = {}) {
   const distance = bias === 'long' ? bands.upper - price : price - bands.lower;
   const needed = min * range;
   return { distance, needed, ok: atLeast(distance, needed) };
+}
+
+// [rules-v3 4] Room to the next level: from the entry `price` to the nearest
+// level ahead in the trade's direction that the day hasn't traded at yet
+// (levelMap's touchedToday; a touched one is used up), against the distance
+// back to the `invalidation` level, the price where the trade is wrong.
+// Returns { level ({ kind, price, tier } or null when nothing untouched lies
+// ahead), points, risk, ratio }: points are always given with a level, risk
+// only with an invalidation level on the losing side, and ratio (points over
+// risk) only with both. Null without a direction or a price. No minimum is
+// applied: one is to be set from the trades once enough have it.
+export function levelRoom({ levels, price, bias, invalidation }) {
+  if ((bias !== 'long' && bias !== 'short') || price == null) return null;
+  const long = bias === 'long';
+  const ahead = levels
+    .filter((level) => !level.touchedToday && (long ? !atMost(level.price, price) : !atLeast(level.price, price)))
+    .sort((a, b) => Math.abs(a.price - price) - Math.abs(b.price - price));
+  const behind = invalidation != null && (long ? !atLeast(invalidation, price) : !atMost(invalidation, price));
+  const risk = behind ? Math.abs(price - invalidation) : null;
+  const next = ahead[0];
+  if (!next) return { level: null, points: null, risk, ratio: null };
+  const points = Math.abs(next.price - price);
+  return {
+    level: { kind: next.kind, price: next.price, tier: next.tier },
+    points,
+    risk,
+    ratio: risk === null ? null : points / risk,
+  };
 }
