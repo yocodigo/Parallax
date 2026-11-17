@@ -289,8 +289,14 @@ Vitest, JavaScript (not TypeScript).
   before the fill; Cboe's daily VIX file; for options Alpaca's contract open interest and indicative
   snapshot) and saves it in `trade_contexts` (JSON with a `version`; first snapshot wins). Version 2
   adds `setups.fourTouch`: the entry review's four-touch break in the trade's direction (`fourTouchAt`),
-  kept for its grade; `setups` is null without the symbol's minute bars, and missing from version 1. A failing
-  source is logged and left null. Live option values are kept only within 15 minutes of the fill.
+  kept for its grade; `setups` is null without the symbol's minute bars, and missing from version 1. Version 3
+  (rules-v3 section 6) fetches the underlying's own minute bars (`fetchMinuteBars`, five days back, for the 15m
+  bands) and adds `setups.detected` (`detectSetups` in `src/lib/setups/detected.js`: the band cross, four-touch,
+  reversal, and three-gate detectors on the bars closed before the fill, the trade's way only, each with
+  `status`, `grade` (four-touch only), `completedAt`, and `barsSince` in its own timeframe's bars) and `levels`
+  (the level map at the fill, with the day's plan, which the callers pass as `dailyPlan`; kept since a plan can
+  be edited later). `clearsWindow` is the window rule: within `DETECTED_MAX_BARS` (3) bars, complete, or for a
+  four-touch break valid and grade A. A failing source is logged and left null. Live option values are kept only within 15 minutes of the fill.
   `TradeContext.jsx` shows it on demand via `GET /api/trades/[id]/context`. Entry route tests mock
   `after` and `captureContext`. Macro dates in `src/lib/context/macroCalendar.js` cover 2026-10-22
   through 2027-12-31 (BLS blocks automated requests); extend them yearly.

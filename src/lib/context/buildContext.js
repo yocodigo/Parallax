@@ -1,5 +1,8 @@
 import { daysToExpiration, sessionPart } from '../historyWarnings';
+import { detectSetups } from '../setups/detected';
 import { fourTouchAt } from '../setups/entryReview';
+import { levelMap } from '../setups/levels';
+import { sessionBars } from '../setups/session';
 import { gapPercent, minutesSinceOpen, relativeStrength, relativeVolume, sma, trendOf } from './indicators';
 import { macroEvents } from './macroCalendar';
 import { expectedMove, occSymbol, spreadPercent, yearsToExpiration } from './options';
@@ -74,28 +77,40 @@ function optionContext(trade, option, price, now) {
   };
 }
 
-// The setups the underlying's minute bars showed at entry, or null without
-// them. For now the four-touch break the trade went with (null when none),
-// kept for its quality grade, which needs the bars to work out.
-export function setupsAt(trade, bars) {
+// The level map of the underlying at the fill (rules-v3 3), from its minute
+// bars, the daily bars before the day, and the day's plan; null without the
+// minute bars. Kept because the plan can be edited after the entry.
+export function levelsAt(trade, bars, { dailyBars = [], dailyPlan = null } = {}) {
   if (!bars?.length) return null;
-  return { fourTouch: fourTouchAt(trade, bars) };
+  return levelMap({ bars: sessionBars(bars), dailyBars, dailyPlan, asOf: trade.openedAt });
+}
+
+// The setups the underlying's minute bars showed at entry, or null without
+// them: the four-touch break the trade went with (null when none), kept for
+// its quality grade, and every setup detected the trade's way (rules-v3 6),
+// the three-gate entry at `levels`.
+export function setupsAt(trade, bars, levels = []) {
+  if (!bars?.length) return null;
+  return { fourTouch: fourTouchAt(trade, bars), detected: detectSetups(trade, bars, { levels: levels ?? [] }) };
 }
 
 // The market context of a trade at entry, built from what was fetched; a
 // piece that couldn't be fetched is null rather than guessed. `daily` and
 // `intraday` map symbols (SPY, QQQ, the trade's symbol or underlying) to bars,
 // `vixRows` is Cboe's history or null, and `option` is { bid, ask, iv, delta,
-// openInterest } or null.
-export function buildContext({ trade, now, daily, intraday, vixRows, option }) {
+// openInterest } or null. `minuteBars` are the underlying's own, reaching
+// back a session for the 15m bands (null when they couldn't be fetched), and
+// `dailyPlan` the day's plan row or null.
+export function buildContext({ trade, now, daily, intraday, vixRows, option, minuteBars = null, dailyPlan = null }) {
   const at = trade.openedAt;
   const spy = symbolContext(daily.SPY, intraday.SPY, at);
   const qqq = symbolContext(daily.QQQ, intraday.QQQ, at);
   const stock = symbolContext(daily[trade.symbol], intraday[trade.symbol], at);
   const entryDate = nyDate.format(at);
+  const levels = levelsAt(trade, minuteBars, { dailyBars: daily[trade.symbol] ?? [], dailyPlan });
 
   return {
-    version: 2,
+    version: 3,
     capturedAt: now.toISOString(),
     timeOfDay: { sessionPart: sessionPart(at), minutesSinceOpen: minutesSinceOpen(at) },
     market: {
@@ -113,7 +128,8 @@ export function buildContext({ trade, now, daily, intraday, vixRows, option }) {
       relativeStrength: strengthAgainst(stock, spy),
     },
     option: trade.assetClass === 'option' ? optionContext(trade, option, stock.price, now) : null,
-    setups: setupsAt(trade, intraday[trade.symbol]),
+    setups: setupsAt(trade, minuteBars, levels),
+    levels,
     unavailable: UNAVAILABLE,
   };
 }

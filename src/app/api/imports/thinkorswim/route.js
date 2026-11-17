@@ -2,12 +2,14 @@ import { after, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getDb } from '@/db';
 import { saveTradeContext } from '@/db/contexts';
+import { getDailyPlan } from '@/db/dailyPlans';
 import { applyImport, listImportCandidates } from '@/db/imports';
 import { saveUnderlying } from '@/db/trades';
 import { matchImport } from '@/lib/import/matchImport';
 import { pairFills } from '@/lib/import/pairFills';
 import { parseThinkorswimStatement } from '@/lib/import/thinkorswim';
 import { logError, requestId, withErrorLogging } from '@/lib/log';
+import { nyDay } from '@/lib/setups/session';
 import { holdMinutes, profitLoss } from '@/lib/tradeMetrics';
 import { captureContext } from '@/server/marketContext';
 import { captureUnderlying } from '@/server/underlying';
@@ -96,7 +98,7 @@ export const POST = withErrorLogging(ROUTE, async (request) => {
   after(async () => {
     for (const trade of [...created, ...filled]) {
       try {
-        await saveTradeContext(db, trade.id, await captureContext(trade, { requestId: reqId }));
+        await saveTradeContext(db, trade.id, await captureContext(trade, { requestId: reqId, dailyPlan: await getDailyPlan(db, nyDay(trade.openedAt)) }));
       } catch (error) {
         logError('Context capture failed', { route: ROUTE, requestId: reqId, tradeId: trade.id, error });
       }

@@ -14,7 +14,15 @@ const CONTRACT_URL = 'https://paper-api.alpaca.markets/v2/options/contracts/:sym
 const openedAt = new Date('2026-10-20T14:30:00Z');
 const stockTrade = { symbol: 'NVDA', assetClass: 'stock', openedAt };
 
-const daily = (last) => Array.from({ length: 60 }, (_, i) => ({ t: `2026-08-${i}`, c: last - 59 + i, v: 1_000_000 }));
+// 60 days of bars ending Oct 19, real dates since the level map reads them.
+const daily = (last) =>
+  Array.from({ length: 60 }, (_, i) => ({
+    t: new Date(Date.parse('2026-10-19T04:00:00Z') - (59 - i) * 86_400_000).toISOString(),
+    h: last - 59 + i,
+    l: last - 59 + i,
+    c: last - 59 + i,
+    v: 1_000_000,
+  }));
 const minute = (price) => [{ t: '2026-10-20T14:29:00Z', o: price, c: price, v: 1000 }];
 
 // Serve bars by timeframe and record each request's query.
@@ -60,6 +68,27 @@ describe('captureContext', () => {
     const minuteQuery = queries.find((q) => q.timeframe === '1Min');
     // Only bars up to the entry, so nothing after it leaks into the snapshot.
     expect(minuteQuery).toMatchObject({ end: '2026-10-20T14:30:00.000Z', adjustment: 'split' });
+  });
+
+  it("fetches the underlying's own minute bars for its setups and level map, with the day's plan", async () => {
+    const queries = serveBars();
+    serveVix();
+
+    const context = await captureContext(stockTrade, { now: openedAt, dailyPlan: { premarketHigh: 195 } });
+
+    // Five days back, for a previous session's 15m bands, and up to the entry.
+    expect(queries).toContainEqual(
+      expect.objectContaining({
+        symbols: 'NVDA',
+        timeframe: '1Min',
+        start: '2026-10-15T14:30:00.000Z',
+        end: '2026-10-20T14:30:00.000Z',
+      })
+    );
+    expect(context.version).toBe(3);
+    expect(context.setups).toEqual({ fourTouch: null, detected: [] });
+    expect(context.levels).toContainEqual(expect.objectContaining({ kind: 'premarket_high', price: 195 }));
+    expect(context.levels).toContainEqual(expect.objectContaining({ kind: 'prior_day_high', price: 180 }));
   });
 
   it('logs a source that fails and leaves its part empty', async () => {

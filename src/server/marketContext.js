@@ -2,6 +2,7 @@ import { buildContext } from '@/lib/context/buildContext';
 import { occSymbol } from '@/lib/context/options';
 import { parseVixCsv } from '@/lib/context/vix';
 import { logError } from '@/lib/log';
+import { fetchMinuteBars } from './minuteBars';
 
 // Fetches what a trade's context snapshot needs and builds it. Server-only:
 // it reads the Alpaca keys from the environment.
@@ -22,7 +23,13 @@ const INTRADAY_LOOKBACK_MS = 8 * 60 * 60 * 1000;
 const nyDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' });
 
 // How each source is named in the logs.
-const SOURCE_NAMES = { daily: 'dailyBars', intraday: 'minuteBars', vixRows: 'vix', option: 'option' };
+const SOURCE_NAMES = {
+  daily: 'dailyBars',
+  intraday: 'minuteBars',
+  minuteBars: 'underlyingMinuteBars',
+  vixRows: 'vix',
+  option: 'option',
+};
 
 function alpacaHeaders() {
   return {
@@ -82,8 +89,9 @@ async function fetchOption(trade) {
 // The context of `trade` at its entry (`openedAt`). Each source is fetched on
 // its own; one that fails is logged and its part of the snapshot left empty,
 // so a slow or down provider never loses the rest. `requestId` ties the logs
-// to the request that recorded the entry.
-export async function captureContext(trade, { now = new Date(), requestId } = {}) {
+// to the request that recorded the entry. `dailyPlan` is the entry day's plan
+// row (null when none), for the level map.
+export async function captureContext(trade, { now = new Date(), requestId, dailyPlan = null } = {}) {
   const entryDate = nyDate.format(trade.openedAt);
   const dayBefore = nyDate.format(new Date(Date.parse(entryDate) - DAY_MS / 2));
   const symbols = [...new Set(['SPY', 'QQQ', trade.symbol])];
@@ -101,6 +109,9 @@ export async function captureContext(trade, { now = new Date(), requestId } = {}
       new Date(trade.openedAt.getTime() - INTRADAY_LOOKBACK_MS).toISOString(),
       trade.openedAt.toISOString()
     ),
+    // The underlying's own, reaching back a full session for the setups'
+    // 15m bands and the level map's previous-session pools.
+    minuteBars: fetchMinuteBars(trade.symbol, trade.openedAt),
     vixRows: fetchVixRows(),
     option: trade.assetClass === 'option' ? fetchOption(trade) : Promise.resolve(null),
   };
@@ -123,5 +134,5 @@ export async function captureContext(trade, { now = new Date(), requestId } = {}
     }
   });
 
-  return buildContext({ trade, now, ...fetched });
+  return buildContext({ trade, now, dailyPlan, ...fetched });
 }

@@ -6,6 +6,7 @@ import { createStrategy } from '@/db/strategies';
 import { resetDb } from '@/db/testing';
 import { DEFAULT_BREAKER_SETTINGS } from '@/lib/circuitBreakerSettings';
 import { getTradeContext } from '@/db/contexts';
+import { saveDailyPlan } from '@/db/dailyPlans';
 import { captureErrorLogs } from '@/mocks/logs';
 import { getTrade } from '@/db/trades';
 import { captureContext } from '@/server/marketContext';
@@ -228,6 +229,19 @@ describe('POST /api/trades/[id]/entry captures the market context', () => {
       expect.objectContaining({ requestId: expect.any(String) })
     );
     expect(await getTradeContext(getDb(), trade.id)).toEqual({ version: 1, market: { spyTrend: 'up' } });
+  });
+
+  it("passes the entry day's plan along, for the level map", async () => {
+    await saveDailyPlan(getDb(), { tradeDate: '2026-10-20', premarketHigh: 101.5 });
+    const trade = await insertTrade();
+
+    await post(trade.id, entry);
+    await Promise.all(afterWork);
+
+    expect(captureContext).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ dailyPlan: expect.objectContaining({ tradeDate: '2026-10-20', premarketHigh: 101.5 }) })
+    );
   });
 
   it('keeps the entry, and logs, when the context cannot be captured', async () => {

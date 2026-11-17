@@ -38,7 +38,7 @@ describe('buildContext', () => {
     const context = buildContext({ trade: stockTrade, now: openedAt, ...raw });
 
     expect(context).toMatchObject({
-      version: 2,
+      version: 3,
       capturedAt: openedAt.toISOString(),
       timeOfDay: { sessionPart: 'midday', minutesSinceOpen: 60 },
       market: {
@@ -121,14 +121,17 @@ describe('buildContext', () => {
       expiration: '2026-10-30',
       openedAt: new Date('2026-10-27T09:56:00-04:00'),
     };
-    const withBars = (trade, bars) =>
-      buildContext({ trade, now: trade.openedAt, ...raw, intraday: { ...raw.intraday, NVDA: bars } });
+    // The underlying's own minute bars, fetched apart from the market's
+    // (`minuteBars`), and its daily bars: the prior day's range 279 to 330.
+    const daily = { ...raw.daily, NVDA: [{ t: '2026-10-26T04:00:00Z', o: 300, h: 330, l: 279, c: 300, v: 1_000_000 }] };
+    const withBars = (trade, bars, extra = {}) =>
+      buildContext({ trade, now: trade.openedAt, ...raw, daily, minuteBars: bars, ...extra });
 
     it('keeps the four-touch break the trade went with and its grade, from the underlying’s bars', () => {
       const bars = asMinutes(breakout);
       const context = withBars(putAt956, bars);
 
-      expect(context.version).toBe(2);
+      expect(context.version).toBe(3);
       expect(context.setups.fourTouch).toMatchObject({
         timeframe: '1m',
         kind: '4xBD',
@@ -136,6 +139,25 @@ describe('buildContext', () => {
         grade: { grade: 'A' },
         brokeAt: bars[22].t,
       });
+    });
+
+    it('keeps every setup detected the trade’s way, with how recent it was', () => {
+      const bars = asMinutes(breakout);
+      expect(withBars(putAt956, bars).setups.detected).toContainEqual({
+        detector: 'four_touch',
+        timeframe: '1m',
+        direction: 'short',
+        status: 'valid',
+        grade: 'A',
+        completedAt: bars[25].t,
+        barsSince: 0,
+      });
+    });
+
+    it('keeps the level map at the fill, with the day’s plan', () => {
+      const { levels } = withBars(putAt956, asMinutes(breakout), { dailyPlan: { premarketHigh: 325 } });
+      expect(levels).toContainEqual(expect.objectContaining({ kind: 'prior_day_low', price: 279, tier: 1 }));
+      expect(levels).toContainEqual(expect.objectContaining({ kind: 'premarket_high', price: 325, tier: 1 }));
     });
 
     it('looks at the regular session only, as the entry review does', () => {
@@ -148,7 +170,9 @@ describe('buildContext', () => {
       }));
       const flatSession = asMinutes(Array.from({ length: 26 }, () => ({ o: 280, h: 281, l: 279, c: 280 })));
 
-      expect(withBars(putAt956, [...preMarket, ...flatSession]).setups).toEqual({ fourTouch: null });
+      const { setups } = withBars(putAt956, [...preMarket, ...flatSession]);
+      expect(setups.fourTouch).toBeNull();
+      expect(setups.detected).toEqual([]);
     });
 
     it('reads nothing after the fill, so bars fetched past it change nothing', () => {
@@ -157,16 +181,22 @@ describe('buildContext', () => {
       for (const time of ['09:50', '09:53', '09:56']) {
         const trade = { ...putAt956, openedAt: new Date(`2026-10-27T${time}:00-04:00`) };
         const upToFill = bars.filter((bar) => Date.parse(bar.t) < trade.openedAt.getTime());
-        expect(withBars(trade, bars).setups).toEqual(withBars(trade, upToFill).setups);
+        const [all, cut] = [withBars(trade, bars), withBars(trade, upToFill)];
+        expect(all.setups).toEqual(cut.setups);
+        expect(all.levels).toEqual(cut.levels);
       }
     });
 
     it('has no four-touch break when the line broke against the trade', () => {
-      expect(withBars({ ...putAt956, optionType: 'call' }, asMinutes(breakout)).setups).toEqual({ fourTouch: null });
+      const { setups } = withBars({ ...putAt956, optionType: 'call' }, asMinutes(breakout));
+      expect(setups.fourTouch).toBeNull();
+      expect(setups.detected.filter((s) => s.detector === 'four_touch')).toEqual([]);
     });
 
-    it('leaves the setups out when the underlying’s minute bars could not be fetched', () => {
-      expect(buildContext({ trade: putAt956, now: putAt956.openedAt, ...raw, intraday: {} }).setups).toBeNull();
+    it('leaves the setups and levels out when the underlying’s minute bars could not be fetched', () => {
+      const context = buildContext({ trade: putAt956, now: putAt956.openedAt, ...raw, minuteBars: null });
+      expect(context.setups).toBeNull();
+      expect(context.levels).toBeNull();
     });
   });
 
