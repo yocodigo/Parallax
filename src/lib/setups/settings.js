@@ -149,3 +149,11 @@ export const ASSUMED_SPREAD = 0.02;
 // [rules-v3 8.3] How many minutes after an exit "after the exit" watches the
 // underlying.
 export const POST_EXIT_MIN = 15;
+
+// [rules-v3 3] The opening range: the session's first this many minutes. Its
+// high and low are tier 2 levels once those minutes have closed.
+export const OPENING_RANGE_MIN = 15;
+
+// [rules-v3 3] Round numbers are the multiples of this many dollars, tier 3
+// levels: something to aim at, not to enter from.
+export const ROUND_STEP = 5;
