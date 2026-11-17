@@ -2,7 +2,6 @@ import { overlap } from './candles';
 import { atMost } from './compare';
 import { bandCross } from './direction';
 import { LOCKOUTS, OVERLAP_MAX, SIZE_MAX, SIZE_MIN } from './settings';
-import { isMidRange } from './swings';
 
 // [8] The pre-entry gates, graded after the fact: the app is never used while
 // a trade is on, so each gate asks whether the rule held at the entry, from
@@ -99,14 +98,6 @@ export function entryGate(bar, prev) {
   return atMost(share, OVERLAP_MAX) ? MET : MISSED;
 }
 
-// Location OK: the entry price wasn't in the middle of the dealing range
-// (section 2.5). `range` is { low, high } from the swings at entry. Unknown
-// without both a price and a range to judge it against.
-export function locationGate(price, range) {
-  if (price == null || !range) return UNKNOWN;
-  return isMidRange(price, range) ? MISSED : MET;
-}
-
 // Stop OK: a stop rule (S1/S2/S3, section 5) was chosen before entry.
 // Unknown, not missed, without one recorded: most plans so far predate the
 // field, and the plan form doesn't require it yet.
@@ -116,13 +107,14 @@ export function stopGate(stopRule) {
 
 // All of a trade's gates, keyed by name. Size OK is Joel's options rule (1-2
 // contracts); a stock or crypto swing has no contract count to judge by it,
-// so the gate is left off rather than graded against every trade.
+// so the gate is left off rather than graded against every trade. Location OK
+// (rules-v3 4) comes from levelLocation in location.js, which needs the level
+// map: `location` is its result, and the gate is unknown without one.
 export function gradeGates({
   assetClass,
   openedAt,
   quantity,
   direction,
-  entryPrice,
   stopRule,
   dailyPlan,
   planEntry,
@@ -130,13 +122,13 @@ export function gradeGates({
   directionBarIndex,
   entryBar,
   entryPrevBar,
-  dealingRange,
+  location = null,
 }) {
   const gates = {
     window: windowGate(openedAt),
     direction: directionGate(bars15, directionBarIndex, direction),
     entry: entryGate(entryBar, entryPrevBar),
-    location: locationGate(entryPrice, dealingRange),
+    location: location?.status ?? UNKNOWN,
     target: targetGate(dailyPlan),
     state: stateGate(planEntry),
     stop: stopGate(stopRule),

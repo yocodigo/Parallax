@@ -78,16 +78,26 @@ async function insertTrade(values = {}) {
   return trade;
 }
 
-function serveBars(symbol, bars) {
+// The prior day's bar, for the level map's prior day levels: a high of 11.8
+// that the fill day traded through.
+const DAILY_BARS = [{ t: '2026-10-26T04:00:00Z', o: 10, h: 11.8, l: 9.2, c: 10, v: 1000 }];
+
+// Minute bars, or the daily ones when the request asks for days.
+function serveBars(symbol, bars, dailyBars = DAILY_BARS) {
   const queries = [];
   server.use(
     http.get(BARS_URL, ({ request }) => {
-      queries.push(Object.fromEntries(new URL(request.url).searchParams));
-      return HttpResponse.json({ bars: { [symbol]: bars }, next_page_token: null });
+      const query = Object.fromEntries(new URL(request.url).searchParams);
+      queries.push(query);
+      const answer = query.timeframe === '1Day' ? dailyBars : bars;
+      return HttpResponse.json({ bars: { [symbol]: answer }, next_page_token: null });
     })
   );
   return queries;
 }
+
+const minuteQuery = (queries) => queries.find((query) => query.timeframe === '1Min');
+const dailyQuery = (queries) => queries.find((query) => query.timeframe === '1Day');
 
 const get = (id) =>
   GET(new Request(`http://localhost/api/trades/${id}/gates`), { params: Promise.resolve({ id }) });
@@ -123,23 +133,34 @@ describe('GET /api/trades/[id]/gates', () => {
     const response = await get(trade.id);
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({
-      gates: {
-        window: 'unknown',
-        direction: 'met',
-        entry: 'met',
-        location: 'met',
-        target: 'missed',
-        state: 'met',
-        stop: 'met',
-      },
+    const body = await response.json();
+    expect(body.gates).toEqual({
+      window: 'unknown',
+      direction: 'met',
+      entry: 'met',
+      location: body.location.status,
+      target: 'missed',
+      state: 'met',
+      stop: 'met',
     });
-    expect(queries[0]).toMatchObject({
+    expect(['met', 'missed']).toContain(body.location.status);
+    expect(body.room).toMatchObject({ risk: null, ratio: null });
+    expect(minuteQuery(queries)).toMatchObject({
       symbols: 'SPY',
-      timeframe: '1Min',
       end: '2026-10-27T14:47:00.000Z',
       adjustment: 'split',
     });
+    expect(dailyQuery(queries)).toMatchObject({ symbols: 'SPY', end: '2026-10-26' });
+  });
+
+  it("measures room to the stock's own stop", async () => {
+    const trade = await insertTrade({ initialStop: 11 });
+    serveBars('SPY', BARS);
+
+    const { room } = await (await get(trade.id)).json();
+
+    // SPY last closed at 11.50 before the 10:47 fill.
+    expect(room.risk).toBeCloseTo(0.5, 9);
   });
 
   it('says met for the target gate when the day was planned', async () => {
@@ -166,13 +187,19 @@ describe('GET /api/trades/[id]/gates', () => {
       multiplier: 100,
       quantity: 2,
       entryPrice: 1.5,
+      initialStop: 1,
+      underlyingStop: 11.2,
+      underlyingStopSource: 'plan',
     });
     serveBars('SPY', BARS);
 
     const response = await get(trade.id);
 
     expect(response.status).toBe(200);
-    expect((await response.json()).gates).toMatchObject({ direction: 'met', size: 'met' });
+    const body = await response.json();
+    expect(body.gates).toMatchObject({ direction: 'met', size: 'met' });
+    // Room runs to the stop on SPY, never the premium stop.
+    expect(body.room.risk).toBeCloseTo(0.3, 9);
   });
 
   it('404s for a trade that does not exist', async () => {

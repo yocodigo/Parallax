@@ -5,7 +5,6 @@ import {
   entryGate,
   gradeGates,
   inWindow,
-  locationGate,
   sizeGate,
   stateGate,
   stopGate,
@@ -165,24 +164,6 @@ describe('entryGate', () => {
   });
 });
 
-describe('locationGate', () => {
-  const range = { low: 0, high: 100 };
-
-  it('is met outside the middle of the dealing range', () => {
-    expect(locationGate(10, range)).toBe('met');
-    expect(locationGate(90, range)).toBe('met');
-  });
-
-  it('misses in the middle of the dealing range', () => {
-    expect(locationGate(55, range)).toBe('missed');
-  });
-
-  it("can't judge without a price or a range", () => {
-    expect(locationGate(null, range)).toBe('unknown');
-    expect(locationGate(55, null)).toBe('unknown');
-  });
-});
-
 describe('stopGate', () => {
   it('is met when a stop rule was chosen', () => {
     expect(stopGate('S1')).toBe('met');
@@ -213,7 +194,7 @@ describe('gradeGates', () => {
     directionBarIndex: 20,
     entryBar: { h: 20, l: 15 },
     entryPrevBar: { h: 10, l: 5 },
-    dealingRange: { low: 0, high: 100 },
+    location: { status: 'met' },
   };
 
   it('grades every gate, including size and stop, for an option trade', () => {

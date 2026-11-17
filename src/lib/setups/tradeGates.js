@@ -10,10 +10,12 @@
 
 import { bandCross } from './direction';
 import { gradeGates } from './gates';
+import { levelMap } from './levels';
+import { levelLocation } from './location';
 import { tradeBias } from './replayTrades';
 import { resample } from './resample';
+import { levelRoom } from './room';
 import { sessionOf, tradingDay } from './session';
-import { dealingRange, swings } from './swings';
 
 const MINUTE = 60_000;
 
@@ -51,11 +53,35 @@ export function underlyingAt(bars, asOf, day) {
   return null;
 }
 
+// [rules-v3 4] Where a trade's entry sat among the day's levels: { location,
+// room } from levelLocation and levelRoom, on the level map as of the fill
+// (levelMap; `dailyBars` and `dailyPlan` as it takes them). Room runs from the
+// underlying's price at the fill to the invalidation level: an option's stop
+// on the underlying, never its premium stop; a stock's own stop. Null for a
+// plan that was never entered.
+export function levelsAtEntry(trade, bars = [], { dailyBars = [], dailyPlan = null } = {}) {
+  if (!trade.openedAt) return null;
+  const asOf = trade.openedAt;
+  const bias = tradeBias(trade);
+  const levels = levelMap({ bars, dailyBars, dailyPlan, asOf });
+  const invalidation = trade.assetClass === 'option' ? trade.underlyingStop : trade.initialStop;
+  return {
+    location: levelLocation({ levels, bars, asOf, bias }),
+    room: levelRoom({
+      levels,
+      price: underlyingAt(bars, asOf, tradingDay({ t: asOf.toISOString() })),
+      bias,
+      invalidation: invalidation ?? null,
+    }),
+  };
+}
+
 // A trade's gates, keyed by name, as gradeGates returns them. `bars` are the
 // underlying's minute bars around the entry; `dailyPlan` is the day's plan row
 // and `planEntry` the trade's plan journal entry, both null when there is
-// none.
-export function gradeTradeGates(trade, bars = [], { dailyPlan = null, planEntry = null } = {}) {
+// none; `location` is levelsAtEntry's, null when it wasn't worked out (the
+// gate is then unknown).
+export function gradeTradeGates(trade, bars = [], { dailyPlan = null, planEntry = null, location = null } = {}) {
   const recorded = {
     assetClass: trade.assetClass,
     openedAt: trade.openedAt,
@@ -79,21 +105,14 @@ export function gradeTradeGates(trade, bars = [], { dailyPlan = null, planEntry 
   // of a 5m candle, and grading the candle findEntry picks would pass by
   // definition, since finding it requires the overlap this gate asks about.
   // Section 8 says only "5m entry candle". **(confirm)**
-  const i5 = bars5.length - 1;
-  // The dealing range comes from the 5m swings, the timeframe the entry was
-  // taken on (section 1). setups.md doesn't say which one mid-range is read
-  // from. **(confirm)**
-  const range = i5 < 0 ? null : dealingRange(swings(bars5, i5));
-
   return gradeGates({
     ...recorded,
     // The side the trade bets on the underlying, so a bought put reads short.
     direction: tradeBias(trade),
-    entryPrice: underlyingAt(bars, asOf, day),
     bars15,
     directionBarIndex: crossIndex(bars15, day),
     entryBar: bars5.at(-1) ?? null,
     entryPrevBar: bars5.at(-2) ?? null,
-    dealingRange: range,
+    location,
   });
 }

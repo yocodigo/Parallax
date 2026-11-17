@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { gradeTradeGates } from '../tradeGates';
+import { levelMap } from '../levels';
+import { levelLocation } from '../location';
+import { levelRoom } from '../room';
+import { gradeTradeGates, levelsAtEntry } from '../tradeGates';
 
 const MINUTE = 60_000;
 // 09:30 New York, where the session's clock-aligned 5m and 15m bars start.
@@ -96,11 +99,16 @@ describe('gradeTradeGates', () => {
       window: 'unknown',
       direction: 'met',
       entry: 'met',
-      location: 'met',
+      location: 'unknown',
       target: 'met',
       state: 'met',
       stop: 'met',
     });
+  });
+
+  it("takes Location OK from the level location it's given", () => {
+    expect(gradeTradeGates(trade(), BARS, { ...records, location: { status: 'met' } }).location).toBe('met');
+    expect(gradeTradeGates(trade(), BARS, { ...records, location: { status: 'missed' } }).location).toBe('missed');
   });
 
   it('reads the direction from the underlying, not the contract', () => {
@@ -124,20 +132,11 @@ describe('gradeTradeGates', () => {
     });
   });
 
-  it('reads the location from the underlying at the fill, not the trade price', () => {
-    // 10:37: SPY last closed at 10.20, the middle of the 9.5-10.8 range,
-    // while the trade itself was filled at 12.
-    expect(gradeTradeGates(trade({ openedAt: at('10:37') }), BARS, records).location).toBe('missed');
-  });
-
-  it("can't judge the entry or location on the session's first 5m bar", () => {
+  it("can't judge the entry on the session's first 5m bar", () => {
     // 09:37, with only the 09:30 bar closed. The bar before it and the last
     // swings on the series are the previous afternoon's, seventeen hours
     // back; reaching across that gap would grade this trade on them.
-    expect(gradeTradeGates(trade({ openedAt: at('09:37') }), BARS, records)).toMatchObject({
-      entry: 'unknown',
-      location: 'unknown',
-    });
+    expect(gradeTradeGates(trade({ openedAt: at('09:37') }), BARS, records)).toMatchObject({ entry: 'unknown' });
   });
 
   it("can't judge the bar gates before the session has a closed 5m bar", () => {
@@ -145,7 +144,6 @@ describe('gradeTradeGates', () => {
     // hours earlier, and its swings are a different day's structure.
     expect(gradeTradeGates(trade({ openedAt: at('09:33') }), BARS, records)).toMatchObject({
       entry: 'unknown',
-      location: 'unknown',
       direction: 'unknown',
       window: 'unknown',
     });
@@ -205,5 +203,30 @@ describe('gradeTradeGates', () => {
         planEntry: { emotion: 'fomo', mistakes: [] },
       })
     ).toMatchObject({ state: 'missed', stop: 'unknown' });
+  });
+});
+
+describe('levelsAtEntry', () => {
+  const dailyBars = [{ t: '2026-10-26T04:00:00Z', o: 10, h: 11.8, l: 9.2, c: 10, v: 1000 }];
+
+  it("judges the location on the level map at the fill and measures room from the underlying's price", () => {
+    // At 10:47 SPY last closed at 11.50 (the 10:46 minute).
+    const stock = trade({ initialStop: 11 });
+    const { location, room } = levelsAtEntry(stock, BARS, { dailyBars });
+
+    const levels = levelMap({ bars: BARS, dailyBars, asOf: at('10:47') });
+    expect(location).toEqual(levelLocation({ levels, bars: BARS, asOf: at('10:47'), bias: 'long' }));
+    expect(room).toEqual(levelRoom({ levels, price: 11.5, bias: 'long', invalidation: 11 }));
+    expect(room.risk).toBeCloseTo(0.5, 9);
+  });
+
+  it("measures an option's room against its stop on the underlying, never its premium stop", () => {
+    const call = trade({ assetClass: 'option', optionType: 'call', quantity: 1, initialStop: 0.5, underlyingStop: 11.2 });
+    expect(levelsAtEntry(call, BARS, { dailyBars }).room.risk).toBeCloseTo(0.3, 9);
+    expect(levelsAtEntry({ ...call, underlyingStop: null }, BARS, { dailyBars }).room.risk).toBeNull();
+  });
+
+  it('is null for a plan never entered', () => {
+    expect(levelsAtEntry(trade({ openedAt: null }), BARS, { dailyBars })).toBeNull();
   });
 });

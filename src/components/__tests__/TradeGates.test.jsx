@@ -88,4 +88,42 @@ describe('TradeGates', () => {
       await screen.findByText('Gates are only available for stocks and options so far')
     ).toBeInTheDocument();
   });
+
+  const GATES = { window: 'unknown', direction: 'met', entry: 'met', location: 'met', target: 'met', state: 'met', stop: 'met' };
+
+  it('names the level Location was met at, and the room to the next level in points and R', async () => {
+    serveGates({
+      gates: GATES,
+      location: { status: 'met', level: { kind: 'prior_day_high', price: 681.5, tier: 1 }, event: 'accepted', at: '2026-10-27T14:12:00.000Z' },
+      room: { level: { kind: 'round', price: 685, tier: 3 }, points: 2.25, risk: 0.75, ratio: 3 },
+    });
+    renderGates();
+
+    expect(await screen.findByText('At the prior day high 681.50, broken and accepted at 10:12 AM')).toBeInTheDocument();
+    expect(screen.getByText('Room: 2.25 pts to the round number 685.00, 3.0 times the 0.75 pts to the stop')).toBeInTheDocument();
+  });
+
+  it('says when the entry was floating and when room has no stop or no level to measure', async () => {
+    serveGates({
+      gates: { ...GATES, location: 'missed' },
+      location: { status: 'missed', level: null, event: null, at: null },
+      room: { level: { kind: 'equal_highs_5m', price: 682, tier: 1 }, points: 1.5, risk: null, ratio: null },
+    });
+    renderGates();
+
+    expect(await screen.findByText('Floating: no tier 1 or 2 level nearby had been broken or swept its way')).toBeInTheDocument();
+    expect(screen.getByText('Room: 1.50 pts to the 5m equal highs 682.00 (no stop to compare it with)')).toBeInTheDocument();
+  });
+
+  it('says when no untouched level lies ahead', async () => {
+    serveGates({
+      gates: GATES,
+      location: { status: 'unknown', level: null, event: null, at: null },
+      room: { level: null, points: null, risk: 0.5, ratio: null },
+    });
+    renderGates();
+
+    expect(await screen.findByText('Room: no untouched level ahead')).toBeInTheDocument();
+    expect(screen.queryByText(/Floating/)).not.toBeInTheDocument();
+  });
 });
