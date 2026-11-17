@@ -16,16 +16,24 @@
 // - formedAt is when a level found in the bars came to exist (the close of
 //   the last bar that defined it), or null for one known before the open
 //   (daily bars, the plan, round numbers).
+// A four-touch line is sloped: its `price` is its value at the last closed
+// minute bar, and it carries `slope`, in dollars per minute bar (the 5m line's
+// slope over five). That is per clock minute only when no minute was skipped,
+// and the IEX feed skips quiet ones, so a line is followed by counting minute
+// bars, never clock time. Every other level is flat and has none.
 //
 // No lookahead: only bars that had closed by `asOf` are read, so a level
 // found in the bars only appears after its last defining bar has closed.
 
 import { minutesSinceOpen } from '@/lib/context/indicators';
 import { atLeast, atMost } from './compare';
+import { fourTouchBreaks } from './fourTouch';
+import { pools } from './pools';
 import { resample } from './resample';
 import { nyDay, sessionBars, sessionOf, tradingDay } from './session';
 import { OPENING_RANGE_MIN, ROUND_STEP, SWING_K } from './settings';
 import { dealingRange, swings } from './swings';
+import { lineAt } from './trendline';
 
 const MINUTE = 60_000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -141,6 +149,84 @@ function roundLevels(price) {
   return prices.map((p) => ({ kind: 'round', price: p, tier: 3 }));
 }
 
+// The bars on a `minutes` timeframe, from the closed minute bars.
+const onFrame = (closed, minutes, asOf) => (minutes === 1 ? closed : resample(closed, minutes, { asOf }));
+
+// [rules-v3 3, pools.js] Equal highs and lows: tier 1 on the 5m and 15m, tier
+// 3 on the 1m. The 5m and 15m look back over the previous session too, since
+// yesterday's equal highs are liquidity this morning; the 1m stays within the
+// day. The level is the pool's outermost price, where its stops rest, and it
+// forms when its last swing is confirmed (SWING_K bars later).
+const POOL_FRAMES = [
+  { minutes: 1, tier: 3, sessions: 1 },
+  { minutes: 5, tier: 1, sessions: 2 },
+  { minutes: 15, tier: 1, sessions: 2 },
+];
+
+// The index of the first bar of the `sessions` trading days ending with the
+// last bar's.
+function sessionsStart(bars, sessions) {
+  let start = bars.length;
+  let seen = 0;
+  for (let k = bars.length - 1; k >= 0; k--) {
+    if (k === bars.length - 1 || tradingDay(bars[k]) !== tradingDay(bars[k + 1])) seen += 1;
+    if (seen > sessions) break;
+    start = k;
+  }
+  return start;
+}
+
+function poolLevels(closed, asOf) {
+  return POOL_FRAMES.flatMap(({ minutes, tier, sessions }) => {
+    const bars = onFrame(closed, minutes, asOf);
+    if (bars.length === 0) return [];
+    const from = sessionsStart(bars, sessions);
+    // Swings from the whole history keep the ATR's warm-up, then the window
+    // keeps the ones in it.
+    const swingList = swings(bars, bars.length - 1).filter((s) => s.index >= from);
+    return pools(bars, swingList).map((pool) => {
+      const support = pool.side === 'support';
+      return {
+        kind: `${support ? 'equal_lows' : 'equal_highs'}_${minutes}m`,
+        price: support ? pool.low : pool.high,
+        tier,
+        formed: closeOf(bars[pool.touches.at(-1) + SWING_K], minutes),
+      };
+    });
+  });
+}
+
+// [rules-v3 3, fourTouch.js] The day's broken four-touch lines on the 1m and
+// 5m, tier 2, found on the day's bars alone as the entry review finds them
+// (fourTouchAt). A line that has not broken yet isn't a level here. It counts
+// as formed at the close of its 4th approach's first bar: by then its second
+// swing point is confirmed (fourTouchBreaks makes sure of it), which the third
+// touch alone doesn't promise. A broken line was met by that approach, so it is
+// always touched.
+function fourTouchLevels(closed, asOf, day) {
+  return [1, 5].flatMap((minutes) => {
+    const bars = sessionOf(onFrame(closed, minutes, asOf), day);
+    const i = bars.length - 1;
+    if (i < 0) return [];
+    // Minute bars from the start of the last closed bar on this timeframe to
+    // the last closed minute: none past it on the 1m, and up to the bars of
+    // the 5m bar still forming on the 5m.
+    const start = Date.parse(bars[i].t);
+    const after = closed.filter((bar) => Date.parse(bar.t) > start).length;
+    return fourTouchBreaks(bars, i).map(({ line, touches }) => {
+      const slope = line.slope / minutes;
+      return {
+        kind: `four_touch_${minutes}m`,
+        price: lineAt(line, i) + slope * after,
+        tier: 2,
+        slope,
+        formed: closeOf(bars[touches[3]], minutes),
+        touched: true,
+      };
+    });
+  });
+}
+
 const reaches = (bar, price) => atMost(bar.l, price) && atLeast(bar.h, price);
 
 // The level map of a symbol as of `asOf` (a Date), from its regular-session
@@ -159,15 +245,19 @@ export function levelMap({ bars = [], dailyBars = [], dailyPlan = null, asOf }) 
     ...sessionLevels(today, asOf),
     rangeLevel(closed, asOf, day),
     ...roundLevels(price),
+    ...poolLevels(closed, asOf),
+    ...fourTouchLevels(closed, asOf, day),
   ].filter(Boolean);
 
   return found
-    .map(({ formed, ...level }) => ({
+    .map(({ formed, touched, ...level }) => ({
       ...level,
       side: atMost(level.price, price) ? 'support' : 'resistance',
       // Bars that started once the level existed; all of the day's for one
-      // known before the open.
-      touchedToday: today.some((bar) => (formed === undefined || Date.parse(bar.t) >= formed) && reaches(bar, level.price)),
+      // known before the open. A flat level only: a sloped line says itself.
+      touchedToday:
+        touched ??
+        today.some((bar) => (formed === undefined || Date.parse(bar.t) >= formed) && reaches(bar, level.price)),
       formedAt: formed === undefined ? null : new Date(formed).toISOString(),
     }))
     .sort((a, b) => a.price - b.price);
