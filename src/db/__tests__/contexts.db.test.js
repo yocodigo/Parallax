@@ -1,5 +1,12 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { addContextSetups, getTradeContext, listContextDeltas, listContextGrades, listContextsWithoutSetups, saveTradeContext } from '../contexts';
+import {
+  addContextSetupsAndLevels,
+  getTradeContext,
+  listContextDeltas,
+  listContextGrades,
+  listContextsWithoutLevels,
+  saveTradeContext,
+} from '../contexts';
 import { trades } from '../schema';
 import { createTestDb, resetDb } from '../testing';
 
@@ -43,9 +50,10 @@ describe('trade contexts', () => {
   });
 });
 
-describe('adding setups to older snapshots', () => {
+describe('bringing older snapshots up to version 3', () => {
   const openedAt = new Date('2026-10-27T13:56:00Z');
-  const setups = { fourTouch: { kind: '4xBD', grade: { grade: 'A' } } };
+  const setups = { fourTouch: { kind: '4xBD', grade: { grade: 'A' } }, detected: [] };
+  const levels = [{ kind: 'prior_day_high', price: 580, tier: 1 }];
 
   async function insertOpenedTrade(values = {}) {
     const [trade] = await db
@@ -55,16 +63,16 @@ describe('adding setups to older snapshots', () => {
     return trade;
   }
 
-  it('lists the opened trades whose snapshot has no setups, oldest first', async () => {
+  it('lists the opened trades whose snapshot has no levels yet, version 1 or 2, oldest first', async () => {
     const later = await insertOpenedTrade({ symbol: 'QQQ', openedAt: new Date('2026-10-28T14:00:00Z') });
     const earlier = await insertOpenedTrade();
     const done = await insertOpenedTrade();
     const noSnapshot = await insertOpenedTrade();
     await saveTradeContext(db, later.id, context);
-    await saveTradeContext(db, earlier.id, context);
-    await saveTradeContext(db, done.id, { ...context, version: 2, setups: null });
+    await saveTradeContext(db, earlier.id, { ...context, version: 2, setups: null });
+    await saveTradeContext(db, done.id, { ...context, version: 3, setups: null, levels: null });
 
-    const listed = await listContextsWithoutSetups(db);
+    const listed = await listContextsWithoutLevels(db);
 
     expect(listed.map((trade) => trade.id)).toEqual([earlier.id, later.id]);
     expect(listed.map((trade) => trade.id)).not.toContain(noSnapshot.id);
@@ -72,22 +80,22 @@ describe('adding setups to older snapshots', () => {
     expect(listed[1].openedAt).toEqual(new Date('2026-10-28T14:00:00Z'));
   });
 
-  it('adds the setups and marks the snapshot version 2, keeping the rest', async () => {
+  it('sets the setups and levels and marks the snapshot version 3, keeping the rest', async () => {
     const trade = await insertOpenedTrade();
-    await saveTradeContext(db, trade.id, context);
+    await saveTradeContext(db, trade.id, { ...context, version: 2, setups: { fourTouch: null } });
 
-    await addContextSetups(db, trade.id, setups);
+    await addContextSetupsAndLevels(db, trade.id, { setups, levels });
 
-    expect(await getTradeContext(db, trade.id)).toEqual({ ...context, version: 2, setups });
+    expect(await getTradeContext(db, trade.id)).toEqual({ ...context, version: 3, setups, levels });
   });
 
-  it('never replaces setups a snapshot already has', async () => {
+  it('never replaces a snapshot that already has levels', async () => {
     const trade = await insertOpenedTrade();
-    await saveTradeContext(db, trade.id, { ...context, version: 2, setups: null });
+    await saveTradeContext(db, trade.id, { ...context, version: 3, setups: null, levels: null });
 
-    await addContextSetups(db, trade.id, setups);
+    await addContextSetupsAndLevels(db, trade.id, { setups, levels });
 
-    expect((await getTradeContext(db, trade.id)).setups).toBeNull();
+    expect(await getTradeContext(db, trade.id)).toMatchObject({ setups: null, levels: null });
   });
 });
 

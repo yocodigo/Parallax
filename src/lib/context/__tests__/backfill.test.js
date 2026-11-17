@@ -14,10 +14,10 @@ describe('backfillFetches', () => {
       trade('e', 'SPY', '2026-10-28T14:00:00Z'),
     ]);
 
-    expect(fetches.map((f) => [f.symbol, f.end.toISOString(), f.trades.map((t) => t.id)])).toEqual([
-      ['SPY', '2026-10-28T01:00:00.000Z', ['b', 'a', 'd']],
-      ['QQQ', '2026-10-27T14:30:00.000Z', ['c']],
-      ['SPY', '2026-10-28T14:00:00.000Z', ['e']],
+    expect(fetches.map((f) => [f.symbol, f.day, f.end.toISOString(), f.trades.map((t) => t.id)])).toEqual([
+      ['SPY', '2026-10-27', '2026-10-28T01:00:00.000Z', ['b', 'a', 'd']],
+      ['QQQ', '2026-10-27', '2026-10-27T14:30:00.000Z', ['c']],
+      ['SPY', '2026-10-28', '2026-10-28T14:00:00.000Z', ['e']],
     ]);
   });
 

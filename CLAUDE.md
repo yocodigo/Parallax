@@ -17,9 +17,10 @@ Vitest, JavaScript (not TypeScript).
 - `npm run perf:months -- --mode=live --year=2026 --asset=option`: print the monthly performance table
   and year-to-date totals from `DATABASE_URL` (New York closing months; flags optional, live and the
   current year by default), to reconcile imports against the spreadsheet. Read-only.
-- `npm run db:backfill-setups`: add `setups` (the four-touch grade) to context snapshots saved before
-  version 2, in `DATABASE_URL`, from Alpaca's minute bars (one fetch per symbol and New York day).
-  Safe to rerun: it only touches snapshots without `setups`; a failed fetch is retried next run.
+- `npm run db:backfill-setups`: bring context snapshots saved before version 3 up to it in `DATABASE_URL`:
+  `setups` (the four-touch grade and the detected setups) and `levels`, from Alpaca's minute and daily bars (one
+  fetch of each per symbol and New York day) and the day's plan as it is now. Safe to rerun: it only touches
+  snapshots without `levels`; a failed fetch is retried next run.
 - `npm run db:backfill-underlying`: record `underlying_entry` (and a derived `underlying_stop` where the band-cross
   setup fired) for entered options without one, in `DATABASE_URL`, from Alpaca's minute bars (one fetch per symbol and
   New York day). Safe to rerun: it only touches options with no underlying entry, and never a plan's stop.

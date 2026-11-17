@@ -12,10 +12,10 @@ export async function getTradeContext(db, tradeId) {
   return row?.context ?? null;
 }
 
-// The trades whose snapshot predates `setups` (version 1), oldest entry
-// first, with what working them out needs. `?` is Postgres's jsonb "has this
-// key" operator, not a query placeholder.
-export async function listContextsWithoutSetups(db) {
+// The trades whose snapshot predates `levels` (versions 1 and 2), oldest
+// entry first, with what working them out needs. `?` is Postgres's jsonb "has
+// this key" operator, not a query placeholder.
+export async function listContextsWithoutLevels(db) {
   return db
     .select({
       id: trades.id,
@@ -27,21 +27,23 @@ export async function listContextsWithoutSetups(db) {
     })
     .from(tradeContexts)
     .innerJoin(trades, eq(trades.id, tradeContexts.tradeId))
-    .where(sql`not (${tradeContexts.context} ? 'setups')`)
+    .where(sql`not (${tradeContexts.context} ? 'levels')`)
     .orderBy(asc(trades.openedAt));
 }
 
-// Adds `setups` to a version 1 snapshot, which makes it version 2. The rest is
-// still as captured at entry: `||` merges the two objects, the right side's
-// keys winning. A snapshot that already has setups is left alone, checked in
-// the update itself so a capture saved at the same moment is never replaced.
-export async function addContextSetups(db, tradeId, setups) {
+// Sets `setups` and `levels` on a snapshot from before version 3, which makes
+// it version 3; version 2's setups are replaced, since version 3 adds the
+// detected ones. The rest is still as captured at entry: `||` merges the two
+// objects, the right side's keys winning. A snapshot that already has levels
+// is left alone, checked in the update itself so a capture saved at the same
+// moment is never replaced.
+export async function addContextSetupsAndLevels(db, tradeId, { setups, levels }) {
   await db
     .update(tradeContexts)
     .set({
-      context: sql`${tradeContexts.context} || jsonb_build_object('version', 2, 'setups', ${JSON.stringify(setups)}::jsonb)`,
+      context: sql`${tradeContexts.context} || jsonb_build_object('version', 3, 'setups', ${JSON.stringify(setups)}::jsonb, 'levels', ${JSON.stringify(levels)}::jsonb)`,
     })
-    .where(and(eq(tradeContexts.tradeId, tradeId), sql`not (${tradeContexts.context} ? 'setups')`));
+    .where(and(eq(tradeContexts.tradeId, tradeId), sql`not (${tradeContexts.context} ? 'levels')`));
 }
 
 // The four-touch grade each of these trades went with at entry, as a Map by
