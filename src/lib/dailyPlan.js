@@ -39,6 +39,35 @@ function checkWholeFibs(plan, ctx) {
   }
 }
 
+// [rules-v3 3] The overnight sessions' highs and lows, typed in from Joel's
+// chart indicator and never worked out from bars (Alpaca's stock bars miss
+// the Asia session). Each is optional, and a blank one is absent, never zero.
+export const OVERNIGHT_SESSIONS = [
+  { prefix: 'asia', label: 'Asia' },
+  { prefix: 'london', label: 'London' },
+  { prefix: 'premarket', label: 'Premarket' },
+];
+
+const overnightFields = {
+  asiaHigh: price.optional(),
+  asiaLow: price.optional(),
+  londonHigh: price.optional(),
+  londonLow: price.optional(),
+  premarketHigh: price.optional(),
+  premarketLow: price.optional(),
+};
+
+// A session's high below its low is a swapped or misheard number.
+function checkOvernightOrder(plan, ctx) {
+  for (const { prefix, label } of OVERNIGHT_SESSIONS) {
+    const high = plan[`${prefix}High`];
+    const low = plan[`${prefix}Low`];
+    if (high !== undefined && low !== undefined && high < low) {
+      ctx.addIssue({ code: 'custom', path: [`${prefix}High`], message: `The ${label} high must be at or above its low` });
+    }
+  }
+}
+
 // [3.1] The day's fib extensions, which Joel anchors by hand from the 30-60 minutes
 // around the open. The working (lower-timeframe) fib gives T1 and T2; the
 // higher-timeframe one is the next target if price pivots against it.
@@ -50,6 +79,7 @@ const fields = z.object({
   htfDirection: fibDirection.optional(),
   htfFib50: price.optional(),
   htfFib100: price.optional(),
+  ...overnightFields,
   notes: z.string().optional(),
 });
 
@@ -66,7 +96,8 @@ const schema = fields
     path: ['htfFib100'],
     message: ORDER_MESSAGE,
   })
-  .superRefine(checkWholeFibs);
+  .superRefine(checkWholeFibs)
+  .superRefine(checkOvernightOrder);
 
 export function parseDailyPlan(input) {
   return schema.safeParse(input);

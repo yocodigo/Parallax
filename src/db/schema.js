@@ -329,6 +329,14 @@ export const dailyPlans = pgTable(
     htfDirection: fibDirection('htf_direction'),
     htfFib50: price('htf_fib_50'),
     htfFib100: price('htf_fib_100'),
+    // [rules-v3 3] The overnight sessions' highs and lows, recorded from the
+    // chart in the morning; null when left blank.
+    asiaHigh: price('asia_high'),
+    asiaLow: price('asia_low'),
+    londonHigh: price('london_high'),
+    londonLow: price('london_low'),
+    premarketHigh: price('premarket_high'),
+    premarketLow: price('premarket_low'),
     notes: text('notes'),
     ...timestamps,
   },
@@ -343,6 +351,9 @@ export const dailyPlans = pgTable(
       'daily_plans_htf_fib_complete',
       sql`num_nulls(${t.htfDirection}, ${t.htfFib50}, ${t.htfFib100}) IN (0, 3)`
     ),
+    check('daily_plans_asia_order', sql`${t.asiaHigh} >= ${t.asiaLow}`),
+    check('daily_plans_london_order', sql`${t.londonHigh} >= ${t.londonLow}`),
+    check('daily_plans_premarket_order', sql`${t.premarketHigh} >= ${t.premarketLow}`),
   ]
 );
 

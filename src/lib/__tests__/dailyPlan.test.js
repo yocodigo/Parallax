@@ -72,6 +72,30 @@ describe('parseDailyPlan', () => {
     ).toContain('htfFib100');
   });
 
+  it('accepts the overnight highs and lows, each on its own', () => {
+    const result = parseDailyPlan({
+      tradeDate: '2026-10-28',
+      asiaHigh: 683.1,
+      asiaLow: 679.4,
+      londonHigh: 684,
+      premarketLow: 680.25,
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.data).toMatchObject({ asiaHigh: 683.1, asiaLow: 679.4, londonHigh: 684, premarketLow: 680.25 });
+    expect(result.data.londonLow).toBeUndefined();
+  });
+
+  it('rejects a session high below its low', () => {
+    const result = parseDailyPlan({ tradeDate: '2026-10-28', londonHigh: 679, londonLow: 680 });
+
+    expect(errorPaths(result)).toEqual(['londonHigh']);
+  });
+
+  it('rejects overnight levels that are not positive prices', () => {
+    expect(errorPaths(parseDailyPlan({ tradeDate: '2026-10-28', premarketHigh: 0 }))).toContain('premarketHigh');
+  });
+
   it('rejects levels that are not positive prices', () => {
     expect(errorPaths(parseDailyPlan({ ...onePlan, ltfFib50: 0 }))).toContain('ltfFib50');
   });

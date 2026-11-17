@@ -27,8 +27,10 @@ export const GET = withErrorLogging('/api/daily-plan', async (request) => {
 });
 
 // Body: tradeDate and, all optional, the working fib (ltfDirection, ltfFib50,
-// ltfFib100), the second fib (htfDirection/htfFib50/htfFib100), and notes; a
-// fib is given whole or not at all. Replaces the day's plan. Returns { plan }.
+// ltfFib100), the second fib (htfDirection/htfFib50/htfFib100), the overnight
+// highs and lows (asiaHigh, asiaLow, londonHigh, londonLow, premarketHigh,
+// premarketLow), and notes; a fib is given whole or not at all. Replaces the
+// day's plan. Returns { plan }.
 export const PUT = withErrorLogging('/api/daily-plan', async (request) => {
   const body = await request.json().catch(() => null);
   const parsed = parseDailyPlan(body);

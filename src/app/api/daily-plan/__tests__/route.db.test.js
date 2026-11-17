@@ -44,7 +44,19 @@ describe('/api/daily-plan', () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
-      plan: { ...plan, htfDirection: null, htfFib50: null, htfFib100: null, notes: null },
+      plan: {
+        ...plan,
+        htfDirection: null,
+        htfFib50: null,
+        htfFib100: null,
+        asiaHigh: null,
+        asiaLow: null,
+        londonHigh: null,
+        londonLow: null,
+        premarketHigh: null,
+        premarketLow: null,
+        notes: null,
+      },
     });
 
     expect((await (await get('2026-10-28')).json()).plan).toMatchObject({

@@ -28,8 +28,10 @@ describe('saveDailyPlan', () => {
   it("saves the day's fibs and reads them back by date", async () => {
     const saved = await saveDailyPlan(db, twoPlan);
 
-    expect(saved).toEqual(twoPlan);
-    expect(await getDailyPlan(db, '2026-10-28')).toEqual(twoPlan);
+    // The overnight levels, left blank, come back as null.
+    const read = { ...twoPlan, asiaHigh: null, asiaLow: null, londonHigh: null, londonLow: null, premarketHigh: null, premarketLow: null };
+    expect(saved).toEqual(read);
+    expect(await getDailyPlan(db, '2026-10-28')).toEqual(read);
   });
 
   it('leaves the second fib and the notes empty when they are not given', async () => {
@@ -50,6 +52,20 @@ describe('saveDailyPlan', () => {
     const saved = await saveDailyPlan(db, { tradeDate: '2026-10-28' });
 
     expect(saved).toMatchObject({ ltfDirection: null, ltfFib50: null, ltfFib100: null });
+  });
+
+  it('saves the overnight highs and lows, a blank one read back as null', async () => {
+    const overnight = { asiaHigh: 683.1, asiaLow: 679.4, londonHigh: 684, londonLow: 680.5, premarketHigh: 683.75 };
+
+    const saved = await saveDailyPlan(db, { ...onePlan, ...overnight });
+
+    expect(saved).toMatchObject({ ...overnight, premarketLow: null });
+    expect(await getDailyPlan(db, '2026-10-28')).toMatchObject({ ...overnight, premarketLow: null });
+  });
+
+  it.each(['asia', 'london', 'premarket'])('refuses a %s high below its low', async (session) => {
+    const plan = { tradeDate: '2026-10-28', [`${session}High`]: 679, [`${session}Low`]: 680 };
+    await expect(saveDailyPlan(db, plan)).rejects.toThrow();
   });
 
   it('refuses half a working fib', async () => {

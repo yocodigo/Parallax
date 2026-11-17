@@ -12,6 +12,12 @@ const pickPlan = (row) => ({
   htfDirection: row.htfDirection ?? null,
   htfFib50: row.htfFib50 ?? null,
   htfFib100: row.htfFib100 ?? null,
+  asiaHigh: row.asiaHigh ?? null,
+  asiaLow: row.asiaLow ?? null,
+  londonHigh: row.londonHigh ?? null,
+  londonLow: row.londonLow ?? null,
+  premarketHigh: row.premarketHigh ?? null,
+  premarketLow: row.premarketLow ?? null,
   notes: row.notes ?? null,
 });
 
