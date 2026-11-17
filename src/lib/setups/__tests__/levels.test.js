@@ -262,7 +262,7 @@ describe('levelMap pools and four-touch lines', () => {
   // The four-touch example tilted up 0.2 a bar, so its line slopes.
   const tilted = breakout.map((b, k) => ({ o: b.o + 0.2 * k, h: b.h + 0.2 * k, l: b.l + 0.2 * k, c: b.c + 0.2 * k }));
 
-  it('counts a broken sloped line as touched, and formed by its 4th approach', () => {
+  it('counts a broken sloped line as touched, and formed from its 4th approach', () => {
     // Ten more bars falling away after the break.
     const tail = Array.from({ length: 10 }, (_, k) => {
       const o = 280 - 2 * k;
@@ -274,7 +274,7 @@ describe('levelMap pools and four-touch lines', () => {
 
     expect(find(levelMap({ bars: timed, asOf }), 'four_touch_1m')).toMatchObject({
       touchedToday: true,
-      formedAt: new Date(Date.parse(timed[hit.touches[3]].t) + MINUTE).toISOString(),
+      formedAt: timed[hit.touches[3]].t,
     });
   });
 

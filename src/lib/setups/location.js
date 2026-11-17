@@ -23,8 +23,9 @@ const closesBelow = (bars, level, k) => !atLeast(bars[k].c, valueAt(bars, level,
 // Bar `k` traded through the level and closed back on the side the bar
 // before closed on: a sweep of a level below (support, for a long) or above
 // (resistance, for a short). A bar that crosses from one side and closes on
-// the other is a break, not a sweep. A bar that does both, closing on the
-// level itself, says neither.
+// the other is a break, not a sweep. A close on the level itself counts as
+// back on either side, so such a bar sweeps toward whichever side the bar
+// before closed on, and says nothing when that bar closed on the level too.
 function sweepAt(bars, level, k) {
   if (k < 1) return null;
   const value = valueAt(bars, level, k);

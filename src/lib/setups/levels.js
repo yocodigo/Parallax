@@ -199,10 +199,11 @@ function poolLevels(closed, asOf) {
 // [rules-v3 3, fourTouch.js] The day's broken four-touch lines on the 1m and
 // 5m, tier 2, found on the day's bars alone as the entry review finds them
 // (fourTouchAt). A line that has not broken yet isn't a level here. It counts
-// as formed at the close of its 4th approach's first bar: by then its second
-// swing point is confirmed (fourTouchBreaks makes sure of it), which the third
-// touch alone doesn't promise. A broken line was met by that approach, so it is
-// always touched.
+// as formed from the start of its 4th approach's first bar: its second swing
+// point is confirmed by that bar's close (fourTouchBreaks makes sure of it),
+// which the third touch alone doesn't promise, and that bar can be the break
+// itself, which the location gate has to see. A broken line was met by that
+// approach, so it is always touched.
 function fourTouchLevels(closed, asOf, day) {
   return [1, 5].flatMap((minutes) => {
     const bars = sessionOf(onFrame(closed, minutes, asOf), day);
@@ -220,7 +221,7 @@ function fourTouchLevels(closed, asOf, day) {
         price: lineAt(line, i) + slope * after,
         tier: 2,
         slope,
-        formed: closeOf(bars[touches[3]], minutes),
+        formed: Date.parse(bars[touches[3]].t),
         touched: true,
       };
     });

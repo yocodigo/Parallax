@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { levelMap } from '../levels';
 import { levelLocation } from '../location';
+import { breakout, W } from './fixtures/fourTouch';
 
 // Tuesday 2026-10-27, on Eastern Daylight Time.
 const DAY = '2026-10-27';
@@ -97,6 +98,94 @@ describe('levelLocation', () => {
       level: { kind: 'opening_range_high', tier: 2 },
     });
     expect(location({ bars: retest(100), asOf: at('09:53'), bias: 'long' }).status).toBe('missed');
+  });
+
+  // A tier 1 level at 101 with no volume rule, built by hand.
+  const at101 = (formedAt = null) => ({ kind: 'prior_day_high', price: 101, tier: 1, touchedToday: true, formedAt });
+
+  it('ignores events before the level formed', () => {
+    const asOf = at('09:53');
+    expect(levelLocation({ levels: [at101()], bars: BREAK_UP, asOf, bias: 'long' }).status).toBe('met');
+    expect(levelLocation({ levels: [at101(at('09:48').toISOString())], bars: BREAK_UP, asOf, bias: 'long' }).status).toBe(
+      'missed'
+    );
+  });
+
+  it('takes back an acceptance when a close comes back inside within N_RECLAIM bars', () => {
+    // 9:45 breaks, 9:46 and 9:47 hold, and 9:48, the third bar after the
+    // break, closes back on 101. Price then sits on the level.
+    const reclaimed = [
+      ...BREAK_UP.slice(0, 18),
+      bar(18, { h: 101.3, l: 101.0, c: 101.0 }),
+      ...Array.from({ length: 4 }, (_, k) => bar(19 + k, { h: 101.0, l: 101.0, c: 101.0 })),
+    ];
+    expect(levelLocation({ levels: [at101()], bars: reclaimed, asOf: at('09:53'), bias: 'long' }).status).toBe('missed');
+  });
+
+  it('lets a later event at the level replace an earlier one', () => {
+    // Accepted above at 9:47, then broken back below at 9:48 and held there.
+    const reversed = [
+      ...BREAK_UP.slice(0, 18),
+      ...Array.from({ length: 5 }, (_, k) => bar(18 + k, { h: 101.0, l: 100.8, c: 100.9 })),
+    ];
+    const asOf = at('09:53');
+    expect(levelLocation({ levels: [at101()], bars: reversed, asOf, bias: 'long' }).status).toBe('missed');
+    expect(levelLocation({ levels: [at101()], bars: reversed, asOf, bias: 'short' })).toMatchObject({
+      status: 'met',
+      event: 'accepted',
+      at: at('09:50').toISOString(),
+    });
+  });
+
+  it("locates an entry at a four-touch line broken on its 4th approach's first bar", () => {
+    // The four-touch example without bar 7, so the break bar (on rising
+    // volume) starts the 4th approach, then a pullback to the line.
+    const MINUTE = 60_000;
+    const open = Date.parse(`${DAY}T13:30:00Z`);
+    const specs = [...breakout.slice(0, W + 7), ...breakout.slice(W + 8)];
+    const timed = specs.map((b, k) => ({ ...b, v: k === W + 7 ? 200 : 100, t: new Date(open + k * MINUTE).toISOString() }));
+    const n = timed.length;
+    const retest = [
+      { o: 281, h: 296, l: 281, c: 295.5, v: 100 },
+      { o: 295.5, h: 300.4, l: 295, c: 299.9, v: 100 },
+    ].map((b, k) => ({ ...b, t: new Date(open + (n + k) * MINUTE).toISOString() }));
+    const bars = [...timed, ...retest];
+    const asOf = new Date(open + bars.length * MINUTE);
+    const levels = levelMap({ bars, asOf });
+
+    expect(levels.map((level) => level.kind)).toContain('four_touch_1m');
+    expect(levelLocation({ levels, bars, asOf, bias: 'short' })).toMatchObject({
+      status: 'met',
+      level: { kind: 'four_touch_1m' },
+      event: 'accepted',
+    });
+  });
+
+  it("does the same for a 5m line, whose break closes on a minute inside that first bar", () => {
+    const MINUTE = 60_000;
+    const open = Date.parse(`${DAY}T13:30:00Z`);
+    // Each 5m spec as five minute bars, closing on the last; the break bar's
+    // last minute, which closes through the line, comes on rising volume.
+    const fiveMinute = (start, { o, h, l, c }, lastVolume = 100) =>
+      [
+        { o, h: o, l: o, c: o },
+        { o, h, l: o, c: o },
+        { o, h: o, l, c: o },
+        { o, h: o, l: o, c: o },
+        { o, h: Math.max(o, c), l: Math.min(o, c), c },
+      ].map((b, k) => ({ ...b, v: k === 4 ? lastVolume : 100, t: new Date(start + k * MINUTE).toISOString() }));
+    const specs = [
+      ...breakout.slice(0, W + 7),
+      ...breakout.slice(W + 8),
+      { o: 281, h: 296, l: 281, c: 295.5 },
+      { o: 295.5, h: 300.4, l: 295, c: 299.9 },
+    ];
+    const bars = specs.flatMap((spec, k) => fiveMinute(open + k * 5 * MINUTE, spec, k === W + 7 ? 200 : 100));
+    const asOf = new Date(open + specs.length * 5 * MINUTE);
+    const lines = levelMap({ bars, asOf }).filter((level) => level.kind === 'four_touch_5m');
+
+    expect(lines).toHaveLength(1);
+    expect(levelLocation({ levels: lines, bars, asOf, bias: 'short' })).toMatchObject({ status: 'met', event: 'accepted' });
   });
 
   it('follows a sloped line bar by bar', () => {
