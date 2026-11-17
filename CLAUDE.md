@@ -87,9 +87,10 @@ Vitest, JavaScript (not TypeScript).
   through `atMost`/`atLeast` (`compare.js`), which allow for floating-point error in decimal
   prices (761.40 − 761.00 isn't exactly 0.4).
 - `src/server/`: server-only fetchers that call outside services (`marketContext.js`, and
-  `minuteBars.js`, Alpaca's minute bars for the gates and the reviews; and `reviewFacts.js`, the
-  Performance Review's database reads), tested with MSW in the node environment.
-- `src/db/journal.js`, `trades.js`, `settings.js`, `strategies.js`, `contexts.js`, `screenshots.js`, `dailyPlans.js` (the day's fib extensions, which give the exit review its T1 and T2), `performanceReviews.js` (the last Performance Review of each date range), `imports.js`, and `signIn.js` (wrong passwords in `sign_in_failures`, counted per IP for the sign-in limit): repository
+  `minuteBars.js`, Alpaca's minute bars for the gates and the reviews; `dailyBars.js`, the daily bars
+  before a day for the level map; and `reviewFacts.js`, the Performance Review's database reads),
+  tested with MSW in the node environment.
+- `src/db/journal.js`, `trades.js`, `settings.js`, `strategies.js`, `contexts.js`, `screenshots.js`, `dailyPlans.js` (the day's plan: the overnight highs and lows and the fib extensions, which give the exit review its T1 and T2; every field but the date is optional, a fib whole or not at all, so the overnight levels can be saved before the fib is anchored, and a plan with no working fib counts as no plan for Target OK, the exit review, and the coach), `performanceReviews.js` (the last Performance Review of each date range), `imports.js`, and `signIn.js` (wrong passwords in `sign_in_failures`, counted per IP for the sign-in limit): repository
   functions. They take `db` as the first argument so tests can
   pass the test database.
 - `src/db/index.js`: `getDb()`, created lazily (builds need no database) and cached on `globalThis`.
@@ -226,6 +227,24 @@ Vitest, JavaScript (not TypeScript).
   leaves out and why, with the rest behind a toggle; the underlying's heat and after-the-exit run as p50/p75/p90 tables,
   R by planned and by derived stop, points a row per underlying (never pooled across symbols); and how often T1 came
   after an exit short of it. It follows the page's Mode and Year only.
+- Level map, location, and room (`rules-v3.md` sections 3 and 4). `levelMap` (`src/lib/setups/levels.js`) gives a
+  symbol's levels as of a time, `{ kind, price, tier, side, touchedToday, formedAt }`, from regular-session minute
+  bars closed by then, the daily bars before the day, and the day's plan. Tier 1: prior day and prior week highs and
+  lows, the plan's Asia, London, and premarket highs and lows (typed in, never computed), and 5m and 15m equal highs
+  and lows (`pools.js`, over today and the previous session, at the pool's outermost price). Tier 2: the opening range
+  (`OPENING_RANGE_MIN`), the session's high and low so far, and the day's broken four-touch lines on the 1m and 5m
+  (sloped: `price` at the last minute bar and `slope` per minute bar, counted in bars because the IEX feed skips
+  quiet minutes). Tier 3: the fibs, the 5m dealing range's 50%, round numbers (`ROUND_STEP`), and 1m pools. `side`
+  is against the last close; `touchedToday` counts only bars after the level formed (a broken line always is).
+  Location OK is `levelLocation` (`location.js`): met within `LEVEL_NEAR` (confirm) 1m ATRs of a tier 1 or 2 level
+  whose latest event that day was the trade's way, a break held for `N_ACC` closes with no close back within
+  `N_RECLAIM`, or a sweep closing back on the side it came from; tier 2 also needs rising volume on that bar; anything
+  else is floating. Room is `levelRoom` (`room.js`): points to the nearest untouched level ahead (any tier), and their
+  ratio to the distance back to the stop on the underlying (an option's `underlying_stop`, a stock's
+  `initial_stop`); no `ROOM_R_MIN` until enough trades have it. `levelsAtEntry` (`tradeGates.js`) runs both at the
+  fill; `GET /api/trades/[id]/gates` returns `{ gates, location, room }` and `TradeGates` shows the level and the
+  room under the badges. Computed on demand, never stored. The plan's fibs count at any time of day, as the exit
+  review's T1 does, even before they were typed in.
 - Structure R columns (`rules-v3.md` section 7), options only: `underlying_entry` (the underlying's price at the fill)
   and `underlying_stop` with `underlying_stop_source` (`plan` or `derived`) and, for a derived one,
   `underlying_stop_rule` (which rule derived it), kept consistent by check constraints. A plan sends `underlyingStop`
