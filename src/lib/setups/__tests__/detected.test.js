@@ -2,14 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { clearsWindow, detectSetups } from '../detected';
 import { BARS, MINUTE, openOf } from './fixtures/bandCross';
 import { breakout, trap } from './fixtures/fourTouch';
-import { reversalBars } from './fixtures/reversalSequence';
+import { reversalBars, TARGET_POOL } from './fixtures/reversalSequence';
 
 // New York times on 2026-10-27, the fixtures' day.
 const at = (nyTime) => new Date(`2026-10-27T${nyTime}:00-04:00`);
 
-// Plain bars as 1m bars from the open.
-const asMinutes = (ohlc) =>
-  ohlc.map((bar, k) => ({ t: new Date(openOf('2026-10-27') + k * MINUTE).toISOString(), v: 100, ...bar }));
+// Plain bars as 1m bars from the open, or one every 5 minutes, which the 5m
+// bars then match one for one.
+const asMinutes = (ohlc, every = 1) =>
+  ohlc.map((bar, k) => ({ t: new Date(openOf('2026-10-27') + k * every * MINUTE).toISOString(), v: 100, ...bar }));
 
 const trade = (overrides = {}) => ({
   assetClass: 'stock',
@@ -86,6 +87,13 @@ describe('detectSetups', () => {
       expect(of(detectSetups(trade({ direction: 'long', openedAt: at('09:56') }), bars), 'four_touch')).toEqual([]);
     });
 
+    it('finds the break on the 5m bars too', () => {
+      // 26 bars from 9:30, the last one 11:35-11:40.
+      const bars = asMinutes(breakout, 5);
+      const [found] = of(detectSetups(trade({ direction: 'short', openedAt: at('11:40') }), bars), 'four_touch', '5m');
+      expect(found).toMatchObject({ status: 'valid', grade: 'A', completedAt: bars[25].t, barsSince: 0 });
+    });
+
     it('is pending, from the break bar, before it was confirmed', () => {
       const bars = asMinutes(breakout);
       const [found] = of(detectSetups(trade({ direction: 'short', openedAt: at('09:54') }), bars), 'four_touch', '1m');
@@ -100,9 +108,18 @@ describe('detectSetups', () => {
   });
 
   describe('reversal sequence', () => {
+    // The fixture's displacement already reaches its T1 (the buyside pool's
+    // 103.0); with that pool raised to 106, T1 lies ahead.
+    const withTargetAhead = () => {
+      const bars = reversalBars();
+      bars[TARGET_POOL[0]] = { ...bars[TARGET_POOL[0]], h: 106 };
+      bars[TARGET_POOL[1]] = { ...bars[TARGET_POOL[1]], h: 106.04 };
+      return bars;
+    };
+
     it('is complete once the gap behind the displacement exists', () => {
       // The sequence completes with bar 67 (10:37), the bar that leaves the gap.
-      const bars = asMinutes(reversalBars());
+      const bars = asMinutes(withTargetAhead());
       expect(of(detectSetups(trade({ openedAt: at('10:38') }), bars), 'reversal', '1m')).toEqual([
         {
           detector: 'reversal',
@@ -117,10 +134,17 @@ describe('detectSetups', () => {
       expect(of(detectSetups(trade({ openedAt: at('10:37') }), bars), 'reversal', '1m')).toEqual([]);
     });
 
-    it('is invalidated by a close beyond the sweep extreme after it completed', () => {
-      const bars = asMinutes([...reversalBars(), { o: 103, h: 103, l: 96, c: 96.5 }]);
+    it('is invalidated by a close beyond the sweep extreme', () => {
+      const bars = asMinutes([...withTargetAhead(), { o: 103, h: 103, l: 96, c: 96.5 }]);
       const [found] = of(detectSetups(trade({ openedAt: at('10:39') }), bars), 'reversal', '1m');
       expect(found).toMatchObject({ status: 'invalidated', barsSince: 1 });
+    });
+
+    it('is spent once price reaches T1, even on the bars that complete it', () => {
+      const ahead = asMinutes([...withTargetAhead(), { o: 104, h: 106.5, l: 103.8, c: 106.2 }]);
+      expect(of(detectSetups(trade({ openedAt: at('10:39') }), ahead), 'reversal', '1m')[0].status).toBe('target_hit');
+      const fixture = asMinutes(reversalBars());
+      expect(of(detectSetups(trade({ openedAt: at('10:38') }), fixture), 'reversal', '1m')[0].status).toBe('target_hit');
     });
   });
 
@@ -160,6 +184,12 @@ describe('detectSetups', () => {
         level({ kind: 'opening_range_low', tier: 2, formedAt: bars[21].t }),
       ];
       expect(of(detectSetups(fill, bars, { levels }), 'three_gate')).toEqual([]);
+    });
+
+    it('lets the first bar after a level formed sweep it', () => {
+      // formedAt is a close: the sweep bar starts at the moment it formed.
+      const levels = [level({ kind: 'opening_range_low', tier: 2, formedAt: bars[20].t })];
+      expect(of(detectSetups(fill, bars, { levels }), 'three_gate', '1m')).toHaveLength(1);
     });
   });
 });

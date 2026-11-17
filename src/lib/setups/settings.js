@@ -163,6 +163,7 @@ export const ROUND_STEP = 5;
 export const LEVEL_NEAR = 0.5;
 
 // [rules-v3 6] A detected setup counts as the trade's own when it completed
-// within this many bars of its own timeframe before the fill (15 minutes on
-// the 5m, 3 on the 1m). Older ones are kept with their bar count, not counted.
+// within this many bars of its own timeframe before the fill. Bars, not
+// minutes: the IEX feed skips quiet minutes, so three bars can span more than
+// 3 (1m) or 15 (5m) minutes. Older ones are kept with their count, not counted.
 export const DETECTED_MAX_BARS = 3;

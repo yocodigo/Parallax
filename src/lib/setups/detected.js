@@ -60,7 +60,8 @@ function fourTouchCompletion({ breakIndex, outcome }) {
   return breakIndex;
 }
 
-// 3.2: the latest break offering a trade the trade's way.
+// 3.2: the latest break offering a trade the trade's way, by its break bar
+// (as the entry review picks it), not by when it completed.
 function fourTouchOn(candles, timeframe, bias) {
   if (candles.length === 0) return null;
   const line = fourTouchBreaks(candles, candles.length - 1)
@@ -75,7 +76,8 @@ function fourTouchOn(candles, timeframe, bias) {
 
 // 3.3: the latest sequence the trade's way. It completes on the bar after the
 // displacement (the gap needs it) or at the MSS, whichever is later, and
-// stays live until T1 or a close beyond the sweep extreme.
+// stays live until T1 or a close beyond the sweep extreme. T1 counts from the
+// displacement on: a move that already reached it left no entry to take.
 function reversalOn(candles, timeframe, bias) {
   if (candles.length === 0) return null;
   const i = candles.length - 1;
@@ -88,7 +90,7 @@ function reversalOn(candles, timeframe, bias) {
   const long = bias === 'long';
   const sweep = candles[sequence.sweepIndex];
   let status = 'complete';
-  for (let k = completion(sequence) + 1; k <= i; k++) {
+  for (let k = sequence.displacementIndex; k <= i; k++) {
     const bar = candles[k];
     if (long ? bar.c < sweep.l : bar.c > sweep.h) {
       status = 'invalidated';
@@ -103,7 +105,10 @@ function reversalOn(candles, timeframe, bias) {
 }
 
 // 3.4: the latest trigger at a flat tier 1 or 2 level, read from the bar the
-// level existed by (the session's own levels form during it).
+// level existed by (the session's own levels form during it). The levels are
+// the map as of the fill, so a level swept and then replaced before it (an
+// earlier session low) can't be seen: this misses some entries, never invents
+// one.
 function threeGateOn(candles, timeframe, bias, levels) {
   if (candles.length === 0) return null;
   const i = candles.length - 1;
@@ -111,10 +116,13 @@ function threeGateOn(candles, timeframe, bias, levels) {
   let best = null;
   for (const level of levels) {
     if (level.tier > 2 || level.slope !== undefined) continue;
-    const from = level.formedAt ? candles.findIndex((bar) => bar.t > level.formedAt) : 0;
+    // formedAt is the close of the bar that made the level, so the first bar
+    // allowed starts at that moment. Both are toISOString() stamps, which
+    // compare as strings.
+    const from = level.formedAt ? candles.findIndex((bar) => bar.t >= level.formedAt) : 0;
     if (from < 0) continue;
     const entry = threeGateEntry(candles, level.price, side, from, i);
-    if (entry && entry.direction === bias && (!best || entry.triggerIndex > best.entry.triggerIndex)) {
+    if (entry && (!best || entry.triggerIndex > best.entry.triggerIndex)) {
       best = { entry, level };
     }
   }
