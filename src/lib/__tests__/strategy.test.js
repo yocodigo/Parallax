@@ -46,6 +46,13 @@ describe('parseStrategy', () => {
     expect(parseStrategy({ ...strategy, description: undefined }).data.description).toBeNull();
     expect(parseStrategy({ ...strategy, description: '  ' }).data.description).toBeNull();
   });
+
+  it('ties a strategy to one of the detectors, or to none for a hand-written checklist', () => {
+    expect(parseStrategy({ ...strategy, detector: 'four_touch' }).data.detector).toBe('four_touch');
+    expect(parseStrategy({ ...strategy, detector: '' }).data.detector).toBeNull();
+    expect(parseStrategy(strategy).data.detector).toBeNull();
+    expect(errorsOf(parseStrategy({ ...strategy, detector: 'vibes' }))).toHaveProperty('detector');
+  });
 });
 
 describe('parseRuleChecks', () => {

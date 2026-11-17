@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { apiErrorMessage, fetchJson } from '@/lib/fetchJson';
+import { DETECTOR_LABELS, DETECTORS } from '@/lib/strategy';
 import Field, { inputClass } from './Field';
 
 const KEY = '/api/strategies';
@@ -28,6 +29,9 @@ function StrategyCard({ strategy, onEdit }) {
             {strategy.name}
           </h2>
           {strategy.description && <p className="mt-1 text-sm text-gray-600">{strategy.description}</p>}
+          {strategy.detector && (
+            <p className="mt-1 text-xs text-gray-500">Detector: {DETECTOR_LABELS[strategy.detector]}</p>
+          )}
         </div>
         <button type="button" onClick={onEdit} className={secondaryButtonClass}>
           Edit
@@ -57,6 +61,7 @@ function StrategyForm({ strategy, onDone }) {
   const { mutate } = useSWRConfig();
   const [name, setName] = useState(strategy?.name ?? '');
   const [description, setDescription] = useState(strategy?.description ?? '');
+  const [detector, setDetector] = useState(strategy?.detector ?? '');
   const [rules, setRules] = useState(
     () => strategy?.rules.map(({ id, text, kind }) => ({ id, text, kind })) ?? [{ text: '', kind: 'edge' }]
   );
@@ -84,7 +89,7 @@ function StrategyForm({ strategy, onDone }) {
       const res = await fetch(strategy ? `${KEY}/${strategy.id}` : KEY, {
         method: strategy ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, description, rules }),
+        body: JSON.stringify({ name, description, detector, rules }),
       });
       const json = await res.json().catch(() => ({}));
 
@@ -124,6 +129,21 @@ function StrategyForm({ strategy, onDone }) {
           placeholder="Optional: what the setup is and when it works"
           className={inputClass}
         />
+      </Field>
+      <Field id="strategy-detector" label="Detector" error={errorFor('detector')}>
+        <select
+          id="strategy-detector"
+          value={detector}
+          onChange={(e) => setDetector(e.target.value)}
+          className={inputClass}
+        >
+          <option value="">None (hand-written checklist)</option>
+          {DETECTORS.map((value) => (
+            <option key={value} value={value}>
+              {DETECTOR_LABELS[value]}
+            </option>
+          ))}
+        </select>
       </Field>
 
       <fieldset className="space-y-2">

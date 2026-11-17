@@ -82,6 +82,7 @@ describe('Strategies', () => {
         body: {
           name: 'Opening range breakout',
           description: '',
+          detector: '',
           rules: [
             { text: 'Break of the 5m opening range', kind: 'edge' },
             { text: 'Risk within my limit', kind: 'discipline' },
@@ -113,6 +114,22 @@ describe('Strategies', () => {
         ],
       },
     });
+  });
+
+  it('ties a strategy to a detector and names it on the card', async () => {
+    const requests = serveStrategies();
+    renderStrategies();
+
+    const card = await screen.findByRole('article', { name: '15m BB acceptance' });
+    expect(within(card).queryByText(/Detector:/)).not.toBeInTheDocument();
+    await userEvent.click(within(card).getByRole('button', { name: 'Edit' }));
+    await userEvent.selectOptions(screen.getByLabelText('Detector'), 'band_cross');
+    await userEvent.click(screen.getByRole('button', { name: 'Save strategy' }));
+
+    await waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests[0].body.detector).toBe('band_cross');
+    const saved = await screen.findByRole('article', { name: '15m BB acceptance' });
+    expect(within(saved).getByText('Detector: 15m band cross')).toBeInTheDocument();
   });
 
   it('removes a rule', async () => {

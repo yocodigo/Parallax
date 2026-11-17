@@ -41,6 +41,7 @@ export const exitReason = pgEnum('exit_reason', [
   'time_in_trade',
   'felt_heavy',
 ]);
+export const setupDetector = pgEnum('setup_detector', ['band_cross', 'four_touch', 'reversal', 'three_gate']);
 export const journalKind = pgEnum('journal_kind', ['plan', 'review', 'thesis']);
 // Edge rules describe the setup; discipline rules are about risk and process.
 export const ruleKind = pgEnum('rule_kind', ['edge', 'discipline']);
@@ -62,6 +63,8 @@ export const strategies = pgTable('strategies', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
   description: text('description'),
+  // Null for a hand-written checklist.
+  detector: setupDetector('detector'),
   ...timestamps,
 });
 

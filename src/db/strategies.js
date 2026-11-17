@@ -27,9 +27,9 @@ export async function getStrategy(db, id) {
   return row ? withRules(row, await rulesOf(db, [row.id])) : null;
 }
 
-export async function createStrategy(db, { name, description, rules }) {
+export async function createStrategy(db, { name, description, detector, rules }) {
   const id = await db.transaction(async (tx) => {
-    const [strategy] = await tx.insert(strategies).values({ name, description }).returning();
+    const [strategy] = await tx.insert(strategies).values({ name, description, detector }).returning();
     await tx
       .insert(strategyRules)
       .values(rules.map((rule, position) => ({ strategyId: strategy.id, text: rule.text, kind: rule.kind, position })));
@@ -38,15 +38,15 @@ export async function createStrategy(db, { name, description, rules }) {
   return getStrategy(db, id);
 }
 
-// Replaces the strategy's name, description, and checklist. A rule sent with
+// Replaces the strategy's name, description, detector, and checklist. A rule sent with
 // its id is edited in place, so the trades checked against it stay linked;
 // rules without one are added, and rules left out are removed. Null if there
 // is no such strategy.
-export async function updateStrategy(db, id, { name, description, rules }) {
+export async function updateStrategy(db, id, { name, description, detector, rules }) {
   const found = await db.transaction(async (tx) => {
     const [strategy] = await tx
       .update(strategies)
-      .set({ name, description })
+      .set({ name, description, detector })
       .where(eq(strategies.id, id))
       .returning();
     if (!strategy) return false;

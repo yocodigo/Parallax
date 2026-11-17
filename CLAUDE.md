@@ -279,6 +279,8 @@ Vitest, JavaScript (not TypeScript).
 - Strategies and the entry checklist: `strategies` with ordered `strategy_rules` (kind `edge` for the
   setup or `discipline` for risk and process), edited on `/strategies` (`Strategies.jsx`, `GET`/`POST
   /api/strategies`, `PUT /api/strategies/[id]`). Editing keeps the ids of rules sent back with one.
+  A strategy may name its `detector` (`band_cross`, `four_touch`, `reversal`, `three_gate`; null for a
+  hand-written checklist, rules-v3 section 6).
   A plan may name its `strategyId`; recording its entry then needs `ruleChecks` ({ ruleId: met } for
   every rule), saved in `trade_rule_checks` with a copy of the rule's text. Unmet rules get a 409
   `{ unmetRules }` (alongside any `breakers`) and `override: true` records the entry anyway.

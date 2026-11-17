@@ -32,6 +32,7 @@ describe('PUT /api/strategies/[id]', () => {
 
     const response = await put(created.id, {
       name: 'BB acceptance',
+      detector: 'four_touch',
       rules: [
         { id: rule.id, text: 'Accepted outside the 15m band', kind: 'edge' },
         { text: 'Risk within my per-trade limit', kind: 'discipline' },
@@ -41,6 +42,7 @@ describe('PUT /api/strategies/[id]', () => {
     expect(response.status).toBe(200);
     const { strategy: updated } = await response.json();
     expect(updated.name).toBe('BB acceptance');
+    expect(updated.detector).toBe('four_touch');
     expect(updated.rules.map((r) => r.text)).toEqual(['Accepted outside the 15m band', 'Risk within my per-trade limit']);
     expect(updated.rules[0].id).toBe(rule.id);
   });

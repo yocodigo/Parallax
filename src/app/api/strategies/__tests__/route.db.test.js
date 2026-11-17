@@ -27,11 +27,18 @@ describe('/api/strategies', () => {
 
     expect(response.status).toBe(201);
     const { strategy: created } = await response.json();
-    expect(created).toMatchObject({ name: '15m BB acceptance', description: null });
+    expect(created).toMatchObject({ name: '15m BB acceptance', description: null, detector: null });
     expect(created.rules).toEqual([expect.objectContaining({ text: 'Accepted above the 15m band', kind: 'edge' })]);
 
     const { strategies } = await (await GET()).json();
     expect(strategies.map((s) => s.id)).toEqual([created.id]);
+  });
+
+  it('saves the detector a strategy is tied to', async () => {
+    const response = await post({ ...strategy, detector: 'band_cross' });
+
+    expect(response.status).toBe(201);
+    expect((await response.json()).strategy.detector).toBe('band_cross');
   });
 
   it('rejects a strategy without rules', async () => {

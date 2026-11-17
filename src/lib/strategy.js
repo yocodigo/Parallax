@@ -2,6 +2,18 @@ import { z } from 'zod';
 
 export const RULE_KINDS = ['edge', 'discipline'];
 
+// The detector a strategy's trades are judged by (rules-v3 section 6): the
+// 15m band cross (3.1), the four-touch break (3.2), the reversal sequence
+// (3.3), or the three-gate entry (3.4). None is a hand-written checklist.
+export const DETECTORS = ['band_cross', 'four_touch', 'reversal', 'three_gate'];
+
+export const DETECTOR_LABELS = {
+  band_cross: '15m band cross',
+  four_touch: 'Four-touch break',
+  reversal: 'Reversal sequence',
+  three_gate: 'Three-gate entry',
+};
+
 const strategySchema = z.object({
   name: z.string().trim().min(1, 'Name the strategy').max(80),
   // Blank is the same as none.
@@ -9,6 +21,11 @@ const strategySchema = z.object({
     .string()
     .trim()
     .max(500)
+    .nullish()
+    .transform((value) => value || null),
+  // Blank is the same as none.
+  detector: z
+    .union([z.enum(DETECTORS), z.literal('')])
     .nullish()
     .transform((value) => value || null),
   // In checklist order.
@@ -24,7 +41,7 @@ const strategySchema = z.object({
     .min(1, 'Add at least one rule'),
 });
 
-// Body of creating or replacing a strategy: { name, description?, rules }.
+// Body of creating or replacing a strategy: { name, description?, detector?, rules }.
 export function parseStrategy(input) {
   return strategySchema.safeParse(input);
 }
