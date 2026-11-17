@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
+import { OVERNIGHT_SESSIONS } from '@/lib/dailyPlan';
 import { apiErrorMessage, fetchJson } from '@/lib/fetchJson';
 import Field, { inputClass } from './Field';
 
@@ -17,6 +18,9 @@ const orUndefined = (value) => (value === '' ? undefined : value);
 // The working fib's direction select has no blank option, so it always holds
 // a value; it is sent only with a level, so a plan saved before the fib is
 // anchored leaves the working fib out instead of sending half of one.
+// The overnight fields' names: asiaHigh, asiaLow, londonHigh, and so on.
+const OVERNIGHT_FIELDS = OVERNIGHT_SESSIONS.flatMap(({ prefix }) => [`${prefix}High`, `${prefix}Low`]);
+
 const ltfDirectionOf = (form) => (form.ltfFib50 === '' && form.ltfFib100 === '' ? undefined : form.ltfDirection);
 
 function formFromPlan(tradeDate, plan) {
@@ -28,6 +32,7 @@ function formFromPlan(tradeDate, plan) {
     htfDirection: plan?.htfDirection ?? '',
     htfFib50: plan?.htfFib50 != null ? String(plan.htfFib50) : '',
     htfFib100: plan?.htfFib100 != null ? String(plan.htfFib100) : '',
+    ...Object.fromEntries(OVERNIGHT_FIELDS.map((name) => [name, plan?.[name] != null ? String(plan[name]) : ''])),
     notes: plan?.notes ?? '',
   };
 }
@@ -70,6 +75,7 @@ function FibFields({ tradeDate, plan, onDateChange, onSaved }) {
       htfDirection: orUndefined(form.htfDirection),
       htfFib50: toNumber(form.htfFib50),
       htfFib100: toNumber(form.htfFib100),
+      ...Object.fromEntries(OVERNIGHT_FIELDS.map((name) => [name, toNumber(form[name])])),
       notes: orUndefined(form.notes),
     };
 
@@ -109,6 +115,23 @@ function FibFields({ tradeDate, plan, onDateChange, onSaved }) {
         />
       </Field>
 
+      <p className="text-xs text-gray-500">Overnight highs and lows (optional)</p>
+      <div className="grid grid-cols-3 gap-3">
+        {OVERNIGHT_SESSIONS.map(({ prefix, label }) => (
+          <div key={prefix} className="space-y-3">
+            {[
+              [`${prefix}High`, `${label} high`],
+              [`${prefix}Low`, `${label} low`],
+            ].map(([name, fieldLabel]) => (
+              <Field key={name} id={`daily-plan-${name}`} label={fieldLabel} error={errorFor(name)}>
+                <input {...fieldProps(name)} type="number" step="any" className={inputClass} />
+              </Field>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      <p className="text-xs text-gray-500">Working fib (once anchored after the open)</p>
       <div className="grid grid-cols-3 gap-3">
         <Field id="daily-plan-ltfDirection" label="LTF direction">
           <select {...fieldProps('ltfDirection')} className={inputClass}>
@@ -165,8 +188,9 @@ function FibFields({ tradeDate, plan, onDateChange, onSaved }) {
   );
 }
 
-// The day's fib extensions, anchored by hand around the open. Defaults to
-// today (New York), and switching the date loads that day's plan instead.
+// The day's overnight highs and lows and its fib extensions, anchored by hand
+// around the open. Defaults to today (New York), and switching the date loads
+// that day's plan instead.
 export default function DailyPlanForm() {
   const { mutate } = useSWRConfig();
   const [tradeDate, setTradeDate] = useState(today);

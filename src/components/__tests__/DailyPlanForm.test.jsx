@@ -102,6 +102,28 @@ describe('DailyPlanForm', () => {
     expect(bodies[0]).toEqual({ tradeDate: '2026-10-28', notes: 'Asia swept the prior low' });
   });
 
+  it('saves the overnight highs and lows that are filled in', async () => {
+    serveDailyPlan({});
+    const bodies = capturePuts();
+    renderForm();
+
+    await userEvent.type(await screen.findByLabelText('Asia high'), '683.1');
+    await userEvent.type(screen.getByLabelText('Asia low'), '679.4');
+    await userEvent.type(screen.getByLabelText('Premarket high'), '684');
+    await save();
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0]).toEqual({ tradeDate: '2026-10-28', asiaHigh: 683.1, asiaLow: 679.4, premarketHigh: 684 });
+  });
+
+  it('prefills the overnight levels a saved plan has', async () => {
+    serveDailyPlan({ '2026-10-28': { tradeDate: '2026-10-28', londonLow: 680.5, londonHigh: null } });
+    renderForm();
+
+    expect(await screen.findByLabelText('London low')).toHaveValue(680.5);
+    expect(screen.getByLabelText('London high')).toHaveValue(null);
+  });
+
   it('shows the field errors the server sends back', async () => {
     serveDailyPlan({});
     capturePuts(() =>
