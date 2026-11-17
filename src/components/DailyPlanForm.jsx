@@ -15,12 +15,13 @@ const keyFor = (tradeDate) => `/api/daily-plan?tradeDate=${tradeDate}`;
 // out, so a dropped second fib clears rather than saving a price of 0.
 const toNumber = (value) => (value === '' ? undefined : Number(value));
 const orUndefined = (value) => (value === '' ? undefined : value);
-// The working fib's direction select has no blank option, so it always holds
-// a value; it is sent only with a level, so a plan saved before the fib is
-// anchored leaves the working fib out instead of sending half of one.
+
 // The overnight fields' names: asiaHigh, asiaLow, londonHigh, and so on.
 const OVERNIGHT_FIELDS = OVERNIGHT_SESSIONS.flatMap(({ prefix }) => [`${prefix}High`, `${prefix}Low`]);
 
+// The working fib's direction select has no blank option, so it always holds
+// a value; it is sent only with a level, so a plan saved before the fib is
+// anchored leaves the working fib out instead of sending half of one.
 const ltfDirectionOf = (form) => (form.ltfFib50 === '' && form.ltfFib100 === '' ? undefined : form.ltfDirection);
 
 function formFromPlan(tradeDate, plan) {
