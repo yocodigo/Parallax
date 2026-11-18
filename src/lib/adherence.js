@@ -22,6 +22,10 @@ import { MET, MISSED, UNKNOWN, sizeGate, windowGate } from './setups/gates';
 // Money is summed in whole cents so totals don't drift with floating-point error.
 const toCents = (dollars) => Math.round(dollars * 100);
 
+// Window OK of a closed trade, from the setups its context snapshot detected at
+// entry (`trade.detected`, listContextDetected; absent before version 3).
+export const windowCheck = (trade) => windowGate(trade.openedAt && new Date(trade.openedAt), trade.detected);
+
 // Plan OK. `trade.planWrittenAt` is the earliest plan entry's creation time and
 // `trade.unmetRuleCount` the checklist rules answered unmet (the entry went
 // ahead by override). Without an entry time there is no "before the fill".
@@ -78,7 +82,7 @@ export function adherence(trades) {
 
   return {
     trades: rows.length,
-    window: tally(rows, (trade) => windowGate(trade.openedAt && new Date(trade.openedAt))),
+    window: tally(rows, windowCheck),
     size: tally(rows, (trade) => sizeGate(trade.quantity)),
     plan,
     stop,
@@ -135,7 +139,7 @@ export function emotionalControlByMonth(trades) {
 }
 
 // Which bucket of `violationCosts` a trade falls in. `window` means the
-// window gate (Window OK) was missed, which it never is while windows aren't scored.
+// window gate (Window OK) was missed: a window entry with no setup that cleared it.
 function violationBucket(windowMissed, sizeMissed) {
   if (windowMissed && sizeMissed) return 'both';
   if (windowMissed) return 'window';
@@ -156,7 +160,7 @@ export function violationCosts(trades) {
     both: { trades: 0, cents: 0 },
   };
   for (const { trade, net } of pricedOptionRows(trades)) {
-    const windowMissed = windowGate(trade.openedAt && new Date(trade.openedAt)) === MISSED;
+    const windowMissed = windowCheck(trade) === MISSED;
     const sizeMissed = sizeGate(trade.quantity) === MISSED;
     const bucket = buckets[violationBucket(windowMissed, sizeMissed)];
     bucket.trades += 1;

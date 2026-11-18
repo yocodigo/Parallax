@@ -56,10 +56,24 @@ describe('inWindow', () => {
 // setup) instead of closing the door, and detected setups come later. Until
 // then the windows are recorded and charted but never scored.
 describe('windowGate', () => {
-  it('judges nothing, inside a window or out of one', () => {
+  const A = { detector: 'four_touch', status: 'valid', grade: 'A', barsSince: 1 };
+  const B = { ...A, grade: 'B' };
+
+  it('is met outside every window, whatever was detected', () => {
+    expect(windowGate(at('10:15'), [])).toBe('met');
+    expect(windowGate(at('10:15'))).toBe('met');
+  });
+
+  it('is met inside a window only by a detected setup that clears it', () => {
+    expect(windowGate(at('09:35'), [B, A])).toBe('met');
+    expect(windowGate(at('09:35'), [B])).toBe('missed');
+    expect(windowGate(at('09:35'), [])).toBe('missed');
+  });
+
+  it("can't judge a window entry without detected setups, or a plan never entered", () => {
     expect(windowGate(at('09:35'))).toBe('unknown');
-    expect(windowGate(at('10:15'))).toBe('unknown');
-    expect(windowGate(null)).toBe('unknown');
+    expect(windowGate(at('09:35'), null)).toBe('unknown');
+    expect(windowGate(null, [])).toBe('unknown');
   });
 });
 
@@ -201,7 +215,7 @@ describe('gradeGates', () => {
 
   it('grades every gate, including size and stop, for an option trade', () => {
     expect(gradeGates(metTrade)).toEqual({
-      window: 'unknown',
+      window: 'met',
       direction: 'met',
       entry: 'met',
       location: 'met',
@@ -221,7 +235,7 @@ describe('gradeGates', () => {
     const result = gradeGates({ ...metTrade, quantity: 5 });
     expect(result.size).toBe('missed');
     expect(result.state).toBe('met');
-    expect(result.window).toBe('unknown');
+    expect(result.window).toBe('met');
     expect(result.stop).toBe('met');
   });
 
@@ -233,6 +247,14 @@ describe('gradeGates', () => {
     expect(gradeGates(metTrade)).not.toHaveProperty('setup');
     const result = gradeGates({ ...metTrade, detector: 'band_cross', setup: { status: 'complete' } });
     expect(result).toMatchObject({ setup: 'met', direction: 'met', entry: 'met' });
+  });
+
+  it('judges a window entry by the setups detected before it', () => {
+    const inWindowTrade = { ...metTrade, openedAt: at('09:35') };
+    expect(gradeGates(inWindowTrade).window).toBe('unknown');
+    expect(gradeGates({ ...inWindowTrade, detected: [] }).window).toBe('missed');
+    const clears = { detector: 'band_cross', status: 'complete', grade: null, barsSince: 0 };
+    expect(gradeGates({ ...inWindowTrade, detected: [clears] }).window).toBe('met');
   });
 
   it('judges Direction and Entry only for the band cross, or a trade with no detector', () => {

@@ -27,10 +27,10 @@ describe("MistakeCostLedger", () => {
     ).toBeInTheDocument();
   });
 
-  it("says the entry windows are not scored yet, so the window buckets stay empty", () => {
+  it("says a window entry breaks the rule only without a detected setup that clears it", () => {
     render(<MistakeCostLedger costs={{ followed: zero, window: zero, size: zero, both: zero }} />);
 
-    expect(screen.getByText(/Entry windows aren.t scored yet/)).toBeInTheDocument();
+    expect(screen.getByText(/without a detected setup that clears it/)).toBeInTheDocument();
   });
 
   it("says so when no option trade has closed, instead of drawing empty axes", () => {

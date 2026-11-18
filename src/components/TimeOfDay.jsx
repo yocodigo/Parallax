@@ -114,7 +114,7 @@ export default function TimeOfDay({ buckets }) {
       <div>
         <h2 className="text-sm font-semibold text-gray-700">Results by time of day</h2>
         <p className="text-xs text-gray-500">
-          Net P/L by the half hour of entry, New York time. Shaded: entry windows, where an entry needs a detected, grade A setup (not scored yet).
+          Net P/L by the half hour of entry, New York time. Shaded: entry windows, where an entry needs a detected setup that clears the window.
         </p>
       </div>
 

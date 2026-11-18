@@ -136,7 +136,7 @@ describe('GET /api/trades/[id]/gates', () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.gates).toEqual({
-      window: 'unknown',
+      window: 'met',
       direction: 'met',
       entry: 'met',
       location: 'missed',

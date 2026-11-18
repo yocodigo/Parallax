@@ -86,11 +86,12 @@ export function levelsAtEntry(trade, bars = [], { dailyBars = [], dailyPlan = nu
 // and `planEntry` the trade's plan journal entry, both null when there is
 // none; `location` is levelsAtEntry's, null when it wasn't worked out (the
 // gate is then unknown). `detector` is the trade's strategy's, and `setup`
-// strategySetup's for it (undefined when it couldn't be worked out).
+// strategySetup's for it (undefined when it couldn't be worked out);
+// `detected` is setupsAtEntry's, which Window OK reads.
 export function gradeTradeGates(
   trade,
   bars = [],
-  { dailyPlan = null, planEntry = null, location = null, detector = null, setup } = {}
+  { dailyPlan = null, planEntry = null, location = null, detector = null, setup, detected } = {}
 ) {
   const recorded = {
     assetClass: trade.assetClass,
@@ -101,6 +102,7 @@ export function gradeTradeGates(
     planEntry,
     detector,
     setup,
+    detected,
   };
   // A plan that was never entered has no fill to judge the bars against; the
   // gates it recorded are still worth grading.

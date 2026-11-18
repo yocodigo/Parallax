@@ -43,13 +43,17 @@ export function inWindow(openedAt, windows = LOCKOUTS) {
   return windows.some(([from, to]) => minutes >= toMinutes(from) && minutes < toMinutes(to));
 }
 
-// Window OK: not judged. Windows raise the bar instead of closing the door
-// (rules-v3 section 5): inside one, an entry needs a detected, valid, grade A
-// setup. Until detected setups exist the windows are recorded (`inWindow`) and
-// charted but never scored, so this answers unknown for every entry, and
-// adherence, the discipline score, and the violation costs leave it out.
-export function windowGate() {
-  return UNKNOWN;
+// Window OK. Windows raise the bar instead of closing the door (rules-v3
+// section 5): an entry outside every window meets it, and one inside meets it
+// only with a detected setup that clears the window (clearsWindow). Missing
+// it is the window_no_setup mistake. `detected` is detectSetups's for the
+// entry; without it (no bars, or a snapshot from before version 3) a window
+// entry can't be judged.
+export function windowGate(openedAt, detected) {
+  if (!openedAt) return UNKNOWN;
+  if (!inWindow(openedAt)) return MET;
+  if (!detected) return UNKNOWN;
+  return detected.some(clearsWindow) ? MET : MISSED;
 }
 
 // Size OK: contracts within the planned range.
@@ -133,7 +137,8 @@ export function stopGate(stopRule) {
 // so the gate is left off rather than graded against every trade. Location OK
 // (rules-v3 4) comes from levelLocation in location.js, which needs the level
 // map: `location` is its result, and the gate is unknown without one. A
-// strategy tied to a `detector` gets Setup OK from `setup` (setupGate's);
+// strategy tied to a `detector` gets Setup OK from `setup` (setupGate's), and
+// Window OK reads `detected`, the setups detected at the entry;
 // Direction OK and Entry OK judge the band cross alone, so they apply to a
 // band-cross strategy or a trade with no detector (rules-v3 6).
 export function gradeGates({
@@ -151,8 +156,9 @@ export function gradeGates({
   location = null,
   detector = null,
   setup,
+  detected,
 }) {
-  const gates = { window: windowGate(openedAt) };
+  const gates = { window: windowGate(openedAt, detected) };
   if (!detector || detector === 'band_cross') {
     gates.direction = directionGate(bars15, directionBarIndex, direction);
     gates.entry = entryGate(entryBar, entryPrevBar);

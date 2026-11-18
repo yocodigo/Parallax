@@ -321,17 +321,28 @@ describe('GET /api/insights/performance', () => {
     });
   });
 
-  it('returns net P/L by the rules the entry broke, an entry inside a window breaking none', async () => {
-    // Entered an hour before closing, in New York time (EDT): 15:30 is outside every window, 12:00 is in the 11:00-14:00 one. Windows aren't scored.
+  it('scores a window entry by the setups its snapshot detected, and counts what missing it cost', async () => {
+    // Entered an hour before closing, in New York time (EDT): 15:30 is outside every window, 12:00 is in the
+    // 11:00-14:00 one. A window entry needs a detected setup that clears it; one with no version 3 snapshot
+    // can't be judged.
     await closedOption(40, '2026-04-13T20:30:00Z');
-    await closedOption(-25, '2026-04-14T17:00:00Z');
-    await closedOption(-5, '2026-04-15T17:00:00Z', { mode: 'paper' });
+    const noSetup = await closedOption(-25, '2026-04-14T17:00:00Z');
+    const onSetup = await closedOption(15, '2026-04-15T17:00:00Z');
+    await closedOption(-8, '2026-04-16T17:00:00Z');
+    const snapshot = (detected) => ({ version: 3, setups: { fourTouch: null, detected }, levels: [] });
+    await saveTradeContext(getDb(), noSetup.id, snapshot([]));
+    await saveTradeContext(
+      getDb(),
+      onSetup.id,
+      snapshot([{ detector: 'band_cross', timeframe: '5m', status: 'complete', grade: null, barsSince: 1 }])
+    );
 
     const body = await (await get('?year=2026')).json();
 
+    expect(body.adherence.window).toEqual({ ok: 2, missed: 1, cost: -25 });
     expect(body.violationCosts).toEqual({
-      followed: { trades: 2, net: 15 },
-      window: { trades: 0, net: 0 },
+      followed: { trades: 3, net: 47 },
+      window: { trades: 1, net: -25 },
       size: { trades: 0, net: 0 },
       both: { trades: 0, net: 0 },
     });

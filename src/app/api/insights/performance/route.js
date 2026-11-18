@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getDb } from '@/db';
-import { listContextGrades } from '@/db/contexts';
+import { listContextDetected, listContextGrades } from '@/db/contexts';
 import { getRuleSettings } from '@/db/settings';
 import { listStrategies } from '@/db/strategies';
 import { listClosedTradesBetween, listPlanFacts, listReviewRatings } from '@/db/trades';
@@ -60,12 +60,11 @@ export const GET = withErrorLogging('/api/insights/performance', async (request)
     optionType,
   });
 
-  // Rule adherence also needs each trade's plan entry and checklist answers.
-  const facts = await listPlanFacts(
-    getDb(),
-    closed.map((trade) => trade.id)
-  );
-  const withFacts = closed.map((trade) => ({ ...trade, ...facts.get(trade.id) }));
+  // Rule adherence also needs each trade's plan entry and checklist answers,
+  // and the setups its snapshot detected at entry, for Window OK.
+  const ids = closed.map((trade) => trade.id);
+  const [facts, detected] = await Promise.all([listPlanFacts(getDb(), ids), listContextDetected(getDb(), ids)]);
+  const withFacts = closed.map((trade) => ({ ...trade, ...facts.get(trade.id), detected: detected.get(trade.id) }));
 
   // The four-touch grade each trade's stored context recorded at entry.
   const grades = await listContextGrades(
@@ -90,7 +89,7 @@ export const GET = withErrorLogging('/api/insights/performance', async (request)
     adherence: adherence(withFacts),
     disciplineByMonth: disciplineByMonth(withFacts),
     emotionalControlByMonth: emotionalControlByMonth(withRatings),
-    violationCosts: violationCosts(closed),
+    violationCosts: violationCosts(withFacts),
     equity: equityCurve(closed),
     rolling: rollingExpectancy(closed),
     timeOfDay: timeOfDay(closed),

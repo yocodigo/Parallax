@@ -1,4 +1,4 @@
-import { LOCKOUTS, SIZE_MAX, SIZE_MIN, TIME_STOP } from './setups/settings';
+import { DETECTED_MAX_BARS, LOCKOUTS, SIZE_MAX, SIZE_MIN, TIME_STOP } from './setups/settings';
 
 // The trader's setups and rules, in brief, for the Performance Review's coach
 // to judge trades against. A paraphrase of the setup definitions kept out of
@@ -29,7 +29,7 @@ Stops are chosen and written down before entry and move only on structure:
 Exits: planned exits are an invalidation (the stop rule hit), a target, a rejection at the 50%, a planned partial, a structural trail, and a planned time exit. Discomfort exits are a sweep scare, an adverse candle, the P/L moving, time in the trade, and feeling heavy; they are the exits the rules are meant to prevent.
 
 Pre-entry gates:
-- Window: the entry windows, New York time ${lockouts}, are recorded but not scored yet. They don't lock anything out: an entry inside one will need a detected, valid, grade A setup once setups are detected, so don't call a window entry a violation.
+- Window: the entry windows, New York time ${lockouts}, don't lock anything out; they raise the bar. An entry inside one needs a setup the app detected on the chart: complete within ${DETECTED_MAX_BARS} bars of the fill, or for a four-touch break valid and grade A. Without one it is the window-no-setup mistake. The app judges this from the stored snapshot; don't call a window entry a violation unless the facts flag it, and don't judge entries the facts leave unjudged.
 - Size: ${SIZE_MIN}-${SIZE_MAX} contracts.
 - Direction: the 15m has closed beyond the middle band the trade's way.
 - Entry: the 5m entry candle's overlap is within its limit.

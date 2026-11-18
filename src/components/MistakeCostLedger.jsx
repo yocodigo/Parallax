@@ -100,8 +100,9 @@ export default function MistakeCostLedger({ costs }) {
           Mistake cost ledger
         </h2>
         <p className="text-xs text-gray-500">
-          Net P/L of option trades by the entry rules broken: window and size.
-          Entry windows aren&apos;t scored yet, so the window buckets stay empty.
+          Net P/L of option trades by the entry rules broken: window and size. A window entry breaks the
+          window rule without a detected setup that clears it; one from before setups were detected
+          isn&apos;t judged.
         </p>
       </div>
 

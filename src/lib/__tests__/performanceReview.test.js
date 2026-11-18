@@ -377,8 +377,9 @@ const clean = (gross, overrides = {}) =>
   });
 
 describe('ruleAdherence', () => {
-  // Filled at 13:00 New York time, inside the 11:00-14:00 window, which breaks nothing
-  // (windows aren't scored); the trade breaks Exit OK with a discomfort exit.
+  // Filled at 13:00 New York time, inside the 11:00-14:00 window, with no detected
+  // setups to judge it by (no version 3 snapshot), so Window OK can't say; the
+  // trade breaks Exit OK with a discomfort exit.
   const rough = {
     openedAt: new Date('2026-04-13T17:00:00Z'),
     closedAt: new Date('2026-04-13T18:00:00Z'),
@@ -390,7 +391,7 @@ describe('ruleAdherence', () => {
 
     expect(checks.trades).toBe(2);
     expect(checks.exit).toEqual({ ok: 1, missed: 1, cost: -5 });
-    expect(checks.window).toEqual({ ok: 0, missed: 0, cost: 0 });
+    expect(checks.window).toEqual({ ok: 1, missed: 0, cost: 0 });
   });
 
   it('flags the trades that broke a rule, with which ones, costliest first', () => {

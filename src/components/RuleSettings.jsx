@@ -131,7 +131,7 @@ function SettingsForm({ settings, onSaved }) {
         label="Entry windows"
         on={form.windowsOn}
         onToggle={() => toggle('windowsOn')}
-        hint="Recorded and charted. They are not scored until setups are detected."
+        hint="An entry inside one needs a detected setup that clears it. Window OK is judged on the default windows for now."
       >
         {form.windows.map(([from, to], index) => (
           <div key={index} className="flex items-end gap-2">

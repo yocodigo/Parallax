@@ -273,17 +273,21 @@ Vitest, JavaScript (not TypeScript).
   the defaults (from `settings.js`) and `parseRuleSettings`; `getRuleSettings`/`saveRuleSettings` in
   `src/db/settings.js` (defaults until the first save; the route validates before saving); edited in
   `RuleSettings.jsx` on `/insights` through `GET`/`PUT /api/rule-settings`.
-  Windows raise the bar instead of closing the door, and are recorded and charted but never scored until
-  detected setups exist (build step 5): `windowGate` answers unknown for every entry, so Window OK, the
-  discipline score, and the violation costs leave them out, while `inWindow` keeps the recorded fact for
-  the entry review's flag. `setupRules.js` tells the coach not to call a window entry a violation.
+  Windows raise the bar instead of closing the door: `windowGate(openedAt, detected)` is met outside every
+  window, and inside one only when a detected setup clears it (`clearsWindow`); missing it is the
+  window_no_setup mistake, computed rather than tagged. Without detected setups (no bars, or a snapshot from
+  before version 3, read by `listContextDetected` for the performance page and the Performance Review) a
+  window entry is unknown. `windowCheck` in `adherence.js` is the one place adherence, the violation costs,
+  and the review read it. The gates still use the default windows from `settings.js`, not the saved ones
+  (nor does Size OK read the saved contract range). `inWindow` keeps the recorded fact for the entry
+  review's flag.
 - Strategies and the entry checklist: `strategies` with ordered `strategy_rules` (kind `edge` for the
   setup or `discipline` for risk and process), edited on `/strategies` (`Strategies.jsx`, `GET`/`POST
   /api/strategies`, `PUT /api/strategies/[id]`). Editing keeps the ids of rules sent back with one.
   A strategy may name its `detector` (`band_cross`, `four_touch`, `reversal`, `three_gate`; null for a
   hand-written checklist, rules-v3 section 6). Its trades then get a Setup gate (`setupGate`: met when
   `strategySetup` finds that detector's setup within `DETECTED_MAX_BARS` of the fill, complete, a valid break, or a
-  trap; unknown without minute bars, via `detectStrategySetup`), and Direction and Entry are graded only for a
+  trap; unknown without minute bars, when `setupsAtEntry` gives undefined), and Direction and Entry are graded only for a
   band-cross strategy or a trade with no detector. The gates
   route (and the coaching pass) detects on demand and also returns the `setup` it found.
   A plan may name its `strategyId`; recording its entry then needs `ruleChecks` ({ ruleId: met } for
@@ -300,7 +304,7 @@ Vitest, JavaScript (not TypeScript).
   reversal, and three-gate detectors on the bars closed before the fill, the trade's way only, each with
   `status`, `grade` (four-touch only), `completedAt`, and `barsSince` in its own timeframe's bars) and `levels`
   (the level map at the fill, with the day's plan, which the callers pass as `dailyPlan`; kept since a plan can
-  be edited later, though an import reads the plan as it stands at import time, which can be days after the fill). `clearsWindow` is the window rule: within `DETECTED_MAX_BARS` (3) bars, complete, or for a
+  be edited later, though an import reads the plan as it stands at import time, which can be days after the fill). `clearsWindow` (`gates.js`) is the window rule: within `DETECTED_MAX_BARS` (3) bars, complete, or for a
   four-touch break valid and grade A. A failing source is logged and left null. Live option values are kept only within 15 minutes of the fill.
   `TradeContext.jsx` shows it on demand via `GET /api/trades/[id]/context`. Entry route tests mock
   `after` and `captureContext`. Macro dates in `src/lib/context/macroCalendar.js` cover 2026-10-22

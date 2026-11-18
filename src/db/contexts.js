@@ -66,6 +66,21 @@ export async function listContextGrades(db, tradeIds) {
   return grades;
 }
 
+// The setups each of these trades' snapshots detected at entry (rules-v3 6),
+// as a Map by trade id: detectSetups's list, empty when nothing was found.
+// null when it can't say: no snapshot, one from before version 3, or one
+// taken without the minute bars. Window OK reads it.
+export async function listContextDetected(db, tradeIds) {
+  const detected = new Map(tradeIds.map((id) => [id, null]));
+  if (tradeIds.length === 0) return detected;
+  const rows = await db
+    .select({ tradeId: tradeContexts.tradeId, context: tradeContexts.context })
+    .from(tradeContexts)
+    .where(inArray(tradeContexts.tradeId, tradeIds));
+  for (const { tradeId, context } of rows) detected.set(tradeId, context?.setups?.detected ?? null);
+  return detected;
+}
+
 // The option delta each of these trades' snapshots kept, as a Map by trade id,
 // null when there is none: no snapshot, not an option, or captured more than 15
 // minutes after the fill, when the live values aren't kept (buildContext).

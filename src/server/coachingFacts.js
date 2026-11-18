@@ -9,7 +9,7 @@ import {
 import { excursions } from '@/lib/excursions';
 import { giveback, underlyingGiveback } from '@/lib/giveback';
 import { mistakeLedger } from '@/lib/mistakeLedger';
-import { detectStrategySetup } from '@/lib/setups/detected';
+import { setupsAtEntry, strategySetup } from '@/lib/setups/detected';
 import { reviewEntry } from '@/lib/setups/entryReview';
 import { reviewExit } from '@/lib/setups/exitReview';
 import { nyDay, sessionBars, tradingDay } from '@/lib/setups/session';
@@ -102,7 +102,8 @@ export async function gatherCoachingFacts(
     const atEntry = levelsAtEntry(trade, bars, { dailyBars, dailyPlan });
     const location = atEntry?.location ?? null;
     const detector = strategies.find((strategy) => strategy.id === trade.strategyId)?.detector ?? null;
-    const setup = detectStrategySetup(trade, bars, { levels: atEntry?.levels ?? [], detector });
+    const detected = setupsAtEntry(trade, bars, { levels: atEntry?.levels ?? [] });
+    const setup = detector ? strategySetup(detected, detector) : null;
     const exitReview = reviewExit(trade, bars, dailyPlan);
     const entryReview = reviewEntry(trade, bars);
     const mistakes = withMistakes.find((t) => t.id === trade.id)?.mistakes ?? [];
@@ -110,7 +111,7 @@ export async function gatherCoachingFacts(
       bars,
       entryReview,
       exitReview,
-      gates: gradeTradeGates(trade, bars, { dailyPlan, planEntry, location, detector, setup }),
+      gates: gradeTradeGates(trade, bars, { dailyPlan, planEntry, location, detector, setup, detected }),
       setups: entryReview?.setup ? [entryReview.setup.name] : [],
       stopAdherence: judgeStopAdherence(trade, mistakes, stopRuleTrigger(trade, bars, exitReview?.t1 ?? null)),
     };

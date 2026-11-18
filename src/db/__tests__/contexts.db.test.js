@@ -3,6 +3,7 @@ import {
   addContextSetupsAndLevels,
   getTradeContext,
   listContextDeltas,
+  listContextDetected,
   listContextGrades,
   listContextsWithoutLevels,
   saveTradeContext,
@@ -122,6 +123,27 @@ describe('listContextGrades', () => {
 
   it('returns nothing for no trades', async () => {
     expect((await listContextGrades(db, [])).size).toBe(0);
+  });
+});
+
+describe('listContextDetected', () => {
+  it('gives the setups each snapshot detected at entry, or null before version 3 or without bars', async () => {
+    const [v3, empty, withoutBars, v2, none] = await Promise.all([1, 2, 3, 4, 5].map(() => insertTrade()));
+    const detected = [{ detector: 'band_cross', status: 'complete', grade: null, barsSince: 1 }];
+    await saveTradeContext(db, v3.id, { ...context, version: 3, setups: { fourTouch: null, detected }, levels: [] });
+    await saveTradeContext(db, empty.id, { ...context, version: 3, setups: { fourTouch: null, detected: [] }, levels: [] });
+    await saveTradeContext(db, withoutBars.id, { ...context, version: 3, setups: null, levels: null });
+    await saveTradeContext(db, v2.id, { ...context, version: 2, setups: { fourTouch: null } });
+
+    const found = await listContextDetected(db, [v3.id, empty.id, withoutBars.id, v2.id, none.id]);
+
+    expect(found.get(v3.id)).toEqual(detected);
+    expect(found.get(empty.id)).toEqual([]);
+    expect([withoutBars.id, v2.id, none.id].map((id) => found.get(id))).toEqual([null, null, null]);
+  });
+
+  it('asks nothing for no trades', async () => {
+    expect(await listContextDetected(db, [])).toEqual(new Map());
   });
 });
 

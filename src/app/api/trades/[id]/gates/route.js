@@ -6,7 +6,7 @@ import { getPlanEntry } from '@/db/journal';
 import { getStrategy } from '@/db/strategies';
 import { getTrade } from '@/db/trades';
 import { withErrorLogging } from '@/lib/log';
-import { detectStrategySetup } from '@/lib/setups/detected';
+import { setupsAtEntry, strategySetup } from '@/lib/setups/detected';
 import { sessionBars } from '@/lib/setups/session';
 import { gradeTradeGates, levelsAtEntry } from '@/lib/setups/tradeGates';
 import { fetchDailyBars } from '@/server/dailyBars';
@@ -61,7 +61,8 @@ export const GET = withErrorLogging('/api/trades/[id]/gates', async (request, { 
 
   const { levels, location, room } = levelsAtEntry(trade, bars, { dailyBars, dailyPlan });
   const detector = strategy?.detector ?? null;
-  const setup = detectStrategySetup(trade, bars, { levels, detector });
-  const gates = gradeTradeGates(trade, bars, { dailyPlan, planEntry, location, detector, setup });
+  const detected = setupsAtEntry(trade, bars, { levels });
+  const setup = detector ? strategySetup(detected, detector) : null;
+  const gates = gradeTradeGates(trade, bars, { dailyPlan, planEntry, location, detector, setup, detected });
   return NextResponse.json({ gates, location, room, setup });
 });

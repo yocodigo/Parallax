@@ -144,10 +144,10 @@ describe('PerformanceTables', () => {
     expect(screen.getByText('No closed trades in this range.')).toBeInTheDocument();
   });
 
-  it('says the entry windows are not scored yet', () => {
+  it('says how Window OK is judged', () => {
     renderTables();
 
-    expect(screen.getByText(/Window OK isn.t scored yet/)).toBeInTheDocument();
+    expect(screen.getByText(/one inside holds it only with a detected\s+setup that clears the window/)).toBeInTheDocument();
   });
 
   it('shows the rules kept and broken with the cost of the broken ones, for option trades', () => {

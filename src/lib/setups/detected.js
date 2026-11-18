@@ -162,24 +162,23 @@ export function detectSetups(trade, bars = [], { levels = [] } = {}) {
   return setups.filter(Boolean);
 }
 
+// detectSetups for the gates: undefined, which they read as unknown, without
+// bars to detect from.
+export function setupsAtEntry(trade, bars, { levels = [] } = {}) {
+  return bars?.length ? detectSetups(trade, bars, { levels }) : undefined;
+}
+
 // The setup a strategy tied to `detector` was taken on, from `detected`
 // (detectSetups's): its detector's setups within DETECTED_MAX_BARS of the
 // fill, one there to trade before one that isn't, then the most recent. Null
-// when there is none.
+// when there is none, and undefined when `detected` is (nothing could be
+// detected), which the Setup gate reads as unknown.
 export function strategySetup(detected, detector) {
+  if (detected === undefined) return undefined;
   const tradable = (setup) => (TRADABLE.includes(setup.status) ? 1 : 0);
   return (
     detected
       .filter((setup) => setup.detector === detector && setup.barsSince <= DETECTED_MAX_BARS)
       .sort((a, b) => tradable(b) - tradable(a) || a.barsSince - b.barsSince)[0] ?? null
   );
-}
-
-// strategySetup on `bars` as of `trade`'s fill, for the Setup gate: null for a
-// trade with no `detector` (it has no such gate), and undefined, which the gate
-// reads as unknown, without bars to detect it from.
-export function detectStrategySetup(trade, bars, { levels = [], detector }) {
-  if (!detector) return null;
-  if (!bars?.length) return undefined;
-  return strategySetup(detectSetups(trade, bars, { levels }), detector);
 }

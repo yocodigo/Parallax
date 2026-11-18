@@ -1,6 +1,6 @@
-import { adherence, exitGate, planGate, stopHeldGate } from './adherence';
+import { adherence, exitGate, planGate, stopHeldGate, windowCheck } from './adherence';
 import { MODES, bySetup, callsVsPuts, summarize, timeOfDay } from './performance';
-import { MISSED, sizeGate, windowGate } from './setups/gates';
+import { MISSED, sizeGate } from './setups/gates';
 import { nyDay } from './setups/session';
 import { profitLoss, rMultiple } from './tradeMetrics';
 
@@ -269,7 +269,7 @@ export const WORKING_MIN_TRADES = 5;
 
 // The checks adherence() makes (adherence.js); keep the two in step.
 const CHECKS = [
-  ['Window', (trade) => windowGate(trade.openedAt && new Date(trade.openedAt))],
+  ['Window', windowCheck],
   ['Size', (trade) => sizeGate(trade.quantity)],
   ['Plan', planGate],
   ['Stop', stopHeldGate],
@@ -280,7 +280,8 @@ const CHECKS = [
 // it): `checks` is adherence()'s figures, and `flagged` the trades that missed
 // at least one check with the ones missed, costliest first, the newest first
 // among equal results (at most MAX_FLAGGED).
-// The trades need `planWrittenAt` and `unmetRuleCount` (listPlanFacts).
+// The trades need `planWrittenAt` and `unmetRuleCount` (listPlanFacts), and
+// `detected` (listContextDetected) for the window.
 export function ruleAdherence(trades) {
   const flagged = trades
     .filter((trade) => trade.assetClass === 'option' && profitLoss(trade) !== null && trade.openedAt)

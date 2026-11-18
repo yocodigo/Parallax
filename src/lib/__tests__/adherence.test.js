@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { adherence, disciplineByMonth, emotionalControlByMonth, violationCosts } from '../adherence';
 
 // A closed long option with the given contracts, net P/L, and entry time.
-function option(net, { quantity = 1, openedAt = '2026-04-13T14:00:00Z' } = {}) {
+function option(net, { quantity = 1, openedAt = '2026-04-13T14:00:00Z', detected } = {}) {
   return {
+    detected,
     assetClass: 'option',
     direction: 'long',
     quantity,
@@ -18,22 +19,28 @@ function option(net, { quantity = 1, openedAt = '2026-04-13T14:00:00Z' } = {}) {
 
 // Entry windows are New York clock times (settings.js): 16:00Z is 12:00 there,
 // inside the 11:00-14:00 window; 14:00Z is 10:00, outside every window.
-// Windows aren't scored (rules-v3 section 5), so neither time changes a score.
+// Inside one, an entry needs a detected setup that clears it (rules-v3
+// section 5): `detected` is the snapshot's, absent without a version 3 one.
 const LOCKED = '2026-04-13T16:00:00Z';
 const FREE = '2026-04-13T14:00:00Z';
+const A_SETUP = [{ detector: 'four_touch', status: 'valid', grade: 'A', barsSince: 0 }];
 
 describe('adherence', () => {
-  it('counts trades that held the size rule and what the violations cost, leaving the window unscored', () => {
+  it('counts trades that held the window and size rules and what the violations cost', () => {
     const result = adherence([
       option(50, { openedAt: FREE }),
-      option(-30, { openedAt: LOCKED }),
+      option(-30, { openedAt: LOCKED, detected: [] }),
       option(-20, { openedAt: FREE, quantity: 3 }),
-      option(10, { openedAt: LOCKED, quantity: 3 }),
+      option(10, { openedAt: LOCKED, quantity: 3, detected: A_SETUP }),
     ]);
 
     expect(result.trades).toBe(4);
-    expect(result.window).toEqual({ ok: 0, missed: 0, cost: 0 });
+    expect(result.window).toEqual({ ok: 3, missed: 1, cost: -30 });
     expect(result.size).toEqual({ ok: 2, missed: 2, cost: -10 });
+  });
+
+  it('leaves a window entry unjudged when its snapshot has no detected setups', () => {
+    expect(adherence([option(-30, { openedAt: LOCKED })]).window).toEqual({ ok: 0, missed: 0, cost: 0 });
   });
 
   it('leaves out trades that were never closed', () => {
@@ -78,20 +85,23 @@ describe('adherence', () => {
 });
 
 describe('violationCosts', () => {
-  it('splits net P/L by which rules the entry broke, each trade in one bucket, a window entry breaking nothing', () => {
+  it('splits net P/L by which rules the entry broke, each trade in one bucket', () => {
     const result = violationCosts([
       option(50, { openedAt: FREE }),
-      option(-30, { openedAt: LOCKED }),
+      option(-30, { openedAt: LOCKED, detected: [] }),
       option(-20, { openedAt: FREE, quantity: 3 }),
-      option(-15, { openedAt: LOCKED, quantity: 3 }),
+      option(-15, { openedAt: LOCKED, quantity: 3, detected: [] }),
       option(10, { openedAt: FREE }),
+      // A window entry on a setup that clears it, and one the gate can't judge.
+      option(-7, { openedAt: LOCKED, detected: A_SETUP }),
+      option(-4, { openedAt: LOCKED }),
     ]);
 
     expect(result).toEqual({
-      followed: { trades: 3, net: 30 },
-      window: { trades: 0, net: 0 },
-      size: { trades: 2, net: -35 },
-      both: { trades: 0, net: 0 },
+      followed: { trades: 4, net: 49 },
+      window: { trades: 1, net: -30 },
+      size: { trades: 1, net: -20 },
+      both: { trades: 1, net: -15 },
     });
   });
 
