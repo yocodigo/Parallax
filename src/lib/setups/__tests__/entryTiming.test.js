@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { entryTiming, entryTimingSummary } from '../entryTiming';
+import { entryTiming, entryTimingSummary, nearestTrigger } from '../entryTiming';
 import { MINUTE, openOf } from './fixtures/bandCross';
 import { breakout } from './fixtures/fourTouch';
 
@@ -15,6 +15,7 @@ const BARS = [...breakout, ...Array.from({ length: 10 }, () => ({ o: 281, h: 281
 const short = (nyTime) => ({ assetClass: 'stock', direction: 'short', symbol: 'SPY', optionType: null, openedAt: at(nyTime) });
 
 describe('entryTiming', () => {
+  // 09:56 is exactly when bar 25 closed: a trigger closed at the fill is on it.
   it('is on the trigger when filled before the bar after it closed', () => {
     expect(entryTiming(short('09:56'), BARS)).toMatchObject({
       timing: 'on',
@@ -37,6 +38,15 @@ describe('entryTiming', () => {
     });
   });
 
+  it('counts early in bars that exist, as late is, when the feed skipped a minute', () => {
+    // Without the 09:54 minute, bar 25 (closing 09:56) is the 1st bar to close
+    // after a 09:54 fill and the break is still pending there; bar 26, the
+    // first quiet bar (closing 09:57), confirms it. That is the 2nd bar after
+    // the fill: early by 2, where clock slots would have said 3.
+    const skipped = BARS.filter((bar) => bar.t !== at('09:54').toISOString());
+    expect(entryTiming(short('09:54'), skipped)).toMatchObject({ timing: 'early', bars: 2 });
+  });
+
   it("times the entry against the strategy's own detector when it names one", () => {
     expect(entryTiming(short('09:56'), BARS, { detector: 'band_cross' })).toMatchObject({ timing: 'none' });
     expect(entryTiming(short('09:56'), BARS, { detector: 'four_touch' })).toMatchObject({ timing: 'on' });
@@ -48,29 +58,56 @@ describe('entryTiming', () => {
   });
 });
 
-describe('entryTimingSummary', () => {
-  const row = (timing, symbol, netPnl, mae, maeR = null) => ({ timing, symbol, netPnl, heat: { mae, maeR } });
+describe('nearestTrigger', () => {
+  const candidate = (timing, bars) => ({ timing, bars, setup: { detector: 'four_touch', timeframe: '1m' } });
 
-  it('gives each group its trades, net P/L, and heat: points per underlying, R where there was a stop', () => {
+  it('takes the trigger nearest the fill, early or not', () => {
+    expect(nearestTrigger([candidate('late', 3), candidate('early', 1)])).toMatchObject({ timing: 'early', bars: 1 });
+    expect(nearestTrigger([candidate('early', 2), candidate('on', 0)])).toMatchObject({ timing: 'on' });
+  });
+
+  it('prefers the trigger already there at the fill at the same distance', () => {
+    expect(nearestTrigger([candidate('early', 2), candidate('late', 2)])).toMatchObject({ timing: 'late', bars: 2 });
+  });
+
+  it('is no trigger without candidates', () => {
+    expect(nearestTrigger([])).toEqual({ timing: 'none' });
+  });
+});
+
+describe('entryTimingSummary', () => {
+  const row = (timing, symbol, netPnl, mae, maeR = null, stopSource = maeR === null ? null : 'derived') => ({
+    timing,
+    symbol,
+    netPnl,
+    heat: { mae, maeR, stopSource },
+  });
+
+  it('gives each group its trades, net P/L, and heat: points per underlying, R by where the stop came from', () => {
     const groups = entryTimingSummary([
       row('early', 'SPY', -30, 1.2, 1.5),
       row('early', 'SPY', 10, 0.4),
+      row('early', 'SPY', 0, 0.9, 0.9, 'plan'),
       row('on', 'SPY', 25, 0.2, 0.25),
       row('none', 'QQQ', -5, 0.8),
     ]);
 
     expect(groups.map((g) => [g.timing, g.trades, g.netPnl])).toEqual([
-      ['early', 2, -20],
+      ['early', 3, -20],
       ['on', 1, 25],
       ['late', 0, 0],
       ['none', 1, -5],
     ]);
-    expect(groups[0].heatPoints).toEqual([{ symbol: 'SPY', trades: 2, percentiles: { p50: 0.4, p75: 1.2, p90: 1.2 } }]);
-    expect(groups[0].heatR).toEqual({ measured: 1, percentiles: { p50: 1.5, p75: 1.5, p90: 1.5 } });
+    expect(groups[0].heatPoints).toEqual([{ symbol: 'SPY', trades: 3, percentiles: { p50: 0.9, p75: 1.2, p90: 1.2 } }]);
+    // R from a planned stop and from a derived one are never pooled.
+    expect(groups[0].heatR).toEqual({
+      plan: { trades: 1, percentiles: { p50: 0.9, p75: 0.9, p90: 0.9 } },
+      derived: { trades: 1, percentiles: { p50: 1.5, p75: 1.5, p90: 1.5 } },
+    });
   });
 
   it('leaves heat out of a trade with no underlying measure', () => {
     const [early] = entryTimingSummary([{ timing: 'early', symbol: 'SPY', netPnl: 5, heat: null }]);
-    expect(early).toMatchObject({ trades: 1, heatPoints: [], heatR: { measured: 0 } });
+    expect(early).toMatchObject({ trades: 1, heatPoints: [], heatR: { plan: { trades: 0 }, derived: { trades: 0 } } });
   });
 });
