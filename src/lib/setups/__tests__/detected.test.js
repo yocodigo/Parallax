@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clearsWindow, detectSetups, detectStrategySetup, strategySetup } from '../detected';
+import { detectSetups, detectStrategySetup, strategySetup } from '../detected';
 import { BARS, MINUTE, openOf } from './fixtures/bandCross';
 import { breakout, trap } from './fixtures/fourTouch';
 import { reversalBars, TARGET_POOL } from './fixtures/reversalSequence';
@@ -207,21 +207,6 @@ function quietAfter(bars, count) {
     v: 100,
   }));
 }
-
-describe('clearsWindow', () => {
-  const setup = (overrides) => ({ detector: 'band_cross', status: 'complete', grade: null, barsSince: 0, ...overrides });
-
-  it('takes a complete setup, or a valid grade A four-touch break, within DETECTED_MAX_BARS of the fill', () => {
-    expect(clearsWindow(setup())).toBe(true);
-    expect(clearsWindow(setup({ barsSince: 3 }))).toBe(true);
-    expect(clearsWindow(setup({ barsSince: 4 }))).toBe(false);
-    expect(clearsWindow(setup({ status: 'no_room' }))).toBe(false);
-    expect(clearsWindow(setup({ detector: 'reversal', status: 'invalidated' }))).toBe(false);
-    expect(clearsWindow(setup({ detector: 'four_touch', status: 'valid', grade: 'A' }))).toBe(true);
-    expect(clearsWindow(setup({ detector: 'four_touch', status: 'valid', grade: 'B' }))).toBe(false);
-    expect(clearsWindow(setup({ detector: 'four_touch', status: 'trap', grade: 'A' }))).toBe(false);
-  });
-});
 
 describe('strategySetup', () => {
   const setup = (overrides) => ({ detector: 'four_touch', timeframe: '1m', status: 'valid', grade: 'A', barsSince: 0, ...overrides });

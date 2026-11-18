@@ -1,7 +1,7 @@
 import { overlap } from './candles';
 import { atMost } from './compare';
 import { bandCross } from './direction';
-import { LOCKOUTS, OVERLAP_MAX, SIZE_MAX, SIZE_MIN } from './settings';
+import { DETECTED_MAX_BARS, LOCKOUTS, OVERLAP_MAX, SIZE_MAX, SIZE_MIN } from './settings';
 
 // [8] The pre-entry gates, graded after the fact: the app is never used while
 // a trade is on, so each gate asks whether the rule held at the entry, from
@@ -102,6 +102,15 @@ export function entryGate(bar, prev) {
 // trade: complete, a confirmed four-touch break, or a trap taken the other
 // way.
 export const TRADABLE = ['complete', 'valid', 'trap'];
+
+// Whether a detected setup clears an entry window (rules-v3 5): recent enough
+// to be the trade's own, and complete, or for a four-touch break valid and
+// grade A.
+export function clearsWindow(setup) {
+  if (setup.barsSince > DETECTED_MAX_BARS) return false;
+  if (setup.detector === 'four_touch') return setup.status === 'valid' && setup.grade === 'A';
+  return setup.status === 'complete';
+}
 
 // Setup OK (rules-v3 6): the setup of the strategy's own detector was on the
 // chart at the fill (strategySetup in detected.js finds it, null when it

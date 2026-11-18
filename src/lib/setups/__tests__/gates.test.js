@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { EMOTIONS, MISTAKES } from '../../journalEntry';
 import {
+  clearsWindow,
   directionGate,
   entryGate,
   gradeGates,
@@ -256,5 +257,20 @@ describe('setupGate', () => {
 
   it("can't say without the bars to detect it from", () => {
     expect(setupGate(undefined)).toBe('unknown');
+  });
+});
+
+describe('clearsWindow', () => {
+  const setup = (overrides) => ({ detector: 'band_cross', status: 'complete', grade: null, barsSince: 0, ...overrides });
+
+  it('takes a complete setup, or a valid grade A four-touch break, within DETECTED_MAX_BARS of the fill', () => {
+    expect(clearsWindow(setup())).toBe(true);
+    expect(clearsWindow(setup({ barsSince: 3 }))).toBe(true);
+    expect(clearsWindow(setup({ barsSince: 4 }))).toBe(false);
+    expect(clearsWindow(setup({ status: 'no_room' }))).toBe(false);
+    expect(clearsWindow(setup({ detector: 'reversal', status: 'invalidated' }))).toBe(false);
+    expect(clearsWindow(setup({ detector: 'four_touch', status: 'valid', grade: 'A' }))).toBe(true);
+    expect(clearsWindow(setup({ detector: 'four_touch', status: 'valid', grade: 'B' }))).toBe(false);
+    expect(clearsWindow(setup({ detector: 'four_touch', status: 'trap', grade: 'A' }))).toBe(false);
   });
 });

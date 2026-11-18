@@ -162,15 +162,6 @@ export function detectSetups(trade, bars = [], { levels = [] } = {}) {
   return setups.filter(Boolean);
 }
 
-// Whether a detected setup clears an entry window (rules-v3 5): recent enough
-// to be the trade's own, and complete, or for a four-touch break valid and
-// grade A.
-export function clearsWindow(setup) {
-  if (setup.barsSince > DETECTED_MAX_BARS) return false;
-  if (setup.detector === 'four_touch') return setup.status === 'valid' && setup.grade === 'A';
-  return setup.status === 'complete';
-}
-
 // The setup a strategy tied to `detector` was taken on, from `detected`
 // (detectSetups's): its detector's setups within DETECTED_MAX_BARS of the
 // fill, one there to trade before one that isn't, then the most recent. Null
