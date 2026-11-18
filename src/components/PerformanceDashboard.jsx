@@ -243,7 +243,7 @@ export default function PerformanceDashboard() {
                 <TimeOfDay buckets={data.timeOfDay} />
                 <BySetup rows={data.bySetup} />
                 <ByGrade grades={data.byGrade} />
-                {data.byDetected && <ByDetected detected={data.byDetected} />}
+                <ByDetected detected={data.byDetected} />
                 <CallsVsPuts sides={data.callsVsPuts} />
                 <ByUnderlying rows={data.byUnderlying} />
                 <FeesVsGross months={data.months} />

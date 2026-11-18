@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { DETECTED_MAX_BARS } from '../setups/settings';
 import { byDetected, byGrade, bySetup, byUnderlying, callsVsPuts, equityCurve, GRAD_N, graduation, modeComparison, monthlySummary, rDistribution, rollingExpectancy, summarize, timeOfDay } from '../performance';
 
 // A closed long option, 1 contract: gross P/L is (exit - entry) * 100.
@@ -331,8 +332,23 @@ describe('byDetected', () => {
   });
 
   it('counts only setups within DETECTED_MAX_BARS of the fill and there to trade', () => {
-    const { rows } = byDetected([withSetups([setup('three_gate', { barsSince: 4 }), setup('band_cross', { status: 'no_room' })], 10)]);
-    expect(rows.map((r) => r.detector)).toEqual(['none']);
+    const { rows } = byDetected([
+      withSetups([setup('three_gate', { barsSince: DETECTED_MAX_BARS + 1 }), setup('band_cross', { status: 'no_room' })], 10),
+      withSetups([setup('reversal', { barsSince: DETECTED_MAX_BARS })], 5),
+    ]);
+    expect(rows.map((r) => [r.detector, r.trades])).toEqual([
+      ['reversal', 1],
+      ['any', 1],
+      ['none', 1],
+    ]);
+  });
+
+  it('counts a trade once in a row, however many setups that detector found', () => {
+    const { rows } = byDetected([withSetups([setup('four_touch', { status: 'valid' }), setup('four_touch', { status: 'trap' })], 10)]);
+    expect(rows.map((r) => [r.detector, r.trades])).toEqual([
+      ['four_touch', 1],
+      ['any', 1],
+    ]);
   });
 
   it('counts the trades with no detected setups stored apart, and skips open trades', () => {

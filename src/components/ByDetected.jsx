@@ -76,7 +76,9 @@ export default function ByDetected({ detected: { rows: found, unknown } }) {
         <h2 className="text-sm font-semibold text-gray-700">Results by detected setup</h2>
         <p className="text-xs text-gray-500">
           Net P/L by the setups detected on the chart within {DETECTED_MAX_BARS} bars of the entry, as stored with its
-          context. A trade with two setups counts in both rows; any setup against none says whether the setup matters.
+          context. Only setups there to trade count: complete, a valid break, or a trap; a weak or pending break, a band
+          cross with no room, or a spent reversal reads as no setup. A trade with two setups counts in both rows; any
+          setup against none says whether the setup matters.
         </p>
       </div>
 
