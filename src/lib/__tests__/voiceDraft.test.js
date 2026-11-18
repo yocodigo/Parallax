@@ -111,3 +111,10 @@ describe('toDraft', () => {
     expect(fieldErrors).toEqual({ plan: {}, entry: {} });
   });
 });
+
+describe('draftOutputSchema', () => {
+  it('no longer offers Claude the retired lockout mistake', () => {
+    expect(() => output({ mistakes: ['entered_in_lockout'] })).toThrow();
+    expect(output({ mistakes: ['moved_stop'] }).mistakes).toEqual(['moved_stop']);
+  });
+});
