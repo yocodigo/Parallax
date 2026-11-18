@@ -5,6 +5,7 @@ import {
   entryGate,
   gradeGates,
   inWindow,
+  setupGate,
   sizeGate,
   stateGate,
   stopGate,
@@ -225,5 +226,35 @@ describe('gradeGates', () => {
 
   it("can't judge the stop gate without a recorded stop rule", () => {
     expect(gradeGates({ ...metTrade, stopRule: null }).stop).toBe('unknown');
+  });
+
+  it('adds the Setup gate for a strategy tied to a detector, and no Setup gate without one', () => {
+    expect(gradeGates(metTrade)).not.toHaveProperty('setup');
+    const result = gradeGates({ ...metTrade, detector: 'band_cross', setup: { status: 'complete' } });
+    expect(result).toMatchObject({ setup: 'met', direction: 'met', entry: 'met' });
+  });
+
+  it('judges Direction and Entry only for the band cross, or a trade with no detector', () => {
+    const result = gradeGates({ ...metTrade, detector: 'four_touch', setup: { status: 'valid', grade: 'B' } });
+    expect(result.setup).toBe('met');
+    expect(result).not.toHaveProperty('direction');
+    expect(result).not.toHaveProperty('entry');
+  });
+});
+
+describe('setupGate', () => {
+  it("is met by the strategy's own setup when it was there to trade: complete, a valid break, or a trap", () => {
+    for (const status of ['complete', 'valid', 'trap']) expect(setupGate({ status })).toBe('met');
+  });
+
+  it('is missed when the setup was absent, or not there to trade', () => {
+    expect(setupGate(null)).toBe('missed');
+    for (const status of ['no_room', 'weak', 'pending', 'invalidated', 'target_hit']) {
+      expect(setupGate({ status })).toBe('missed');
+    }
+  });
+
+  it("can't say without the bars to detect it from", () => {
+    expect(setupGate(undefined)).toBe('unknown');
   });
 });

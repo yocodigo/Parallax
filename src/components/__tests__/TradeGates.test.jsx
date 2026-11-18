@@ -127,3 +127,32 @@ describe('TradeGates', () => {
     expect(screen.queryByText(/Floating/)).not.toBeInTheDocument();
   });
 });
+
+describe('TradeGates for a strategy tied to a detector', () => {
+  const base = { window: 'unknown', location: 'unknown', target: 'met', state: 'met', stop: 'met' };
+
+  it('shows the Setup gate after Entry, and the setup the detector found', async () => {
+    serveGates({
+      gates: { ...base, setup: 'met' },
+      setup: { detector: 'four_touch', timeframe: '1m', direction: 'short', status: 'valid', grade: 'A', barsSince: 1 },
+    });
+    renderGates();
+
+    expect(await screen.findByText('Setup OK')).toBeInTheDocument();
+    expect(screen.getByText('Setup: four-touch break on the 1m, valid, grade A, 1 bar before the fill')).toBeInTheDocument();
+  });
+
+  it("says the setup wasn't there, or wasn't there to trade", async () => {
+    serveGates({ gates: { ...base, setup: 'missed' }, setup: null });
+    const { unmount } = renderGates();
+    expect(await screen.findByText('Setup: none found within 3 bars of the fill')).toBeInTheDocument();
+    unmount();
+
+    serveGates({
+      gates: { ...base, direction: 'met', entry: 'met', setup: 'missed' },
+      setup: { detector: 'band_cross', timeframe: '5m', direction: 'long', status: 'no_room', grade: null, barsSince: 0 },
+    });
+    renderGates();
+    expect(await screen.findByText('Setup: 15m band cross, no room to the 1m band, 0 bars before the fill')).toBeInTheDocument();
+  });
+});

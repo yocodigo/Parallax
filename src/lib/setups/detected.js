@@ -15,6 +15,7 @@
 import { findEntry } from './entry';
 import { sideOf } from './entryReview';
 import { fourTouchBreaks } from './fourTouch';
+import { TRADABLE } from './gates';
 import { tradeBias } from './replayTrades';
 import { resample } from './resample';
 import { reversalSequences } from './reversalSequence';
@@ -168,4 +169,19 @@ export function clearsWindow(setup) {
   if (setup.barsSince > DETECTED_MAX_BARS) return false;
   if (setup.detector === 'four_touch') return setup.status === 'valid' && setup.grade === 'A';
   return setup.status === 'complete';
+}
+
+// The setup a strategy tied to `detector` was taken on, from `detected`
+// (detectSetups's): its detector's setups within DETECTED_MAX_BARS of the
+// fill, one there to trade before one that isn't, then the most recent. Null
+// when there is none.
+export function strategySetup(detected, detector) {
+  const rank = (setup) => [TRADABLE.includes(setup.status) ? 0 : 1, setup.barsSince];
+  const before = (a, b) => {
+    const [ra, rb] = [rank(a), rank(b)];
+    return ra[0] !== rb[0] ? ra[0] < rb[0] : ra[1] < rb[1];
+  };
+  return detected
+    .filter((setup) => setup.detector === detector && setup.barsSince <= DETECTED_MAX_BARS)
+    .reduce((best, setup) => (!best || before(setup, best) ? setup : best), null);
 }

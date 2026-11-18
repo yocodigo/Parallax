@@ -87,6 +87,12 @@ describe('whatsWorking', () => {
     ]);
   });
 
+  it("counts the Setup gate of a trade whose strategy has a detector, after Entry", () => {
+    const result = whatsWorking([stock(2, { gates: { ...gates(), setup: 'met' } }), stock(-1, { gates: gates() })]);
+    expect(result.gates.find((g) => g.gate === 'setup').met).toEqual({ trades: 1, r: { trades: 1, average: 2 }, pnl: null });
+    expect(result.gates.map((g) => g.gate).slice(2, 5)).toEqual(['entry', 'setup', 'location']);
+  });
+
   it('leaves out a gate no trade met', () => {
     const result = whatsWorking([stock(1, { gates: gates({ state: 'unknown' }) })]);
     expect(result.gates.find((g) => g.gate === 'state')).toBeUndefined();

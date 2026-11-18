@@ -4,16 +4,20 @@ import useSWR from 'swr';
 import { fetchJson } from '@/lib/fetchJson';
 import { formatTradeTime } from '@/lib/format';
 import { MET, MISSED } from '@/lib/setups/gates';
+import { DETECTED_MAX_BARS } from '@/lib/setups/settings';
+import { DETECTOR_LABELS } from '@/lib/strategy';
 
 // The section 8 table's order; `size` only appears for an option trade
-// (gradeGates only grades it there).
-const GATE_ORDER = ['window', 'size', 'direction', 'entry', 'location', 'stop', 'target', 'state'];
+// (gradeGates only grades it there), and `setup` for a strategy tied to a
+// detector.
+const GATE_ORDER = ['window', 'size', 'direction', 'entry', 'setup', 'location', 'stop', 'target', 'state'];
 
 const GATE_LABELS = {
   window: 'Window',
   size: 'Size',
   direction: 'Direction',
   entry: 'Entry',
+  setup: 'Setup',
   location: 'Location',
   stop: 'Stop',
   target: 'Target',
@@ -92,6 +96,31 @@ function roomLine(room) {
     : `${base}, ${room.ratio.toFixed(1)} times the ${room.risk.toFixed(2)} pts to the stop`;
 }
 
+// A detected setup's status (detected.js) in words.
+const STATUS_WORDS = {
+  complete: 'complete',
+  no_room: 'no room to the 1m band',
+  valid: 'valid',
+  weak: 'weak, without the 4x body',
+  trap: 'a trap, taken the other way',
+  pending: 'not confirmed yet',
+  invalidated: 'invalidated past its sweep',
+  target_hit: 'already at its target',
+};
+
+// [rules-v3 6] The setup the strategy's detector found by the fill, and
+// nothing for a trade with no Setup gate.
+function setupLine(gate, setup) {
+  if (!gate) return null;
+  if (!setup) return `Setup: none found within ${DETECTED_MAX_BARS} bars of the fill`;
+  const name = DETECTOR_LABELS[setup.detector].toLowerCase();
+  // The band cross's name already says its timeframe.
+  const where = setup.detector === 'band_cross' ? name : `${name} on the ${setup.timeframe}`;
+  const grade = setup.grade ? `, grade ${setup.grade}` : '';
+  const bars = `${setup.barsSince} ${setup.barsSince === 1 ? 'bar' : 'bars'} before the fill`;
+  return `Setup: ${where}, ${STATUS_WORDS[setup.status] ?? setup.status}${grade}, ${bars}`;
+}
+
 // A recorded trade's pre-entry gates (section 8), graded from its bars, the
 // day's plan, and its own plan entry, with where the entry sat among the
 // day's levels.
@@ -103,10 +132,10 @@ export default function TradeGates({ tradeId }) {
   if (isLoading) return <p className="text-xs text-gray-500">Loading gates…</p>;
   if (error) return <p className="text-xs text-red-700">{error.message}</p>;
 
-  const { gates, reason, location, room } = data;
+  const { gates, reason, location, room, setup } = data;
   if (!gates) return <p className="text-xs text-gray-500">{reason ?? 'No gates to grade for this trade.'}</p>;
 
-  const levelLines = [locationLine(location), roomLine(room)].filter(Boolean);
+  const levelLines = [setupLine(gates.setup, setup), locationLine(location), roomLine(room)].filter(Boolean);
   return (
     <div className="space-y-1">
       <div className="flex flex-wrap gap-1.5 text-xs">

@@ -3,6 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { getDb } from '@/db';
 import { addJournalEntry } from '@/db/journal';
 import { dailyPlans, trades } from '@/db/schema';
+import { createStrategy } from '@/db/strategies';
 import { resetDb } from '@/db/testing';
 import { server } from '@/mocks/server';
 import { GET } from '../route';
@@ -153,6 +154,35 @@ describe('GET /api/trades/[id]/gates', () => {
       adjustment: 'split',
     });
     expect(dailyQuery(queries)).toMatchObject({ symbols: 'SPY', end: '2026-10-26' });
+  });
+
+  it("judges the setup of the trade's strategy, and Direction and Entry only for the band cross", async () => {
+    const strategy = (detector) =>
+      createStrategy(getDb(), { name: detector, detector, rules: [{ text: 'A rule', kind: 'edge' }] });
+    serveBars('SPY', BARS);
+
+    // The 15m cross closed at 10:45 and no 5m entry candle has closed by the
+    // 10:47 fill; no four-touch line formed either.
+    const bandCross = await insertTrade({ strategyId: (await strategy('band_cross')).id });
+    const crossBody = await (await get(bandCross.id)).json();
+    expect(crossBody.gates).toMatchObject({ setup: 'missed', direction: 'met', entry: 'met' });
+    expect(crossBody.setup).toBeNull();
+
+    const fourTouch = await insertTrade({ strategyId: (await strategy('four_touch')).id });
+    const touchBody = await (await get(fourTouch.id)).json();
+    expect(touchBody.gates.setup).toBe('missed');
+    expect(touchBody.gates).not.toHaveProperty('direction');
+    expect(touchBody.gates).not.toHaveProperty('entry');
+  });
+
+  it('has no Setup gate for a trade whose strategy has no detector', async () => {
+    const { id } = await createStrategy(getDb(), { name: 'Checklist', rules: [{ text: 'A rule', kind: 'edge' }] });
+    const trade = await insertTrade({ strategyId: id });
+    serveBars('SPY', BARS);
+
+    const body = await (await get(trade.id)).json();
+    expect(body.gates).not.toHaveProperty('setup');
+    expect(body.setup).toBeNull();
   });
 
   it('locates an entry at a level from the daily bars, or from the plan', async () => {

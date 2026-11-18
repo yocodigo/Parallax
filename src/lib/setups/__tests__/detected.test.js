@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clearsWindow, detectSetups } from '../detected';
+import { clearsWindow, detectSetups, strategySetup } from '../detected';
 import { BARS, MINUTE, openOf } from './fixtures/bandCross';
 import { breakout, trap } from './fixtures/fourTouch';
 import { reversalBars, TARGET_POOL } from './fixtures/reversalSequence';
@@ -220,5 +220,24 @@ describe('clearsWindow', () => {
     expect(clearsWindow(setup({ detector: 'four_touch', status: 'valid', grade: 'A' }))).toBe(true);
     expect(clearsWindow(setup({ detector: 'four_touch', status: 'valid', grade: 'B' }))).toBe(false);
     expect(clearsWindow(setup({ detector: 'four_touch', status: 'trap', grade: 'A' }))).toBe(false);
+  });
+});
+
+describe('strategySetup', () => {
+  const setup = (overrides) => ({ detector: 'four_touch', timeframe: '1m', status: 'valid', grade: 'A', barsSince: 0, ...overrides });
+
+  it("picks the strategy's detector within DETECTED_MAX_BARS, one there to trade first, then the most recent", () => {
+    const detected = [
+      setup({ detector: 'band_cross', status: 'complete' }),
+      setup({ timeframe: '1m', status: 'weak', barsSince: 0 }),
+      setup({ timeframe: '5m', status: 'valid', barsSince: 2 }),
+    ];
+    expect(strategySetup(detected, 'four_touch')).toEqual(detected[2]);
+    expect(strategySetup(detected.slice(0, 2), 'four_touch')).toEqual(detected[1]);
+  });
+
+  it('is null when the detector found nothing recent', () => {
+    expect(strategySetup([setup({ barsSince: 4 })], 'four_touch')).toBeNull();
+    expect(strategySetup([setup()], 'reversal')).toBeNull();
   });
 });

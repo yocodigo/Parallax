@@ -11,7 +11,7 @@ import { profitLoss, rMultiple } from './tradeMetrics';
 // never mixed.
 
 // The setups.md section 8 table's order, as TradeGates shows them.
-const GATE_ORDER = ['window', 'size', 'direction', 'entry', 'location', 'stop', 'target', 'state'];
+const GATE_ORDER = ['window', 'size', 'direction', 'entry', 'setup', 'location', 'stop', 'target', 'state'];
 
 const average = (values) => values.reduce((sum, v) => sum + v, 0) / values.length;
 

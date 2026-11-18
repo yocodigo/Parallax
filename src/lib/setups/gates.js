@@ -98,6 +98,20 @@ export function entryGate(bar, prev) {
   return atMost(share, OVERLAP_MAX) ? MET : MISSED;
 }
 
+// The statuses of a detected setup (detected.js) that leave it there to
+// trade: complete, a confirmed four-touch break, or a trap taken the other
+// way.
+export const TRADABLE = ['complete', 'valid', 'trap'];
+
+// Setup OK (rules-v3 6): the setup of the strategy's own detector was on the
+// chart at the fill (strategySetup in detected.js finds it, null when it
+// wasn't), there to trade. Unknown without the bars to detect it from
+// (`setup` undefined).
+export function setupGate(setup) {
+  if (setup === undefined) return UNKNOWN;
+  return setup && TRADABLE.includes(setup.status) ? MET : MISSED;
+}
+
 // Stop OK: a stop rule (S1/S2/S3, section 5) was chosen before entry.
 // Unknown, not missed, without one recorded: most plans so far predate the
 // field, and the plan form doesn't require it yet.
@@ -109,7 +123,10 @@ export function stopGate(stopRule) {
 // contracts); a stock or crypto swing has no contract count to judge by it,
 // so the gate is left off rather than graded against every trade. Location OK
 // (rules-v3 4) comes from levelLocation in location.js, which needs the level
-// map: `location` is its result, and the gate is unknown without one.
+// map: `location` is its result, and the gate is unknown without one. A
+// strategy tied to a `detector` gets Setup OK from `setup` (setupGate's);
+// Direction OK and Entry OK judge the band cross alone, so they apply to a
+// band-cross strategy or a trade with no detector (rules-v3 6).
 export function gradeGates({
   assetClass,
   openedAt,
@@ -123,16 +140,21 @@ export function gradeGates({
   entryBar,
   entryPrevBar,
   location = null,
+  detector = null,
+  setup,
 }) {
-  const gates = {
-    window: windowGate(openedAt),
-    direction: directionGate(bars15, directionBarIndex, direction),
-    entry: entryGate(entryBar, entryPrevBar),
+  const gates = { window: windowGate(openedAt) };
+  if (!detector || detector === 'band_cross') {
+    gates.direction = directionGate(bars15, directionBarIndex, direction);
+    gates.entry = entryGate(entryBar, entryPrevBar);
+  }
+  if (detector) gates.setup = setupGate(setup);
+  Object.assign(gates, {
     location: location?.status ?? UNKNOWN,
     target: targetGate(dailyPlan),
     state: stateGate(planEntry),
     stop: stopGate(stopRule),
-  };
+  });
   if (assetClass === 'option') gates.size = sizeGate(quantity);
   return gates;
 }

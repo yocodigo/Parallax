@@ -53,12 +53,13 @@ export function underlyingAt(bars, asOf, day) {
   return null;
 }
 
-// [rules-v3 4] Where a trade's entry sat among the day's levels: { location,
-// room } from levelLocation and levelRoom, on the level map as of the fill
-// (levelMap; `dailyBars` and `dailyPlan` as it takes them). Room runs from the
-// underlying's price at the fill (the last minute close before it, the price
-// Location OK is judged at) to the invalidation level: an option's stop on the
-// underlying, never its premium stop; a stock's own stop. A derived option
+// [rules-v3 4] Where a trade's entry sat among the day's levels: { levels,
+// location, room }, the level map as of the fill (levelMap; `dailyBars` and
+// `dailyPlan` as it takes them) with levelLocation's and levelRoom's verdicts
+// on it. Room runs from the underlying's price at the fill (the last minute
+// close before it, the price Location OK is judged at) to the invalidation
+// level: an option's stop on the underlying, never its premium stop; a
+// stock's own stop. A derived option
 // stop was placed against `underlying_entry`, the fill minute's VWAP, so one
 // sitting between that and this price leaves no risk to compare. Null for a
 // plan that was never entered.
@@ -69,6 +70,7 @@ export function levelsAtEntry(trade, bars = [], { dailyBars = [], dailyPlan = nu
   const levels = levelMap({ bars, dailyBars, dailyPlan, asOf });
   const invalidation = trade.assetClass === 'option' ? trade.underlyingStop : trade.initialStop;
   return {
+    levels,
     location: levelLocation({ levels, bars, asOf, bias }),
     room: levelRoom({
       levels,
@@ -83,8 +85,13 @@ export function levelsAtEntry(trade, bars = [], { dailyBars = [], dailyPlan = nu
 // underlying's minute bars around the entry; `dailyPlan` is the day's plan row
 // and `planEntry` the trade's plan journal entry, both null when there is
 // none; `location` is levelsAtEntry's, null when it wasn't worked out (the
-// gate is then unknown).
-export function gradeTradeGates(trade, bars = [], { dailyPlan = null, planEntry = null, location = null } = {}) {
+// gate is then unknown). `detector` is the trade's strategy's, and `setup`
+// strategySetup's for it (undefined when it couldn't be worked out).
+export function gradeTradeGates(
+  trade,
+  bars = [],
+  { dailyPlan = null, planEntry = null, location = null, detector = null, setup } = {}
+) {
   const recorded = {
     assetClass: trade.assetClass,
     openedAt: trade.openedAt,
@@ -92,6 +99,8 @@ export function gradeTradeGates(trade, bars = [], { dailyPlan = null, planEntry 
     stopRule: trade.stopRule,
     dailyPlan,
     planEntry,
+    detector,
+    setup,
   };
   // A plan that was never entered has no fill to judge the bars against; the
   // gates it recorded are still worth grading.
