@@ -1,6 +1,7 @@
 'use client';
 
 import { formatProfitLoss } from '@/lib/format';
+import { DETECTED_MAX_BARS } from '@/lib/setups/settings';
 
 const percent = new Intl.NumberFormat('en-US', { style: 'percent', maximumFractionDigits: 0 });
 const plainMoney = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
@@ -181,7 +182,7 @@ export default function PerformanceTables({ months, yearToDate, adherence, viola
           planned one, not a discomfort exit. Discipline score: the Plan OK, Stop OK, and Exit OK checks passed out of the
           ones that applied (Window OK and Size OK aren&apos;t in it). It has no cost, since one trade can fail
           several checks. Window OK: an entry outside every window holds it, and one inside holds it only with a detected
-          setup that clears the window (a complete setup within 3 bars, or a valid grade A four-touch break); an entry
+          setup that clears the window (within {DETECTED_MAX_BARS} bars of the fill, a setup that is complete, or for a four-touch break valid and grade A); an entry
           from before setups were detected isn&apos;t judged.
         </p>
       </Table>

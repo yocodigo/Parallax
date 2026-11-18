@@ -1,4 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { saveTradeContext } from '@/db/contexts';
 import { saveDailyPlan } from '@/db/dailyPlans';
 import { addJournalEntry } from '@/db/journal';
 import { trades } from '@/db/schema';
@@ -57,6 +58,20 @@ describe('gatherReviewFacts', () => {
     // The plan entry came before the fill, so Plan OK held for the trade with a strategy.
     expect(facts.modes.live.adherence.checks.plan).toEqual({ ok: 1, missed: 0, cost: 0 });
     expect(facts.range).toEqual({ label: 'Last 7 days', from: '2026-04-08', to: '2026-04-14' });
+  });
+
+  it("judges a window entry by the setups its snapshot detected, flagging one with none", async () => {
+    // Noon in New York, inside the 11:00-14:00 window, with no setup detected.
+    const [inWindow] = await db
+      .insert(trades)
+      .values(option('13', { openedAt: new Date('2026-04-13T16:00:00Z'), closedAt: new Date('2026-04-13T17:00:00Z'), exitPrice: 0.9 }))
+      .returning();
+    await saveTradeContext(db, inWindow.id, { version: 3, setups: { fourTouch: null, detected: [] }, levels: [] });
+
+    const facts = await gatherReviewFacts(db, week);
+
+    expect(facts.modes.live.adherence.checks.window).toEqual({ ok: 0, missed: 1, cost: -10 });
+    expect(facts.modes.live.adherence.flagged[0].failed).toContain('Window');
   });
 
   it('reads the entries of those trades and the unlinked entries created in range', async () => {

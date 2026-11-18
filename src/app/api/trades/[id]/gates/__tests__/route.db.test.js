@@ -136,7 +136,6 @@ describe('GET /api/trades/[id]/gates', () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.gates).toEqual({
-      window: 'met',
       direction: 'met',
       entry: 'met',
       location: 'missed',
@@ -154,6 +153,22 @@ describe('GET /api/trades/[id]/gates', () => {
       adjustment: 'split',
     });
     expect(dailyQuery(queries)).toMatchObject({ symbols: 'SPY', end: '2026-10-26' });
+  });
+
+  it("judges an option's window entry by the setups detected on its bars", async () => {
+    // 09:40 New York, inside the 9:30-9:45 window, on a flat morning: nothing detected clears it.
+    const trade = await insertTrade({
+      assetClass: 'option',
+      optionType: 'call',
+      strike: 10,
+      expiration: '2026-10-27',
+      quantity: 1,
+      openedAt: new Date('2026-10-27T13:40:00Z'),
+    });
+    serveBars('SPY', BARS);
+
+    const body = await (await get(trade.id)).json();
+    expect(body.gates.window).toBe('missed');
   });
 
   it("judges the setup of the trade's strategy, and Direction and Entry only for the band cross", async () => {

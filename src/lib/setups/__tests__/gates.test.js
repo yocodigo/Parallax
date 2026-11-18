@@ -226,9 +226,10 @@ describe('gradeGates', () => {
     });
   });
 
-  it('leaves out size for a stock or crypto trade', () => {
+  it('leaves out size and window for a stock or crypto trade: both are option rules', () => {
     const result = gradeGates({ ...metTrade, assetClass: 'stock', quantity: 500 });
     expect(result).not.toHaveProperty('size');
+    expect(result).not.toHaveProperty('window');
   });
 
   it('misses one gate without affecting the others', () => {

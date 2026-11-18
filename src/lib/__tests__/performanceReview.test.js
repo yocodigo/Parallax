@@ -386,6 +386,11 @@ describe('ruleAdherence', () => {
     exitReason: 'felt_heavy',
   };
 
+  it('flags a window entry with no setup detected that clears it', () => {
+    const { flagged } = ruleAdherence([clean(-5, { ...rough, exitReason: 'target', detected: [] })]);
+    expect(flagged[0].failed).toEqual(['Window']);
+  });
+
   it('passes the dashboard’s adherence figures through', () => {
     const { checks } = ruleAdherence([clean(10), clean(-5, rough)]);
 

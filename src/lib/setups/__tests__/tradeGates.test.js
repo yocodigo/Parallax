@@ -96,7 +96,6 @@ const records = { dailyPlan: { id: 1, ltfFib50: 681.2, ltfFib100: 684.5 }, planE
 describe('gradeTradeGates', () => {
   it('grades every gate of a trade taken on the 15m cross', () => {
     expect(gradeTradeGates(trade(), BARS, records)).toEqual({
-      window: 'met',
       direction: 'met',
       entry: 'met',
       location: 'unknown',
@@ -145,7 +144,6 @@ describe('gradeTradeGates', () => {
     expect(gradeTradeGates(trade({ openedAt: at('09:33') }), BARS, records)).toMatchObject({
       entry: 'unknown',
       direction: 'unknown',
-      window: 'unknown',
     });
   });
 
@@ -153,19 +151,18 @@ describe('gradeTradeGates', () => {
     // 10:44, a minute before the crossing bar closes: nothing had set a bias.
     expect(gradeTradeGates(trade({ openedAt: at('10:44') }), BARS, records)).toMatchObject({
       direction: 'unknown',
-      window: 'met',
     });
   });
 
-  it("can't judge a window entry without the setups detected at it", () => {
-    expect(gradeTradeGates(trade({ openedAt: at('11:30') }), BARS, records).window).toBe('unknown');
-    expect(gradeTradeGates(trade({ openedAt: at('11:30') }), BARS, { ...records, detected: [] }).window).toBe('missed');
+  it("can't judge an option's window entry without the setups detected at it", () => {
+    const call = trade({ assetClass: 'option', optionType: 'call', quantity: 1, openedAt: at('11:30') });
+    expect(gradeTradeGates(call, BARS, records).window).toBe('unknown');
+    expect(gradeTradeGates(call, BARS, { ...records, detected: [] }).window).toBe('missed');
   });
 
   it('grades only what was recorded for a plan that was never entered', () => {
     const plan = trade({ openedAt: null, entryPrice: null });
     expect(gradeTradeGates(plan, BARS, records)).toEqual({
-      window: 'unknown',
       direction: 'unknown',
       entry: 'unknown',
       location: 'unknown',
@@ -177,7 +174,6 @@ describe('gradeTradeGates', () => {
 
   it('leaves the bar gates unknown without bars', () => {
     expect(gradeTradeGates(trade(), [], records)).toEqual({
-      window: 'met',
       direction: 'unknown',
       entry: 'unknown',
       location: 'unknown',

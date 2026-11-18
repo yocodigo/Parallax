@@ -273,7 +273,8 @@ Vitest, JavaScript (not TypeScript).
   the defaults (from `settings.js`) and `parseRuleSettings`; `getRuleSettings`/`saveRuleSettings` in
   `src/db/settings.js` (defaults until the first save; the route validates before saving); edited in
   `RuleSettings.jsx` on `/insights` through `GET`/`PUT /api/rule-settings`.
-  Windows raise the bar instead of closing the door: `windowGate(openedAt, detected)` is met outside every
+  Windows raise the bar instead of closing the door (an option rule; stock trades get no Window gate):
+  `windowGate(openedAt, detected)` is met outside every
   window, and inside one only when a detected setup clears it (`clearsWindow`); missing it is the
   window_no_setup mistake, computed rather than tagged. Without detected setups (no bars, or a snapshot from
   before version 3, read by `listContextDetected` for the performance page and the Performance Review) a
@@ -304,8 +305,8 @@ Vitest, JavaScript (not TypeScript).
   reversal, and three-gate detectors on the bars closed before the fill, the trade's way only, each with
   `status`, `grade` (four-touch only), `completedAt`, and `barsSince` in its own timeframe's bars) and `levels`
   (the level map at the fill, with the day's plan, which the callers pass as `dailyPlan`; kept since a plan can
-  be edited later, though an import reads the plan as it stands at import time, which can be days after the fill). `clearsWindow` (`gates.js`) is the window rule: within `DETECTED_MAX_BARS` (3) bars, complete, or for a
-  four-touch break valid and grade A. A failing source is logged and left null. Live option values are kept only within 15 minutes of the fill.
+  be edited later, though an import reads the plan as it stands at import time, which can be days after the fill). `clearsWindow` (`gates.js`) is the window rule: within `DETECTED_MAX_BARS` (3) bars of the fill, a setup
+  that is complete, or for a four-touch break valid and grade A. A failing source is logged and left null. Live option values are kept only within 15 minutes of the fill.
   `TradeContext.jsx` shows it on demand via `GET /api/trades/[id]/context`. Entry route tests mock
   `after` and `captureContext`. Macro dates in `src/lib/context/macroCalendar.js` cover 2026-10-22
   through 2027-12-31 (BLS blocks automated requests); extend them yearly.

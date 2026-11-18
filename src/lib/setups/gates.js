@@ -133,8 +133,9 @@ export function stopGate(stopRule) {
 }
 
 // All of a trade's gates, keyed by name. Size OK is Joel's options rule (1-2
-// contracts); a stock or crypto swing has no contract count to judge by it,
-// so the gate is left off rather than graded against every trade. Location OK
+// contracts) and Window OK his options entry windows; a stock or crypto swing
+// is judged by neither, so both are left off rather than graded against every
+// trade. Location OK
 // (rules-v3 4) comes from levelLocation in location.js, which needs the level
 // map: `location` is its result, and the gate is unknown without one. A
 // strategy tied to a `detector` gets Setup OK from `setup` (setupGate's), and
@@ -158,7 +159,8 @@ export function gradeGates({
   setup,
   detected,
 }) {
-  const gates = { window: windowGate(openedAt, detected) };
+  // Window and Size are option rules (rules-v3 5): a stock swing has neither.
+  const gates = assetClass === 'option' ? { window: windowGate(openedAt, detected) } : {};
   if (!detector || detector === 'band_cross') {
     gates.direction = directionGate(bars15, directionBarIndex, direction);
     gates.entry = entryGate(entryBar, entryPrevBar);
