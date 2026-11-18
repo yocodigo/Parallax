@@ -28,6 +28,15 @@ export const MISTAKES = [
   'entered_in_lockout',
 ];
 
+// Mistakes no longer offered for new entries; old entries keep them, shown by
+// their label. entered_in_lockout went when windows stopped being lockouts
+// (rules-v3 5): a window entry without a setup is now computed (Window OK),
+// not tagged.
+export const RETIRED_MISTAKES = ['entered_in_lockout'];
+
+// The mistakes a new entry can be tagged with.
+export const MISTAKE_CHOICES = MISTAKES.filter((mistake) => !RETIRED_MISTAKES.includes(mistake));
+
 export const EMOTION_LABELS = {
   calm: 'Calm',
   hesitant: 'Hesitant',
@@ -64,7 +73,7 @@ const schema = z
     notes: z.string().trim().min(1, 'Notes cannot be empty').max(10000),
     emotion: z.enum(EMOTIONS).optional(),
     mistakes: z
-      .array(z.enum(MISTAKES))
+      .array(z.enum(MISTAKE_CHOICES))
       .default([])
       .transform((list) => [...new Set(list)]),
     emotionalControl: z.int().min(1).max(10).optional(),

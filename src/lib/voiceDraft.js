@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { EMOTIONS, MISTAKES, parseJournalEntry } from './journalEntry';
+import { EMOTIONS, MISTAKE_CHOICES, parseJournalEntry } from './journalEntry';
 import { parseTradePlan, STOP_RULES } from './tradePlan';
 
 // The shape Claude fills in from a transcript. Every field is required and
@@ -11,7 +11,7 @@ export const draftOutputSchema = z.object({
   symbol: z.string().nullable().describe('Ticker the note is about, if any'),
   notes: z.string().describe("The trader's reasoning in their own words, without filler"),
   emotion: z.enum(EMOTIONS).nullable().describe('Only if they say how they feel'),
-  mistakes: z.array(z.enum(MISTAKES)).describe('Only mistakes they admit to'),
+  mistakes: z.array(z.enum(MISTAKE_CHOICES)).describe('Only mistakes they admit to'),
   plan: z
     .object({
       mode: z.enum(['live', 'paper', 'backtest']).nullable(),

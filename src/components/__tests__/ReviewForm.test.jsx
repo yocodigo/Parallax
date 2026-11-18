@@ -124,6 +124,14 @@ describe('ReviewForm', () => {
     });
   });
 
+  it('no longer offers the retired lockout mistake', async () => {
+    serveJournal(journalWithTrades());
+    renderForm();
+
+    expect(await screen.findByLabelText('Moved stop')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Entered in lockout')).not.toBeInTheDocument();
+  });
+
   it('sends emotionalControl as a number', async () => {
     serveJournal([]);
     const bodies = captureReviews();

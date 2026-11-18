@@ -4,7 +4,7 @@ import { useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { apiErrorMessage, fetchJson } from '@/lib/fetchJson';
 import { byOpenedAtDesc, formatTradeTime } from '@/lib/format';
-import { EMOTION_LABELS, EMOTIONS, MISTAKE_LABELS, MISTAKES } from '@/lib/journalEntry';
+import { EMOTION_LABELS, EMOTIONS, MISTAKE_CHOICES, MISTAKE_LABELS } from '@/lib/journalEntry';
 import Field, { inputClass } from './Field';
 import { capitalize, describeTrade } from './JournalEntries';
 
@@ -37,7 +37,7 @@ function formFromDraft({ entry = {} }) {
     symbol: entry.symbol ?? '',
     notes: entry.notes ?? '',
     emotion: entry.emotion ?? '',
-    mistakes: MISTAKES.filter((m) => entry.mistakes?.includes(m)),
+    mistakes: MISTAKE_CHOICES.filter((m) => entry.mistakes?.includes(m)),
     emotionalControl: entry.emotionalControl ?? '',
   };
 }
@@ -57,13 +57,13 @@ export default function ReviewForm({ draft, draftErrors, onSaved }) {
 
   const set = (name) => (e) => setForm((current) => ({ ...current, [name]: e.target.value }));
 
-  // Kept in the order of MISTAKES, whatever order the boxes were ticked in.
+  // Kept in the order of MISTAKE_CHOICES, whatever order the boxes were ticked in.
   const toggleMistake = (mistake) =>
     setForm((current) => {
       const ticked = current.mistakes.includes(mistake)
         ? current.mistakes.filter((m) => m !== mistake)
         : [...current.mistakes, mistake];
-      return { ...current, mistakes: MISTAKES.filter((m) => ticked.includes(m)) };
+      return { ...current, mistakes: MISTAKE_CHOICES.filter((m) => ticked.includes(m)) };
     });
 
   // The first message the server sent for a field, if any.
@@ -169,7 +169,7 @@ export default function ReviewForm({ draft, draftErrors, onSaved }) {
       <fieldset>
         <legend className="text-xs font-medium text-gray-500">Mistakes</legend>
         <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-4">
-          {MISTAKES.map((mistake) => (
+          {MISTAKE_CHOICES.map((mistake) => (
             <label key={mistake} className="flex items-center gap-2 text-sm text-gray-700">
               <input
                 type="checkbox"

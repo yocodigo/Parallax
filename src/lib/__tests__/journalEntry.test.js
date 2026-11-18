@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  EMOTION_LABELS,
-  EMOTIONS,
-  MISTAKE_LABELS,
-  MISTAKES,
-  parseJournalEntry,
-} from '../journalEntry';
+import { EMOTION_LABELS, EMOTIONS, MISTAKE_CHOICES, MISTAKE_LABELS, MISTAKES, parseJournalEntry } from '../journalEntry';
 
 const review = { kind: 'review', notes: 'Held past my target and gave back half the move.' };
 
@@ -44,13 +38,17 @@ describe('parseJournalEntry', () => {
     expect(parseJournalEntry({ ...review, emotion: 'regretful' }).success).toBe(true);
   });
 
-  it('accepts the entered_before_confirmation, mid_range_entry, and entered_in_lockout mistakes', () => {
-    const result = parseJournalEntry({
-      ...review,
-      mistakes: ['entered_before_confirmation', 'mid_range_entry', 'entered_in_lockout'],
-    });
+  it('accepts the entered_before_confirmation and mid_range_entry mistakes', () => {
+    const result = parseJournalEntry({ ...review, mistakes: ['entered_before_confirmation', 'mid_range_entry'] });
 
     expect(result.success).toBe(true);
+  });
+
+  it('no longer takes the retired entered_in_lockout, which old entries still show by its label', () => {
+    // Windows raise the bar now (rules-v3 5): a window entry without a setup is computed, not tagged.
+    expect(parseJournalEntry({ ...review, mistakes: ['entered_in_lockout'] }).success).toBe(false);
+    expect(MISTAKE_CHOICES).not.toContain('entered_in_lockout');
+    expect(MISTAKE_LABELS.entered_in_lockout).toBe('Entered in lockout');
   });
 
   it('accepts only known mistakes and removes duplicates', () => {

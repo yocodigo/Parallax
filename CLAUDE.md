@@ -419,7 +419,8 @@ Vitest, JavaScript (not TypeScript).
   and `expiration` (a `YYYY-MM-DD` date string; never parse it with `new Date()`, which shifts it a
   day west of UTC). Plans for options require all three; stocks and crypto may not have them.
 - Journal entry kinds: `plan`, `review`, `thesis`. A thesis needs a symbol. Emotions and mistakes
-  come from the fixed lists in `src/lib/journalEntry.js`.
+  come from the fixed lists in `src/lib/journalEntry.js`; a new entry can't take a `RETIRED_MISTAKES` one
+  (`entered_in_lockout`, now computed as Window OK), which old entries still show by its label.
 - Deleting a trade never deletes its journal entries; the link is set to null.
 - Every trade has a `mode`: `live`, `paper`, or `backtest`. So does every journal entry: one linked to
   a trade is saved with the trade's mode (and keeps it if the trade is deleted); one with no trade
