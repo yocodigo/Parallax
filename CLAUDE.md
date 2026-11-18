@@ -224,7 +224,8 @@ Vitest, JavaScript (not TypeScript).
   (bars, full coverage, not edge-only) and counts the rest by reason; `summaryAll` takes in every premium figure. Every
   exit gets `afterExit` and `afterExitSummary`. Entry timing (rules-v3 8.9, `entryTiming.js`) rides the same call:
   each trade's entry against its setup's trigger bar (the strategy's detector, else the nearest setup any detector
-  found the trade's way; the three-gate entry at the levels its snapshot kept, `listContextLevels`): early (the
+  found the trade's way; the three-gate entry at the levels its snapshot kept, `listContextLevels`, null when none
+  were, and a three-gate strategy's trade without them is untimed): early (the
   trigger bar closed after the fill, within `DETECTED_MAX_BARS` bars that exist), on, late, or none, as
   `timing: { rows, groups, untimed }` with each group's net P/L and the underlying's heat (points per underlying, R
   by planned or derived stop). It reads bars after the fill, so it is review-time only. Computed per call, never

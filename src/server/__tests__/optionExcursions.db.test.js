@@ -1,8 +1,16 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { saveTradeContext } from '@/db/contexts';
+import { createStrategy } from '@/db/strategies';
+import { entryTiming } from '@/lib/setups/entryTiming';
 import { dailyPlans, trades } from '@/db/schema';
 import { createTestDb, resetDb } from '@/db/testing';
 import { gatherOptionExcursions } from '../optionExcursions';
+
+// The real entryTiming, watched, to see what each trade is timed with.
+vi.mock('@/lib/setups/entryTiming', async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...actual, entryTiming: vi.fn(actual.entryTiming) };
+});
 
 const db = createTestDb();
 
@@ -103,7 +111,7 @@ describe('gatherOptionExcursions', () => {
 
   it('times each entry against its setup, with the net P/L and the heat of each group', async () => {
     await insert(call({ exitPrice: 2.4, openedAt: new Date('2026-11-04T15:15:30Z'), closedAt: new Date('2026-11-04T15:20:40Z') }));
-    await insert(call({ exitPrice: 1.6, openedAt: new Date('2026-11-04T15:38:00Z'), closedAt: new Date('2026-11-04T15:40:20Z') }));
+    await insert(call({ exitPrice: 1.7, openedAt: new Date('2026-11-04T15:38:00Z'), closedAt: new Date('2026-11-04T15:40:20Z') }));
 
     const result = await gatherOptionExcursions(db, {
       mode: 'live',
@@ -115,9 +123,36 @@ describe('gatherOptionExcursions', () => {
     // A handful of minute bars sets up nothing, so neither entry had a trigger.
     expect(result.timing.rows.map((row) => row.timing)).toEqual(['none', 'none']);
     const none = result.timing.groups.find((group) => group.timing === 'none');
-    expect(none).toMatchObject({ trades: 2, netPnl: 0 });
+    // +$40 and -$30.
+    expect(none).toMatchObject({ trades: 2, netPnl: 10 });
     expect(none.heatPoints[0]).toMatchObject({ symbol: 'SPY', trades: 2 });
     expect(result.timing.untimed).toBe(0);
+  });
+
+  it("times each entry with its strategy's detector and the levels its snapshot kept", async () => {
+    const strategy = await createStrategy(db, { name: '4x', detector: 'four_touch', rules: [{ kind: 'edge', text: 'A rule' }] });
+    const trade = await insert(
+      call({ strategyId: strategy.id, exitPrice: 2.4, openedAt: new Date('2026-11-04T15:15:30Z'), closedAt: new Date('2026-11-04T15:20:40Z') })
+    );
+    const levels = [{ kind: 'prior_day_high', price: 581, tier: 1, side: 'above', touchedToday: false, formedAt: null }];
+    await saveTradeContext(db, trade.id, { version: 3, setups: null, levels });
+    vi.mocked(entryTiming).mockClear();
+
+    await gatherOptionExcursions(db, { mode: 'live', fetchBars: async () => SPY_BARS, fetchContractBars: async () => [] });
+
+    expect(entryTiming).toHaveBeenCalledWith(expect.objectContaining({ id: trade.id }), SPY_BARS, { detector: 'four_touch', levels });
+  });
+
+  it("counts apart the trades it can't time: no bars, or a three-gate strategy with no levels kept", async () => {
+    const threeGate = await createStrategy(db, { name: '3G', detector: 'three_gate', rules: [{ kind: 'edge', text: 'A rule' }] });
+    await insert(call({ strategyId: threeGate.id, exitPrice: 2.4, openedAt: new Date('2026-11-04T15:15:30Z'), closedAt: new Date('2026-11-04T15:20:40Z') }));
+    await insert(call({ exitPrice: 2.4, openedAt: new Date('2026-11-05T15:15:30Z'), closedAt: new Date('2026-11-05T15:20:40Z') }));
+    const fetchBars = async (symbol, end) => (end < new Date('2026-11-05T00:00:00Z') ? SPY_BARS : []);
+
+    const result = await gatherOptionExcursions(db, { mode: 'live', fetchBars, fetchContractBars: async () => [] });
+
+    expect(result.timing.rows).toEqual([]);
+    expect(result.timing.untimed).toBe(2);
   });
 
   it("falls back to the delta the winner's context kept when its contract had no bars", async () => {

@@ -190,6 +190,8 @@ function EntryTiming({ timing }) {
   if (timing.groups.every((group) => group.trades === 0) && timing.untimed === 0) {
     return <p className="text-sm text-gray-500">No option entries to time in this range.</p>;
   }
+  // Per timing group: a points row for each underlying, then an R row for each
+  // stop source (planned, derived) that had trades.
   const heatRows = timing.groups.flatMap(({ timing: name, heatPoints, heatR }) => [
     ...heatPoints.map((row) => ({ name: `${TIMING_NAMES[name]}: ${row.symbol} (points)`, ...row, format: pts })),
     ...[
@@ -228,7 +230,7 @@ function EntryTiming({ timing }) {
       </div>
       {heatRows.length > 0 && <PercentileTable label="Heat by entry timing" rows={heatRows} />}
       {timing.untimed > 0 && (
-        <p className="text-xs text-gray-500">{`${plural(timing.untimed, 'trade')} had no bars to time.`}</p>
+        <p className="text-xs text-gray-500">{`${plural(timing.untimed, 'trade')} couldn't be timed: no bars, or a three-gate strategy with no levels stored.`}</p>
       )}
     </div>
   );

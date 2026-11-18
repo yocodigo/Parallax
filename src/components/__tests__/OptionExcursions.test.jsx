@@ -185,7 +185,7 @@ describe('OptionExcursions', () => {
     expect(cells(heat, 'Early: SPY (points)')).toEqual(['3', '0.60', '0.90', '1.20']);
     expect(cells(heat, 'Early: derived stop (R)')).toEqual(['2', '0.8R', '1.4R', '1.4R']);
     expect(within(heat).queryByRole('rowheader', { name: 'Early: planned stop (R)' })).not.toBeInTheDocument();
-    expect(screen.getByText('1 trade had no bars to time.')).toBeInTheDocument();
+    expect(screen.getByText("1 trade couldn't be timed: no bars, or a three-gate strategy with no levels stored.")).toBeInTheDocument();
   });
 
   it('shows the error with its reference when the bars could not be fetched', async () => {

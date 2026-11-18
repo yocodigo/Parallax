@@ -82,16 +82,18 @@ export async function listContextDetected(db, tradeIds) {
 }
 
 // The level map each of these trades' snapshots kept at the fill (version 3),
-// as a Map by trade id, empty when it kept none: the three-gate entry reads
-// it when setups are detected again at review time.
+// as a Map by trade id: the three-gate entry reads it when setups are
+// detected again at review time. null when none was kept (no snapshot, one
+// from before version 3, or one taken without the minute bars), which is not
+// the same as a map with no levels.
 export async function listContextLevels(db, tradeIds) {
-  const levels = new Map(tradeIds.map((id) => [id, []]));
+  const levels = new Map(tradeIds.map((id) => [id, null]));
   if (tradeIds.length === 0) return levels;
   const rows = await db
     .select({ tradeId: tradeContexts.tradeId, context: tradeContexts.context })
     .from(tradeContexts)
     .where(inArray(tradeContexts.tradeId, tradeIds));
-  for (const { tradeId, context } of rows) levels.set(tradeId, context?.levels ?? []);
+  for (const { tradeId, context } of rows) levels.set(tradeId, Array.isArray(context?.levels) ? context.levels : null);
   return levels;
 }
 
