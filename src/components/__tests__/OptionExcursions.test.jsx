@@ -35,6 +35,40 @@ const body = {
       t1: { judged: 3, reached: 2 },
     },
   },
+  timing: {
+    rows: [],
+    untimed: 1,
+    groups: [
+      {
+        timing: 'early',
+        trades: 3,
+        netPnl: -45.5,
+        heatPoints: [{ symbol: 'SPY', trades: 3, percentiles: p(0.6, 0.9, 1.2) }],
+        heatR: { plan: { trades: 0, percentiles: p(null, null, null) }, derived: { trades: 2, percentiles: p(0.8, 1.4, 1.4) } },
+      },
+      {
+        timing: 'on',
+        trades: 2,
+        netPnl: 60,
+        heatPoints: [{ symbol: 'SPY', trades: 2, percentiles: p(0.2, 0.3, 0.3) }],
+        heatR: { plan: { trades: 0, percentiles: p(null, null, null) }, derived: { trades: 0, percentiles: p(null, null, null) } },
+      },
+      {
+        timing: 'late',
+        trades: 0,
+        netPnl: 0,
+        heatPoints: [],
+        heatR: { plan: { trades: 0, percentiles: p(null, null, null) }, derived: { trades: 0, percentiles: p(null, null, null) } },
+      },
+      {
+        timing: 'none',
+        trades: 4,
+        netPnl: -10,
+        heatPoints: [{ symbol: 'SPY', trades: 4, percentiles: p(0.5, 0.7, 0.9) }],
+        heatR: { plan: { trades: 0, percentiles: p(null, null, null) }, derived: { trades: 0, percentiles: p(null, null, null) } },
+      },
+    ],
+  },
 };
 
 function serve(response = HttpResponse.json(body)) {
@@ -136,6 +170,24 @@ describe('OptionExcursions', () => {
     expect(screen.getByText('T1 reached within 15 minutes after the exit: 2 of the 3 exits whose day had a T1 and that exited short of it.')).toBeInTheDocument();
   });
 
+  it('times the entries against their setup, with the net P/L and heat of each group', async () => {
+    serve();
+    renderIt();
+    await measure();
+
+    const timing = await screen.findByRole('table', { name: 'Entry timing' });
+    expect(cells(timing, 'Early')).toEqual(['3', '-$45.50']);
+    expect(cells(timing, 'On the trigger')).toEqual(['2', '+$60.00']);
+    expect(cells(timing, 'Late')).toEqual(['0', '+$0.00']);
+    expect(cells(timing, 'No trigger')).toEqual(['4', '-$10.00']);
+
+    const heat = screen.getByRole('table', { name: 'Heat by entry timing' });
+    expect(cells(heat, 'Early: SPY (points)')).toEqual(['3', '0.60', '0.90', '1.20']);
+    expect(cells(heat, 'Early: derived stop (R)')).toEqual(['2', '0.8R', '1.4R', '1.4R']);
+    expect(within(heat).queryByRole('rowheader', { name: 'Early: planned stop (R)' })).not.toBeInTheDocument();
+    expect(screen.getByText('1 trade had no bars to time.')).toBeInTheDocument();
+  });
+
   it('shows the error with its reference when the bars could not be fetched', async () => {
     serve(HttpResponse.json({ error: 'Could not fetch the bars to measure these trades', requestId: 'abc' }, { status: 502 }));
     renderIt();
@@ -148,6 +200,7 @@ describe('OptionExcursions', () => {
     const empty = {
       heat: { rows: [], summary: { ...body.heat.summary, winners: 0 }, summaryAll: { ...body.heat.summaryAll, winners: 0 } },
       afterExit: { rows: [], summary: { ...body.afterExit.summary, trades: 0 } },
+      timing: { rows: [], untimed: 0, groups: body.timing.groups.map((g) => ({ ...g, trades: 0, netPnl: 0, heatPoints: [] })) },
     };
     serve(HttpResponse.json(empty));
     renderIt();
@@ -155,5 +208,6 @@ describe('OptionExcursions', () => {
 
     expect(await screen.findByText('No winning option trades closed in this range.')).toBeInTheDocument();
     expect(screen.getByText('No option exits to measure in this range.')).toBeInTheDocument();
+    expect(screen.getByText('No option entries to time in this range.')).toBeInTheDocument();
   });
 });

@@ -101,6 +101,25 @@ describe('gatherOptionExcursions', () => {
     expect(result.afterExit.summary.trades).toBe(2);
   });
 
+  it('times each entry against its setup, with the net P/L and the heat of each group', async () => {
+    await insert(call({ exitPrice: 2.4, openedAt: new Date('2026-11-04T15:15:30Z'), closedAt: new Date('2026-11-04T15:20:40Z') }));
+    await insert(call({ exitPrice: 1.6, openedAt: new Date('2026-11-04T15:38:00Z'), closedAt: new Date('2026-11-04T15:40:20Z') }));
+
+    const result = await gatherOptionExcursions(db, {
+      mode: 'live',
+      now: new Date('2026-11-05T00:00:00Z'),
+      fetchBars: async () => SPY_BARS,
+      fetchContractBars: async () => CONTRACT_BARS,
+    });
+
+    // A handful of minute bars sets up nothing, so neither entry had a trigger.
+    expect(result.timing.rows.map((row) => row.timing)).toEqual(['none', 'none']);
+    const none = result.timing.groups.find((group) => group.timing === 'none');
+    expect(none).toMatchObject({ trades: 2, netPnl: 0 });
+    expect(none.heatPoints[0]).toMatchObject({ symbol: 'SPY', trades: 2 });
+    expect(result.timing.untimed).toBe(0);
+  });
+
   it("falls back to the delta the winner's context kept when its contract had no bars", async () => {
     const winner = await insert(
       call({ exitPrice: 2.4, openedAt: new Date('2026-11-04T15:15:30Z'), closedAt: new Date('2026-11-04T15:20:40Z') })

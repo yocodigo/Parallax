@@ -24,6 +24,17 @@ const summary = {
 const body = {
   heat: { rows: [], summary, summaryAll: summary },
   afterExit: { rows: [], summary: { trades: 0, points: [], r: { plan: { trades: 0, percentiles: p }, derived: { trades: 0, percentiles: p } }, t1: { judged: 0, reached: 0 } } },
+  timing: {
+    rows: [],
+    untimed: 0,
+    groups: ['early', 'on', 'late', 'none'].map((timing) => ({
+      timing,
+      trades: 0,
+      netPnl: 0,
+      heatPoints: [],
+      heatR: { plan: { trades: 0, percentiles: p }, derived: { trades: 0, percentiles: p } },
+    })),
+  },
 };
 
 describe('OptionExcursions layout', () => {

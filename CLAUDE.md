@@ -222,7 +222,13 @@ Vitest, JavaScript (not TypeScript).
   figure), else from the delta the context snapshot kept (`listContextDeltas`, `source: 'delta'`, an estimate), else
   `source: 'none'` (never an assumed delta), beside the underlying's excursion. `heatSummary` keeps the trusted set
   (bars, full coverage, not edge-only) and counts the rest by reason; `summaryAll` takes in every premium figure. Every
-  exit gets `afterExit` and `afterExitSummary`. Computed per call, never stored; a failed fetch answers 502.
+  exit gets `afterExit` and `afterExitSummary`. Entry timing (rules-v3 8.9, `entryTiming.js`) rides the same call:
+  each trade's entry against its setup's trigger bar (the strategy's detector, else the nearest setup any detector
+  found the trade's way; the three-gate entry at the levels its snapshot kept, `listContextLevels`): early (the
+  trigger bar closed after the fill, within `DETECTED_MAX_BARS` bars that exist), on, late, or none, as
+  `timing: { rows, groups, untimed }` with each group's net P/L and the underlying's heat (points per underlying, R
+  by planned or derived stop). It reads bars after the fill, so it is review-time only. Computed per call, never
+  stored; a failed fetch answers 502.
   `OptionExcursions.jsx`, the Charts tab's "Heat and after the exit" section on `/performance` (the page's Mode and
   Year), asks only when its button is pressed: the premium heat chart in 5% bands over the trusted set, saying what it
   leaves out and why, with the rest behind a toggle; the underlying's heat and after-the-exit run as p50/p75/p90 tables,

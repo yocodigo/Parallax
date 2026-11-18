@@ -81,6 +81,20 @@ export async function listContextDetected(db, tradeIds) {
   return detected;
 }
 
+// The level map each of these trades' snapshots kept at the fill (version 3),
+// as a Map by trade id, empty when it kept none: the three-gate entry reads
+// it when setups are detected again at review time.
+export async function listContextLevels(db, tradeIds) {
+  const levels = new Map(tradeIds.map((id) => [id, []]));
+  if (tradeIds.length === 0) return levels;
+  const rows = await db
+    .select({ tradeId: tradeContexts.tradeId, context: tradeContexts.context })
+    .from(tradeContexts)
+    .where(inArray(tradeContexts.tradeId, tradeIds));
+  for (const { tradeId, context } of rows) levels.set(tradeId, context?.levels ?? []);
+  return levels;
+}
+
 // The option delta each of these trades' snapshots kept, as a Map by trade id,
 // null when there is none: no snapshot, not an option, or captured more than 15
 // minutes after the fill, when the live values aren't kept (buildContext).

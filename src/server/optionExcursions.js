@@ -1,27 +1,34 @@
-import { listContextDeltas } from '@/db/contexts';
+import { listContextDeltas, listContextLevels } from '@/db/contexts';
 import { getDailyPlan } from '@/db/dailyPlans';
+import { listStrategies } from '@/db/strategies';
 import { listClosedTradesBetween } from '@/db/trades';
 import { occSymbol } from '@/lib/context/options';
 import { underlyingExcursions } from '@/lib/excursions';
 import { heatSummary, isWinner, winnerHeat } from '@/lib/optionHeat';
 import { afterExit, afterExitSummary } from '@/lib/setups/afterExit';
+import { entryTiming, entryTimingSummary } from '@/lib/setups/entryTiming';
 import { reviewExit } from '@/lib/setups/exitReview';
 import { nyDay, sessionBars } from '@/lib/setups/session';
 import { POST_EXIT_MIN } from '@/lib/setups/settings';
+import { profitLoss } from '@/lib/tradeMetrics';
 import { fetchMinuteBars } from './minuteBars';
 import { fetchOptionBars } from './optionBars';
 
 const MINUTE = 60_000;
 const minuteOf = (date) => Math.floor(date.getTime() / MINUTE) * MINUTE;
 
-// Heat on winners and after the exit (rules-v3 section 8, items 8 and 3) over
+// Heat on winners, after the exit, and entry timing (rules-v3 section 8, items
+// 8, 3, and 9) over
 // the closed option trades of `mode` that closed in [from, to). Recomputed per
 // call from Alpaca's bars, never stored: the underlying's minute bars once per
 // symbol and New York day of the fill (reaching POST_EXIT_MIN minutes past
 // that day's last exit, and not past `now`), and each winner's contract bars
 // from its fill's minute to its exit's. A failed fetch fails the call.
-// Returns { heat: { rows, summary, summaryAll }, afterExit: { rows, summary } },
-// each row naming its trade.
+// Entry timing reads each trade's strategy detector and the levels its
+// snapshot kept (for the three-gate entry).
+// Returns { heat: { rows, summary, summaryAll }, afterExit: { rows, summary },
+// timing: { rows, groups, untimed } }, each row naming its trade; `untimed`
+// counts the trades with no bars to time.
 export async function gatherOptionExcursions(
   db,
   { mode, from, to, now = new Date(), fetchBars = fetchMinuteBars, fetchContractBars = fetchOptionBars }
@@ -50,19 +57,31 @@ export async function gatherOptionExcursions(
     if (!plans.has(day)) plans.set(day, getDailyPlan(db, day));
     return plans.get(day);
   };
-  const deltas = await listContextDeltas(
-    db,
-    closed.map((t) => t.id)
-  );
+  const ids = closed.map((t) => t.id);
+  const [deltas, levels, strategies] = await Promise.all([
+    listContextDeltas(db, ids),
+    listContextLevels(db, ids),
+    listStrategies(db),
+  ]);
+  const detectors = new Map(strategies.map((strategy) => [strategy.id, strategy.detector]));
 
   const heatRows = [];
   const afterRows = [];
+  const timingRows = [];
+  let untimed = 0;
   for (const trade of closed) {
     const bars = await barsFor(trade);
     const name = { tradeId: trade.id, symbol: trade.symbol, contract: occSymbol(trade), openedAt: trade.openedAt };
     // The bars it was open for: from the start of the fill's minute to the exit.
     const open = bars.filter((bar) => Date.parse(bar.t) >= minuteOf(trade.openedAt) && Date.parse(bar.t) <= trade.closedAt.getTime());
     const underlying = underlyingExcursions(trade, open);
+
+    const timing = entryTiming(trade, bars, {
+      detector: detectors.get(trade.strategyId) ?? null,
+      levels: levels.get(trade.id),
+    });
+    if (timing) timingRows.push({ ...name, ...timing, netPnl: profitLoss(trade), heat: underlying });
+    else untimed += 1;
 
     // As the trade's own exit review takes them: the regular session's bars,
     // and T1 as the day's 50% when it was ahead of the fill.
@@ -84,5 +103,6 @@ export async function gatherOptionExcursions(
   return {
     heat: { rows: heatRows, summary: heatSummary(heatRows), summaryAll: heatSummary(heatRows, { includeAll: true }) },
     afterExit: { rows: afterRows, summary: afterExitSummary(afterRows) },
+    timing: { rows: timingRows, groups: entryTimingSummary(timingRows), untimed },
   };
 }

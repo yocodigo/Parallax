@@ -5,6 +5,7 @@ import {
   listContextDeltas,
   listContextDetected,
   listContextGrades,
+  listContextLevels,
   listContextsWithoutLevels,
   saveTradeContext,
 } from '../contexts';
@@ -144,6 +145,21 @@ describe('listContextDetected', () => {
 
   it('asks nothing for no trades', async () => {
     expect(await listContextDetected(db, [])).toEqual(new Map());
+  });
+});
+
+describe('listContextLevels', () => {
+  it('gives the level map each snapshot kept at entry, or an empty one when it kept none', async () => {
+    const [v3, v2, none] = await Promise.all([1, 2, 3].map(() => insertTrade()));
+    const levels = [{ kind: 'prior_day_high', price: 580, tier: 1, side: 'above', touchedToday: false, formedAt: null }];
+    await saveTradeContext(db, v3.id, { ...context, version: 3, setups: null, levels });
+    await saveTradeContext(db, v2.id, { ...context, version: 2, setups: null });
+
+    const found = await listContextLevels(db, [v3.id, v2.id, none.id]);
+
+    expect(found.get(v3.id)).toEqual(levels);
+    expect(found.get(v2.id)).toEqual([]);
+    expect(found.get(none.id)).toEqual([]);
   });
 });
 

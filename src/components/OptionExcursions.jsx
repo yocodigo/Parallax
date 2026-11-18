@@ -5,7 +5,8 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import useSWR from 'swr';
 import { valueTicks } from '@/lib/chartTicks';
 import { fetchJson } from '@/lib/fetchJson';
-import { POST_EXIT_MIN } from '@/lib/setups/settings';
+import { formatProfitLoss } from '@/lib/format';
+import { DETECTED_MAX_BARS, POST_EXIT_MIN } from '@/lib/setups/settings';
 import { EDGE_MINUTES_HOLD } from '@/lib/tradeWindow';
 
 const theme = (name) => `rgb(var(--color-${name}))`;
@@ -179,8 +180,62 @@ function AfterExit({ summary }) {
   );
 }
 
-// Heat on winners and after the exit (rules-v3 section 8, items 8 and 3), for
-// the page's mode and year: measured on request, since the route reads
+const TIMING_NAMES = { early: 'Early', on: 'On the trigger', late: 'Late', none: 'No trigger' };
+
+// [rules-v3 8.9] Entry timing: trades and net P/L by when each entry came
+// against its setup's trigger bar, then the underlying's heat per group, in
+// points per underlying and in R by where the stop came from (rows with no
+// trades are left out of the heat).
+function EntryTiming({ timing }) {
+  if (timing.groups.every((group) => group.trades === 0) && timing.untimed === 0) {
+    return <p className="text-sm text-gray-500">No option entries to time in this range.</p>;
+  }
+  const heatRows = timing.groups.flatMap(({ timing: name, heatPoints, heatR }) => [
+    ...heatPoints.map((row) => ({ name: `${TIMING_NAMES[name]}: ${row.symbol} (points)`, ...row, format: pts })),
+    ...[
+      ['plan', 'planned stop'],
+      ['derived', 'derived stop'],
+    ]
+      .filter(([source]) => heatR[source].trades > 0)
+      .map(([source, words]) => ({ name: `${TIMING_NAMES[name]}: ${words} (R)`, ...heatR[source], format: inR })),
+  ]);
+  return (
+    <div className="space-y-3">
+      <div className="overflow-x-auto">
+        <table aria-label="Entry timing" className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-200 text-xs text-gray-500">
+              <th scope="col" className="px-3 py-2 text-left font-medium">Entry</th>
+              {['Trades', 'Net P/L'].map((name) => (
+                <th key={name} scope="col" className="px-3 py-2 text-right font-medium">
+                  {name}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {timing.groups.map(({ timing: name, trades, netPnl }) => (
+              <tr key={name}>
+                <th scope="row" className="whitespace-nowrap px-3 py-1.5 text-left font-medium text-gray-700">
+                  {TIMING_NAMES[name]}
+                </th>
+                <td className="px-3 py-1.5 text-right tabular-nums text-gray-900">{trades}</td>
+                <td className="px-3 py-1.5 text-right tabular-nums text-gray-900">{formatProfitLoss(netPnl)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {heatRows.length > 0 && <PercentileTable label="Heat by entry timing" rows={heatRows} />}
+      {timing.untimed > 0 && (
+        <p className="text-xs text-gray-500">{`${plural(timing.untimed, 'trade')} had no bars to time.`}</p>
+      )}
+    </div>
+  );
+}
+
+// Heat on winners, after the exit, and entry timing (rules-v3 section 8, items
+// 8, 3, and 9), for the page's mode and year: measured on request, since the route reads
 // Alpaca's bars for every option trade. Heat is how far a winning trade went
 // against the trader on the way, on its premium (the trusted set by default,
 // the rest behind a toggle) and on the underlying; after the exit is how far
@@ -222,6 +277,13 @@ export default function OptionExcursions({ mode, year }) {
             {`How far the underlying ran on in the trade's direction in the ${POST_EXIT_MIN} minutes after each option exit.`}
           </p>
           <AfterExit summary={data.afterExit.summary} />
+        </section>
+        <section className="space-y-3 rounded-lg border border-gray-200 bg-white p-4 lg:col-span-2">
+          <h3 className="text-sm font-semibold text-gray-700">Entry timing</h3>
+          <p className="text-xs text-gray-500">
+            {`Each entry against its setup's trigger bar: the strategy's own detector, else the nearest setup detected the trade's way. On the trigger: filled before the bar after it closed. Late: 1 to ${DETECTED_MAX_BARS} bars after. Early: the trigger bar closed after the fill, within ${DETECTED_MAX_BARS} bars, the entered-before-confirmation mistake. Heat is how far the underlying went against the trade while it was open.`}
+          </p>
+          <EntryTiming timing={data.timing} />
         </section>
       </div>
     );
