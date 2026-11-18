@@ -1,4 +1,6 @@
-import { minutesOfDay } from './setups/gates';
+import { minutesOfDay, TRADABLE } from './setups/gates';
+import { DETECTED_MAX_BARS } from './setups/settings';
+import { DETECTORS } from './strategy';
 import { profitLoss, rMultiple, tradeStatus } from './tradeMetrics';
 
 // Performance metrics over closed trades (docs/private/dashboard.md section 1).
@@ -207,6 +209,35 @@ export function byGrade(trades) {
     .filter(({ list }) => list.length > 0)
     .map(({ grade, list }) => ({ grade, ...summarize(list) }));
   return { rows, unknown: counted.filter((t) => !GRADES.includes(t.grade)).length };
+}
+
+// summarize() by detected setup (rules-v3 section 6), from the `detected` each
+// trade carries (its snapshot's, listContextDetected; null before version 3).
+// A setup counts when it was within DETECTED_MAX_BARS of the fill and there to
+// trade (complete, a valid break, or a trap). One row per detector that fired,
+// a trade counted in each of its own, then `any` (at least one fired) against
+// `none` (none did): the test of whether the setup matters. Trades with no
+// detected setups stored are counted in `unknown`, never as `none`. A row with
+// no trades is left out.
+export function byDetected(trades) {
+  const counted = trades.filter(isCounted);
+  const known = counted.filter((t) => Array.isArray(t.detected));
+  const fired = (trade) =>
+    new Set(
+      trade.detected
+        .filter((s) => s.barsSince <= DETECTED_MAX_BARS && TRADABLE.includes(s.status))
+        .map((s) => s.detector)
+    );
+  const firedBy = known.map((trade) => ({ trade, detectors: fired(trade) }));
+  const groups = [
+    ...DETECTORS.map((detector) => [detector, firedBy.filter(({ detectors }) => detectors.has(detector))]),
+    ['any', firedBy.filter(({ detectors }) => detectors.size > 0)],
+    ['none', firedBy.filter(({ detectors }) => detectors.size === 0)],
+  ];
+  const rows = groups
+    .filter(([, list]) => list.length > 0)
+    .map(([detector, list]) => ({ detector, ...summarize(list.map(({ trade }) => trade)) }));
+  return { rows, unknown: counted.length - known.length };
 }
 
 // How wide a bin of the R-multiple distribution is, in R.

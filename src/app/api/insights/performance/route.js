@@ -9,7 +9,7 @@ import { adherence, disciplineByMonth, emotionalControlByMonth, violationCosts }
 import { withErrorLogging } from '@/lib/log';
 import { friction, holdTime, premiumBand, untriggeredExits } from '@/lib/optionExecution';
 import { ASSUMED_SPREAD } from '@/lib/setups/settings';
-import { byGrade, byUnderlying, bySetup, callsVsPuts, equityCurve, monthlySummary, rDistribution, rollingExpectancy, summarize, timeOfDay } from '@/lib/performance';
+import { byDetected, byGrade, byUnderlying, bySetup, callsVsPuts, equityCurve, monthlySummary, rDistribution, rollingExpectancy, summarize, timeOfDay } from '@/lib/performance';
 
 // Read fresh from the database on every request, never prerendered.
 export const dynamic = 'force-dynamic';
@@ -30,7 +30,7 @@ const querySchema = z.object({
 // New York year by default) or ?year=all (every year), ?asset=stock|option|crypto, ?strategyId=<id>|none
 // (the setup), and ?optionType=call|put (which leaves out stocks and crypto); all
 // of the last three by default.
-// Returns { months, yearToDate, adherence, violationCosts, equity, rolling, timeOfDay, callsVsPuts, byUnderlying, bySetup, byGrade, rDistribution, disciplineByMonth, emotionalControlByMonth, execution } for trades closed in that
+// Returns { months, yearToDate, adherence, violationCosts, equity, rolling, timeOfDay, callsVsPuts, byUnderlying, bySetup, byGrade, byDetected, rDistribution, disciplineByMonth, emotionalControlByMonth, execution } for trades closed in that
 // New York calendar year (`yearToDate` is then the whole range, and `rolling` runs on through the years) (docs/private/dashboard.md sections 1 to 3).
 export const GET = withErrorLogging('/api/insights/performance', async (request) => {
   const { searchParams } = new URL(request.url);
@@ -97,6 +97,7 @@ export const GET = withErrorLogging('/api/insights/performance', async (request)
     byUnderlying: byUnderlying(closed),
     bySetup: bySetup(closed).map((setup) => ({ ...setup, name: names.get(setup.strategyId) ?? null })),
     byGrade: byGrade(withGrades),
+    byDetected: byDetected(withFacts),
     rDistribution: rDistribution(closed),
     execution: {
       holdTime: holdTime(closed),

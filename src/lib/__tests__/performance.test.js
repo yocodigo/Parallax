@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { byGrade, bySetup, byUnderlying, callsVsPuts, equityCurve, GRAD_N, graduation, modeComparison, monthlySummary, rDistribution, rollingExpectancy, summarize, timeOfDay } from '../performance';
+import { byDetected, byGrade, bySetup, byUnderlying, callsVsPuts, equityCurve, GRAD_N, graduation, modeComparison, monthlySummary, rDistribution, rollingExpectancy, summarize, timeOfDay } from '../performance';
 
 // A closed long option, 1 contract: gross P/L is (exit - entry) * 100.
 function option(gross, fees = 0, closedAt = '2026-04-13T20:00:00Z') {
@@ -308,6 +308,36 @@ describe('byGrade', () => {
   it('skips trades still open, and has no rows without trades', () => {
     const open = { ...graded('A', 10), exitPrice: null, closedAt: null };
     expect(byGrade([open])).toEqual({ rows: [], unknown: 0 });
+  });
+});
+
+describe('byDetected', () => {
+  const setup = (detector, overrides = {}) => ({ detector, status: 'complete', grade: null, barsSince: 0, ...overrides });
+  const withSetups = (detected, gross) => ({ ...option(gross, 0), detected });
+
+  it('summarizes the trades by each detector that fired, then any setup against none', () => {
+    const { rows } = byDetected([
+      withSetups([setup('band_cross'), setup('four_touch', { status: 'valid', grade: 'B' })], 30),
+      withSetups([setup('four_touch', { status: 'trap', grade: 'A' })], 10),
+      withSetups([], -20),
+      withSetups([setup('reversal', { status: 'invalidated' })], -5),
+    ]);
+    expect(rows.map((r) => [r.detector, r.trades, r.netPnl])).toEqual([
+      ['band_cross', 1, 30],
+      ['four_touch', 2, 40],
+      ['any', 2, 40],
+      ['none', 2, -25],
+    ]);
+  });
+
+  it('counts only setups within DETECTED_MAX_BARS of the fill and there to trade', () => {
+    const { rows } = byDetected([withSetups([setup('three_gate', { barsSince: 4 }), setup('band_cross', { status: 'no_room' })], 10)]);
+    expect(rows.map((r) => r.detector)).toEqual(['none']);
+  });
+
+  it('counts the trades with no detected setups stored apart, and skips open trades', () => {
+    const open = { ...withSetups([], 10), exitPrice: null, closedAt: null };
+    expect(byDetected([withSetups(null, 10), { ...option(5, 0) }, open])).toEqual({ rows: [], unknown: 2 });
   });
 });
 

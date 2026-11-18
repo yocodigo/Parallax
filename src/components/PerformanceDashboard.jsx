@@ -7,6 +7,7 @@ import { fetchJson } from '@/lib/fetchJson';
 import { formatProfitLoss } from '@/lib/format';
 import { inputClass } from './Field';
 import AverageWinLoss from './AverageWinLoss';
+import ByDetected from './ByDetected';
 import ByGrade from './ByGrade';
 import BySetup from './BySetup';
 import ByUnderlying from './ByUnderlying';
@@ -242,6 +243,7 @@ export default function PerformanceDashboard() {
                 <TimeOfDay buckets={data.timeOfDay} />
                 <BySetup rows={data.bySetup} />
                 <ByGrade grades={data.byGrade} />
+                {data.byDetected && <ByDetected detected={data.byDetected} />}
                 <CallsVsPuts sides={data.callsVsPuts} />
                 <ByUnderlying rows={data.byUnderlying} />
                 <FeesVsGross months={data.months} />

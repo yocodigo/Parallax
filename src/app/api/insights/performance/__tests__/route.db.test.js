@@ -207,6 +207,28 @@ describe('GET /api/insights/performance', () => {
     expect(body.byGrade.unknown).toBe(1);
   });
 
+  it('returns results by detected setup against none, from the snapshots, counting the rest as unknown', async () => {
+    const onSetup = await closedOption(30, '2026-04-13T20:30:00Z');
+    const noSetup = await closedOption(-20, '2026-04-14T20:30:00Z');
+    await closedOption(5, '2026-04-15T20:30:00Z');
+    const snapshot = (detected) => ({ version: 3, setups: { fourTouch: null, detected }, levels: [] });
+    await saveTradeContext(
+      getDb(),
+      onSetup.id,
+      snapshot([{ detector: 'band_cross', timeframe: '5m', status: 'complete', grade: null, barsSince: 0 }])
+    );
+    await saveTradeContext(getDb(), noSetup.id, snapshot([]));
+
+    const body = await (await get('?year=2026')).json();
+
+    expect(body.byDetected.rows.map((r) => [r.detector, r.trades, r.netPnl])).toEqual([
+      ['band_cross', 1, 30],
+      ['any', 1, 30],
+      ['none', 1, -20],
+    ]);
+    expect(body.byDetected.unknown).toBe(1);
+  });
+
   it('returns the discipline score of each month, from the option trades closed in it', async () => {
     const strategy = await createStrategy(getDb(), { name: 'Band cross', description: '', rules: [{ text: 'Trend aligned', kind: 'edge' }] });
     // A planned trade with a strategy: Plan OK met. No stop and no exit reason, so nothing else applies.
