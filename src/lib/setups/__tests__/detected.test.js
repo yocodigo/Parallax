@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clearsWindow, detectSetups, strategySetup } from '../detected';
+import { clearsWindow, detectSetups, detectStrategySetup, strategySetup } from '../detected';
 import { BARS, MINUTE, openOf } from './fixtures/bandCross';
 import { breakout, trap } from './fixtures/fourTouch';
 import { reversalBars, TARGET_POOL } from './fixtures/reversalSequence';
@@ -239,5 +239,19 @@ describe('strategySetup', () => {
   it('is null when the detector found nothing recent', () => {
     expect(strategySetup([setup({ barsSince: 4 })], 'four_touch')).toBeNull();
     expect(strategySetup([setup()], 'reversal')).toBeNull();
+  });
+});
+
+describe('detectStrategySetup', () => {
+  it("finds the setup of a strategy's detector on the bars", () => {
+    const bars = asMinutes(breakout);
+    const short = trade({ direction: 'short', openedAt: at('09:56') });
+    expect(detectStrategySetup(short, bars, { detector: 'four_touch' })).toMatchObject({ detector: 'four_touch', status: 'valid' });
+    expect(detectStrategySetup(short, bars, { detector: 'reversal' })).toBeNull();
+  });
+
+  it('is null with no detector, and undefined (unknown) without bars to detect from', () => {
+    expect(detectStrategySetup(trade(), BARS, { detector: null })).toBeNull();
+    expect(detectStrategySetup(trade(), [], { detector: 'band_cross' })).toBeUndefined();
   });
 });

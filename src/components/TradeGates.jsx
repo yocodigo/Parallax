@@ -109,9 +109,9 @@ const STATUS_WORDS = {
 };
 
 // [rules-v3 6] The setup the strategy's detector found by the fill, and
-// nothing for a trade with no Setup gate.
+// nothing for a trade with no Setup gate or one that couldn't be judged.
 function setupLine(gate, setup) {
-  if (!gate) return null;
+  if (gate !== MET && gate !== MISSED) return null;
   if (!setup) return `Setup: none found within ${DETECTED_MAX_BARS} bars of the fill`;
   const name = DETECTOR_LABELS[setup.detector].toLowerCase();
   // The band cross's name already says its timeframe.

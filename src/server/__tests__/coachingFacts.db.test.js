@@ -237,6 +237,39 @@ describe('gatherCoachingFacts', () => {
     expect(facts.whatsWorking.gates).toContainEqual(expect.objectContaining({ gate: 'location', met: expect.objectContaining({ trades: 2 }) }));
   });
 
+  it("grades the Setup gate for a strategy's detector, leaving Direction and Entry to the band cross", async () => {
+    const minute = (k, h, l, c, v = 100) => ({
+      t: new Date(Date.parse('2026-10-29T13:30:00Z') + k * 60_000).toISOString(),
+      o: c,
+      h,
+      l,
+      c,
+      v,
+    });
+    // The Location test's morning: its last 5m bar meets Entry OK.
+    const bars = [
+      ...Array.from({ length: 15 }, (_, k) => minute(k, 100.7, 100.3, 100.5)),
+      minute(15, 101.4, 100.6, 101.3, 200),
+      minute(16, 101.5, 101.2, 101.4),
+      minute(17, 101.4, 101.1, 101.3),
+      ...Array.from({ length: 5 }, (_, k) => minute(18 + k, 101.2, 101.0, 101.1)),
+    ];
+    const strategy = (detector) =>
+      createStrategy(db, { name: detector ?? 'Checklist', detector, rules: [{ kind: 'edge', text: 'A rule' }] });
+    const gatesWith = async (detector, fetchBars = async () => bars) => {
+      await resetDb(db);
+      const { id } = await strategy(detector);
+      await db.insert(trades).values(trade({ openedAt: new Date('2026-10-29T13:53:00Z'), entryPrice: 101.1, strategyId: id }));
+      const facts = await gatherCoachingFacts(db, { day: '2026-10-29', fetchBars, fetchDaily: async () => [] });
+      return facts.whatsWorking.gates.map((g) => g.gate);
+    };
+
+    expect(await gatesWith(null)).toContain('entry');
+    expect(await gatesWith('band_cross')).toContain('entry');
+    // No four-touch line formed, so its Setup gate is missed and no Entry is judged.
+    expect(await gatesWith('four_touch')).not.toContain('entry');
+  });
+
   it('judges stop adherence per trade and over the recent history', async () => {
     const stopped = (k) =>
       trade({

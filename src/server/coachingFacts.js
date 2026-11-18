@@ -9,7 +9,7 @@ import {
 import { excursions } from '@/lib/excursions';
 import { giveback, underlyingGiveback } from '@/lib/giveback';
 import { mistakeLedger } from '@/lib/mistakeLedger';
-import { detectSetups, strategySetup } from '@/lib/setups/detected';
+import { detectStrategySetup } from '@/lib/setups/detected';
 import { reviewEntry } from '@/lib/setups/entryReview';
 import { reviewExit } from '@/lib/setups/exitReview';
 import { nyDay, sessionBars, tradingDay } from '@/lib/setups/session';
@@ -102,7 +102,7 @@ export async function gatherCoachingFacts(
     const atEntry = levelsAtEntry(trade, bars, { dailyBars, dailyPlan });
     const location = atEntry?.location ?? null;
     const detector = strategies.find((strategy) => strategy.id === trade.strategyId)?.detector ?? null;
-    const setup = detector ? strategySetup(detectSetups(trade, bars, { levels: atEntry?.levels ?? [] }), detector) : null;
+    const setup = detectStrategySetup(trade, bars, { levels: atEntry?.levels ?? [], detector });
     const exitReview = reviewExit(trade, bars, dailyPlan);
     const entryReview = reviewEntry(trade, bars);
     const mistakes = withMistakes.find((t) => t.id === trade.id)?.mistakes ?? [];

@@ -6,7 +6,7 @@ import { getPlanEntry } from '@/db/journal';
 import { getStrategy } from '@/db/strategies';
 import { getTrade } from '@/db/trades';
 import { withErrorLogging } from '@/lib/log';
-import { detectSetups, strategySetup } from '@/lib/setups/detected';
+import { detectStrategySetup } from '@/lib/setups/detected';
 import { sessionBars } from '@/lib/setups/session';
 import { gradeTradeGates, levelsAtEntry } from '@/lib/setups/tradeGates';
 import { fetchDailyBars } from '@/server/dailyBars';
@@ -22,7 +22,7 @@ const notFound = () => NextResponse.json({ error: 'Trade not found' }, { status:
 // (rules-v3 4: Location OK's level and event, and the room to the next level),
 // read from the minute bars, the daily bars before the day, and the plan's
 // overnight levels; and, for a strategy tied to a detector, the setup it found
-// (rules-v3 6, null when none). `gates` is null, with a reason, when there's
+// (rules-v3 6, null when none, left out when there were no bars to look in). `gates` is null, with a reason, when there's
 // nothing to grade it from yet.
 export const GET = withErrorLogging('/api/trades/[id]/gates', async (request, { params }) => {
   const { id } = await params;
@@ -61,7 +61,7 @@ export const GET = withErrorLogging('/api/trades/[id]/gates', async (request, { 
 
   const { levels, location, room } = levelsAtEntry(trade, bars, { dailyBars, dailyPlan });
   const detector = strategy?.detector ?? null;
-  const setup = detector ? strategySetup(detectSetups(trade, bars, { levels }), detector) : null;
+  const setup = detectStrategySetup(trade, bars, { levels, detector });
   const gates = gradeTradeGates(trade, bars, { dailyPlan, planEntry, location, detector, setup });
   return NextResponse.json({ gates, location, room, setup });
 });

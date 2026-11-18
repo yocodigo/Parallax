@@ -155,4 +155,11 @@ describe('TradeGates for a strategy tied to a detector', () => {
     renderGates();
     expect(await screen.findByText('Setup: 15m band cross, no room to the 1m band, 0 bars before the fill')).toBeInTheDocument();
   });
+
+  it("says nothing of the setup when it couldn't be judged", async () => {
+    serveGates({ gates: { ...base, setup: 'unknown' } });
+    renderGates();
+    expect(await screen.findByText('Setup ?')).toBeInTheDocument();
+    expect(screen.queryByText(/^Setup:/)).not.toBeInTheDocument();
+  });
 });

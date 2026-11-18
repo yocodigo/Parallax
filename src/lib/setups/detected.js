@@ -176,12 +176,19 @@ export function clearsWindow(setup) {
 // fill, one there to trade before one that isn't, then the most recent. Null
 // when there is none.
 export function strategySetup(detected, detector) {
-  const rank = (setup) => [TRADABLE.includes(setup.status) ? 0 : 1, setup.barsSince];
-  const before = (a, b) => {
-    const [ra, rb] = [rank(a), rank(b)];
-    return ra[0] !== rb[0] ? ra[0] < rb[0] : ra[1] < rb[1];
-  };
-  return detected
-    .filter((setup) => setup.detector === detector && setup.barsSince <= DETECTED_MAX_BARS)
-    .reduce((best, setup) => (!best || before(setup, best) ? setup : best), null);
+  const tradable = (setup) => (TRADABLE.includes(setup.status) ? 1 : 0);
+  return (
+    detected
+      .filter((setup) => setup.detector === detector && setup.barsSince <= DETECTED_MAX_BARS)
+      .sort((a, b) => tradable(b) - tradable(a) || a.barsSince - b.barsSince)[0] ?? null
+  );
+}
+
+// strategySetup on `bars` as of `trade`'s fill, for the Setup gate: null for a
+// trade with no `detector` (it has no such gate), and undefined, which the gate
+// reads as unknown, without bars to detect it from.
+export function detectStrategySetup(trade, bars, { levels = [], detector }) {
+  if (!detector) return null;
+  if (!bars?.length) return undefined;
+  return strategySetup(detectSetups(trade, bars, { levels }), detector);
 }

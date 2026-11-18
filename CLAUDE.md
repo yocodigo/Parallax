@@ -283,7 +283,8 @@ Vitest, JavaScript (not TypeScript).
   A strategy may name its `detector` (`band_cross`, `four_touch`, `reversal`, `three_gate`; null for a
   hand-written checklist, rules-v3 section 6). Its trades then get a Setup gate (`setupGate`: met when
   `strategySetup` finds that detector's setup within `DETECTED_MAX_BARS` of the fill, complete, a valid break, or a
-  trap), and Direction and Entry are graded only for a band-cross strategy or a trade with no detector. The gates
+  trap; unknown without minute bars, via `detectStrategySetup`), and Direction and Entry are graded only for a
+  band-cross strategy or a trade with no detector. The gates
   route (and the coaching pass) detects on demand and also returns the `setup` it found.
   A plan may name its `strategyId`; recording its entry then needs `ruleChecks` ({ ruleId: met } for
   every rule), saved in `trade_rule_checks` with a copy of the rule's text. Unmet rules get a 409

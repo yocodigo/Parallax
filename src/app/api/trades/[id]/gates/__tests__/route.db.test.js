@@ -175,6 +175,20 @@ describe('GET /api/trades/[id]/gates', () => {
     expect(touchBody.gates).not.toHaveProperty('entry');
   });
 
+  it("can't judge the setup without the bars to detect it from", async () => {
+    const { id } = await createStrategy(getDb(), {
+      name: 'Four-touch',
+      detector: 'four_touch',
+      rules: [{ text: 'A rule', kind: 'edge' }],
+    });
+    const trade = await insertTrade({ strategyId: id });
+    serveBars('SPY', []);
+
+    const body = await (await get(trade.id)).json();
+    expect(body.gates.setup).toBe('unknown');
+    expect(body.setup).toBeUndefined();
+  });
+
   it('has no Setup gate for a trade whose strategy has no detector', async () => {
     const { id } = await createStrategy(getDb(), { name: 'Checklist', rules: [{ text: 'A rule', kind: 'edge' }] });
     const trade = await insertTrade({ strategyId: id });
