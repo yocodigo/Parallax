@@ -188,7 +188,9 @@ Vitest, JavaScript (not TypeScript).
   (`EntryCoaching` on each review of the day's trades, an open trade's included). The forms take optional props for
   it: `DailyPlanForm` `tradeDate` (leaves out its own Day field) and `onSaved`, `ReviewForm` and `VoiceNote` `trade`
   (no Trade select; a voice draft becomes that trade's review whatever kind it came back as), and `onSaved`,
-  `onImported`, `onCoached`, so the day reloads. The demo hides the forms and the importer.
+  `onImported`, `onCoached`, so the day reloads. The page is `force-dynamic` (prerendered, the build's date would be
+  baked into the picker's limit). The Review step names the display zone its times are on ("Times in Pacific"). The demo
+  hides the forms and the importer, and Coach lists only the reviews that have stored coaching.
 - Insights (`/insights`): history-based views. `MistakeLedger.jsx` loads `GET /api/insights/mistakes`
   (`?mode=` optional), built from `listClosedTradesWithMistakes` and `mistakeLedger`: per mistake,
   the closed trades tagged with it (on any of their entries, once per trade) and their total and
