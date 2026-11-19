@@ -246,6 +246,21 @@ Vitest, JavaScript (not TypeScript).
   oscillating, none, undecided }] }`. `LevelReactions.jsx`, its own section on `/performance` after the heat section,
   asks only when its button is pressed (the symbol picked from the traded ones, the page's Year); computed per call,
   never stored; a failed fetch answers 502.
+- Plans not taken (`rules-v3.md` 8.11): `GET /api/insights/plans-not-taken` (`?mode`, live by default; `?year`, the New
+  York year or `all`, by the day the plan was written) runs `gatherPlansNotTaken` (`src/server/plansNotTaken.js`) over
+  `listUnfilledOptionPlans` (option trades with no fill and a plan entry; today's plans left out, their day not being
+  over): per plan, the underlying's minute bars once per symbol and day, the contract's own bars (`fetchOptionBars`),
+  and the day's working fib 50% for the symbol, into `replayPlan` (`src/lib/planReplay.js`). It enters at the planned
+  premium on the first contract bar after the plan was written that traded there (with none planned, the open of the
+  next bar; never reaching it is `never_triggered`, counted apart), then exits at the first of: invalidation (the
+  underlying's 1m close beyond the plan's underlying stop), the backstop (sold at its level), T1 (the fib, only when
+  ahead of the underlying at the fill; sold at that minute's contract close), the time stop, and the session's last
+  minute, the backstop and time stop by the saved rule settings; the reversal exit is left out until built. A contract has
+  bars only for minutes it traded, so exits other than the backstop sell at the last bar at or before their minute, and
+  `barCoverage` says how many minutes had their own. `plansNotTakenSummary` turns the replays into `summarize()` trades of
+  the planned quantity with the median fees of the option trades taken in the range taken off (an estimate, 0 with none).
+  `PlansNotTaken.jsx`, its own section on `/performance` (the page's Mode and Year), asks only when its button is
+  pressed; computed per call, never stored; a failed fetch answers 502.
 - Level map, location, and room (`rules-v3.md` sections 3 and 4). `levelMap` (`src/lib/setups/levels.js`) gives a
   symbol's levels as of a time, `{ kind, price, tier, side, touchedToday, formedAt }`, from regular-session minute
   bars closed by then, the daily bars before the day, and the day's plan. Tier 1: prior day, week, and month highs and

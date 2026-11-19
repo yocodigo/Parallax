@@ -28,6 +28,7 @@ import RollingExpectancy from './RollingExpectancy';
 import OptionExcursions from './OptionExcursions';
 import PerformanceTables from './PerformanceTables';
 import ProfitFactorByMonth from './ProfitFactorByMonth';
+import PlansNotTaken from './PlansNotTaken';
 import PlansVsNoPlan from './PlansVsNoPlan';
 import WinRateVsBreakeven from './WinRateVsBreakeven';
 import WinsLossesScratches from './WinsLossesScratches';
@@ -262,6 +263,9 @@ export default function PerformanceDashboard() {
             </Section>
             <Section title="Heat and after the exit">
               <OptionExcursions mode={mode} year={year} />
+            </Section>
+            <Section title="Plans not taken">
+              <PlansNotTaken mode={mode} year={year} />
             </Section>
             <Section title="Level reactions">
               <LevelReactions year={year} symbols={data.byUnderlying.map((row) => row.symbol)} />
