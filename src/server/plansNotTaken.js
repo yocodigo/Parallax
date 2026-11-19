@@ -39,7 +39,8 @@ export async function gatherPlansNotTaken(
   const rows = await Promise.all(
     unfilled.map(async (trade) => {
       const day = nyDay(trade.planWrittenAt);
-      // 05:00 UTC the next day is after the close in either time zone offset.
+      // 05:00 UTC the next day is midnight or 1am in New York, so always after the close. The
+      // bars reach back five days from it; replayPlan ignores what came before the plan.
       const end = new Date(Math.min(now.getTime(), Date.parse(`${day}T00:00:00Z`) + 29 * HOUR));
       const [underlyingBars, contractBars, dailyPlan] = await Promise.all([
         underlyingFor(trade.symbol, day, end),

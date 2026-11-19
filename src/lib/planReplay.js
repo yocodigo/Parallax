@@ -21,11 +21,11 @@
 // minute after the entry's, never the entry's own bar. The reversal exit isn't
 // built yet and is left out.
 
+import { atMost } from './setups/compare';
 import { sessionBars } from './setups/session';
 import { summarize } from './performance';
 
 const MINUTE = 60_000;
-const PRICE_TOLERANCE = 1e-9;
 // The order the exits win a tie in.
 const ORDER = ['invalidation', 'backstop', 't1', 'time_stop', 'session_close'];
 
@@ -75,7 +75,7 @@ export function replayPlan({ plan, contractBars, underlyingBars, rules, fib50 })
   }
   if (rules.backstopOn) {
     const level = entryPrice * (1 - rules.backstopPct);
-    const bar = contractAfter.find((b) => b.l <= level + PRICE_TOLERANCE);
+    const bar = contractAfter.find((b) => atMost(b.l, level));
     if (bar) add('backstop', startOf(bar), level);
   }
   if (fib50 !== null) {
