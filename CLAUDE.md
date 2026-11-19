@@ -235,6 +235,17 @@ Vitest, JavaScript (not TypeScript).
   leaves out and why, with the rest behind a toggle; the underlying's heat and after-the-exit run as p50/p75/p90 tables,
   R by planned and by derived stop, points a row per underlying (never pooled across symbols); and how often T1 came
   after an exit short of it. It follows the page's Mode and Year only.
+- Level reactions (`rules-v3.md` 8.10): `GET /api/insights/level-reactions` (`?symbol`, SPY by default; `?year`, one year,
+  never all) runs `gatherLevelReactions` (`src/server/levelReactions.js`): a year of the symbol's minute bars
+  (`fetchMinuteBarsBetween`, following Alpaca's page tokens; today's unfinished session left out), the daily bars from 62
+  days before January 1, and that symbol's daily plans, into `levelReactions` (`src/lib/setups/levelReactions.js`). Per
+  session after the first (which feeds the ATR) and per level fixed before the open (the prior day, week, and month highs
+  and lows from `dailyLevels`, the plan's overnight levels and fibs from `planLevels`), the side comes from the open (a
+  level above it is reached from below; one at the open exactly is skipped), only the first touch is judged, and
+  `reactionAt` runs to the close. Result: `{ sessions, kinds: [{ kind, sessions, reached, rejected, ranThrough,
+  oscillating, none, undecided }] }`. `LevelReactions.jsx`, its own section on `/performance` after the heat section,
+  asks only when its button is pressed (the symbol picked from the traded ones, the page's Year); computed per call,
+  never stored; a failed fetch answers 502.
 - Level map, location, and room (`rules-v3.md` sections 3 and 4). `levelMap` (`src/lib/setups/levels.js`) gives a
   symbol's levels as of a time, `{ kind, price, tier, side, touchedToday, formedAt }`, from regular-session minute
   bars closed by then, the daily bars before the day, and the day's plan. Tier 1: prior day, week, and month highs and

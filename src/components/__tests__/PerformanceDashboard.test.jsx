@@ -195,6 +195,7 @@ describe('PerformanceDashboard', () => {
       'Discipline score by month',
       'Emotional control by month',
       'Heat and after the exit',
+      'Level reactions',
       'Modes',
       'Mode comparison',
       'Graduation tracker',

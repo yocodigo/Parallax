@@ -19,6 +19,7 @@ import ExpectancyByMonth from './ExpectancyByMonth';
 import CallsVsPuts from './CallsVsPuts';
 import FeesVsGross from './FeesVsGross';
 import GraduationTracker from './GraduationTracker';
+import LevelReactions from './LevelReactions';
 import MistakeCostLedger from './MistakeCostLedger';
 import ModeComparison from './ModeComparison';
 import MonthlyPnl from './MonthlyPnl';
@@ -261,6 +262,9 @@ export default function PerformanceDashboard() {
             </Section>
             <Section title="Heat and after the exit">
               <OptionExcursions mode={mode} year={year} />
+            </Section>
+            <Section title="Level reactions">
+              <LevelReactions year={year} symbols={data.byUnderlying.map((row) => row.symbol)} />
             </Section>
           </>
         ) : (
