@@ -105,6 +105,28 @@ export async function listPlanFacts(db, tradeIds) {
   return facts;
 }
 
+// The option plans of `mode` that were never filled, whose earliest plan entry was written in
+// [from, to) (Dates), oldest first, each trade with `planWrittenAt` (rules-v3 8.11). A trade
+// with no plan entry has no time to replay from and is left out.
+export async function listUnfilledOptionPlans(db, { mode, from, to }) {
+  const writtenAt = sql`min(${journalEntries.createdAt})`;
+  const plans = await db
+    .select({ tradeId: journalEntries.tradeId, writtenAt })
+    .from(journalEntries)
+    .innerJoin(trades, eq(trades.id, journalEntries.tradeId))
+    .where(and(eq(journalEntries.kind, 'plan'), eq(trades.assetClass, 'option'), eq(trades.mode, mode), isNull(trades.openedAt)))
+    .groupBy(journalEntries.tradeId)
+    .having(and(sql`${writtenAt} >= ${from.toISOString()}`, sql`${writtenAt} < ${to.toISOString()}`));
+  if (plans.length === 0) return [];
+
+  const rows = await db.select().from(trades).where(inArray(trades.id, plans.map((p) => p.tradeId)));
+  // min() is raw SQL, so the driver hands back a string rather than a Date.
+  const written = new Map(plans.map((p) => [p.tradeId, new Date(p.writtenAt)]));
+  return rows
+    .map((trade) => ({ ...trade, planWrittenAt: written.get(trade.id) }))
+    .sort((a, b) => a.planWrittenAt - b.planWrittenAt);
+}
+
 // The emotional-control ratings (1-10) on each trade's review entries, as a Map by
 // trade id (an empty list for a trade with none). Reviews saved without a rating
 // are left out.

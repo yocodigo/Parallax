@@ -10,6 +10,7 @@ import {
   listClosedTradesWithMistakes,
   listClosedTradesWithRuleChecks,
   listPlanFacts,
+  listUnfilledOptionPlans,
   listReviewRatings,
   listOptionsWithoutUnderlying,
   listRecentTrades,
@@ -433,5 +434,36 @@ describe('listReviewRatings', () => {
 
   it('returns nothing for no trades', async () => {
     expect((await listReviewRatings(db, [])).size).toBe(0);
+  });
+});
+
+describe('listUnfilledOptionPlans', () => {
+  const optionPlan = { ...plan, assetClass: 'option', optionType: 'call', strike: 580, expiration: '2026-10-20', plannedEntry: 2, initialStop: null, target: null };
+  const planned = async (values, writtenAt = '2026-10-20T13:00:00Z') => {
+    const [trade] = await db.insert(trades).values({ ...optionPlan, ...values }).returning();
+    await db.insert(journalEntries).values({ kind: 'plan', notes: 'n', tradeId: trade.id, createdAt: new Date(writtenAt) });
+    return trade;
+  };
+  const range = { mode: 'paper', from: new Date('2026-10-01T00:00:00Z'), to: new Date('2026-11-01T00:00:00Z') };
+
+  it('lists option plans with no fill, written in the range, with when the earliest plan entry was written', async () => {
+    const wanted = await planned({});
+    await db.insert(journalEntries).values({ kind: 'plan', notes: 'later', tradeId: wanted.id, createdAt: new Date('2026-10-20T15:00:00Z') });
+
+    const rows = await listUnfilledOptionPlans(db, range);
+
+    expect(rows.map((r) => [r.id, r.planWrittenAt])).toEqual([[wanted.id, new Date('2026-10-20T13:00:00Z')]]);
+    expect(rows[0]).toMatchObject({ symbol: 'SPY', optionType: 'call', plannedEntry: 2 });
+  });
+
+  it('leaves out filled plans, stock plans, other modes, other dates, and trades with no plan entry', async () => {
+    const filled = await planned({});
+    await recordEntry(db, filled.id, entry);
+    await planned({ assetClass: 'stock', optionType: null, strike: null, expiration: null, initialStop: 98 });
+    await planned({ mode: 'live' });
+    await planned({}, '2026-09-20T13:00:00Z');
+    await db.insert(trades).values(optionPlan);
+
+    expect(await listUnfilledOptionPlans(db, range)).toEqual([]);
   });
 });

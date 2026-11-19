@@ -59,7 +59,7 @@ export function untriggeredExits(trades, rules) {
   };
 }
 
-const median = (values) => {
+export const median = (values) => {
   if (values.length === 0) return null;
   const sorted = [...values].sort((a, b) => a - b);
   const middle = Math.floor(sorted.length / 2);
