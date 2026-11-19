@@ -1,11 +1,11 @@
-// Alpaca's daily bars for the level map's prior day and prior week levels
+// Alpaca's daily bars for the level map's prior day, week, and month levels
 // (rules-v3 3). Server-only: it reads the Alpaca keys from the environment.
 
 const BARS_URL = 'https://data.alpaca.markets/v2/stocks/bars';
 const DAY_MS = 24 * 60 * 60 * 1000;
-// Three weeks of calendar days covers the prior week from any day of the
-// current one, holidays included.
-const LOOKBACK_DAYS = 21;
+// Two months of calendar days reach the first of the prior month from the
+// last day of the current one (31 + 31 = 62), holidays included.
+const LOOKBACK_DAYS = 62;
 
 const shift = (date, days) => new Date(Date.parse(`${date}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10);
 

@@ -47,6 +47,8 @@ const LEVEL_WORDS = {
   prior_day_low: 'prior day low',
   prior_week_high: 'prior week high',
   prior_week_low: 'prior week low',
+  prior_month_high: 'prior month high',
+  prior_month_low: 'prior month low',
   asia_high: 'Asia high',
   asia_low: 'Asia low',
   london_high: 'London high',

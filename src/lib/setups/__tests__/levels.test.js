@@ -59,6 +59,32 @@ describe('levelMap', () => {
     expect(find(levels, 'prior_week_low')).toMatchObject({ price: 676.2, tier: 1 });
   });
 
+  it("takes the prior month's high and low from the calendar month before the day's, and none without its bars", () => {
+    const withMonth = [
+      daily('2026-08-31', 720, 600), // two months back: no level
+      daily('2026-09-01', 690, 650),
+      daily('2026-09-15', 705.5, 640),
+      daily('2026-09-30', 695, 660.25),
+      ...DAILY, // October's bars stay out of it
+    ];
+    const monthLevels = levelMap({ bars: SESSION, dailyBars: withMonth, asOf: at('10:00') });
+
+    expect(find(monthLevels, 'prior_month_high')).toMatchObject({ price: 705.5, tier: 1, side: 'resistance', touchedToday: false });
+    expect(find(monthLevels, 'prior_month_low')).toMatchObject({ price: 640, tier: 1, side: 'support' });
+    expect(find(monthLevels, 'prior_month_high').formedAt).toBeNull();
+    expect(kinds(levels)).not.toContain('prior_month_high');
+  });
+
+  it('across a year end, takes the prior month from December', () => {
+    // The session moved to 2027-01-15, an hour later on the clock for standard time.
+    const january = levelMap({
+      bars: SESSION.map((b) => ({ ...b, t: new Date(Date.parse(b.t) + 80 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000).toISOString() })),
+      dailyBars: [daily('2026-12-10', 700, 650), daily('2026-12-31', 690, 655)],
+      asOf: new Date('2027-01-15T10:00:00-05:00'), // Eastern Standard Time
+    });
+    expect(find(january, 'prior_month_high').price).toBe(700);
+  });
+
   it("on a Monday, takes the prior day from Friday, inside the prior week, and leaves out the Monday's own bar", () => {
     const monday = SESSION.map((b) => ({ ...b, t: new Date(Date.parse(b.t) - 24 * 60 * 60 * 1000).toISOString() }));
     const mondayLevels = levelMap({ bars: monday, dailyBars: DAILY, asOf: at('10:00', '2026-10-26') });

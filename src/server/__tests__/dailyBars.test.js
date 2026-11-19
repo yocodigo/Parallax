@@ -13,7 +13,7 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe('fetchDailyBars', () => {
-  it('asks for three weeks of daily bars ending the day before, and returns them oldest first', async () => {
+  it('asks for about two months of daily bars ending the day before, and returns them oldest first', async () => {
     const requests = [];
     server.use(
       http.get(URL_, ({ request }) => {
@@ -27,7 +27,7 @@ describe('fetchDailyBars', () => {
     expect(Object.fromEntries(new URL(requests[0].url).searchParams)).toMatchObject({
       symbols: 'SPY',
       timeframe: '1Day',
-      start: '2026-10-27',
+      start: '2026-09-16',
       end: '2026-11-16',
       adjustment: 'split',
       feed: 'iex',

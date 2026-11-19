@@ -55,8 +55,8 @@ const highLow = (bars) =>
     ? null
     : { high: Math.max(...bars.map((bar) => bar.h)), low: Math.min(...bars.map((bar) => bar.l)) };
 
-// Levels from the daily bars: the prior day's and the prior calendar week's
-// highs and lows. The day's own daily bar is still forming and never read.
+// Levels from the daily bars: the prior day's, the prior calendar week's, and
+// the prior calendar month's highs and lows. The day's own daily bar is still forming and never read.
 function dailyLevels(dailyBars, day) {
   const before = dailyBars.filter((bar) => tradingDay(bar) < day);
   const thisWeek = mondayOf(day);
@@ -64,11 +64,17 @@ function dailyLevels(dailyBars, day) {
   const lastWeek = mondayOf(new Date(Date.parse(`${thisWeek}T00:00:00Z`) - DAY_MS).toISOString().slice(0, 10));
   const week = highLow(before.filter((bar) => tradingDay(bar) >= lastWeek && tradingDay(bar) < thisWeek));
   const prior = highLow(before.slice(-1));
+  // The month before the day's: 'YYYY-MM' is also the first 7 characters of a date.
+  const thisMonth = day.slice(0, 7);
+  const lastMonth = new Date(Date.parse(`${thisMonth}-01T00:00:00Z`) - DAY_MS).toISOString().slice(0, 7);
+  const month = highLow(before.filter((bar) => tradingDay(bar).slice(0, 7) === lastMonth));
   return [
     prior && { kind: 'prior_day_high', price: prior.high, tier: 1 },
     prior && { kind: 'prior_day_low', price: prior.low, tier: 1 },
     week && { kind: 'prior_week_high', price: week.high, tier: 1 },
     week && { kind: 'prior_week_low', price: week.low, tier: 1 },
+    month && { kind: 'prior_month_high', price: month.high, tier: 1 },
+    month && { kind: 'prior_month_low', price: month.low, tier: 1 },
   ];
 }
 

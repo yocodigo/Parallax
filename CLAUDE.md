@@ -237,7 +237,7 @@ Vitest, JavaScript (not TypeScript).
   after an exit short of it. It follows the page's Mode and Year only.
 - Level map, location, and room (`rules-v3.md` sections 3 and 4). `levelMap` (`src/lib/setups/levels.js`) gives a
   symbol's levels as of a time, `{ kind, price, tier, side, touchedToday, formedAt }`, from regular-session minute
-  bars closed by then, the daily bars before the day, and the day's plan. Tier 1: prior day and prior week highs and
+  bars closed by then, the daily bars before the day, and the day's plan. Tier 1: prior day, week, and month highs and
   lows, the plan's Asia, London, and premarket highs and lows (typed in, never computed), and 5m and 15m equal highs
   and lows (`pools.js`, over today and the previous session, at the pool's outermost price). Tier 2: the opening range
   (`OPENING_RANGE_MIN`), the session's high and low so far, and the day's broken four-touch lines on the 1m and 5m
