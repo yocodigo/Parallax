@@ -12,6 +12,7 @@ const countStep = (done, of) => ({ status: of === 0 ? 'waiting' : done === of ? 
 const toCents = (dollars) => Math.round(dollars * 100);
 
 export function todaySummary({ plans, trades, reviews }) {
+  // Reviews of trades not given (unlinked, or another day's) are ignored.
   const reviewsOf = new Map(trades.map((trade) => [trade.id, []]));
   for (const review of reviews) reviewsOf.get(review.tradeId)?.push(review);
 

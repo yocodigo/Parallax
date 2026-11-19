@@ -48,7 +48,8 @@ describe('todaySummary', () => {
   });
 
   it('sums net P/L of the closed trades in whole cents', () => {
-    // 48.70 + 0.10 - 0.30 in floating point is 48.500000000000004.
+    // (1.001 - 1) × 100 and (0.997 - 1) × 100 aren't exact, so the raw sum
+    // of the three P/Ls comes to 48.49999999999999.
     const trades = [trade(), trade({ id: 't2', exitPrice: 1.001, fees: 0 }), trade({ id: 't3', exitPrice: 0.997, fees: 0 }), trade({ id: 't4', ...open })];
     const summary = todaySummary({ plans: [], trades, reviews: [] });
     expect(summary.netPnl).toBe(48.5);
@@ -78,6 +79,18 @@ describe('todaySummary', () => {
     expect(rows[0].pnl).toBeCloseTo(48.7);
     expect(rows[0].reviews.map((r) => r.id)).toEqual(['r-t1', 'r-again']);
     expect(rows[1]).toMatchObject({ pnl: null, reviews: [] });
+  });
+
+  it('asks for coaching of a review of an open trade, though Review waits for the exit', () => {
+    const summary = todaySummary({ plans: [], trades: [trade(open)], reviews: [review('t1')] });
+    expect(summary.steps.review).toEqual({ status: 'waiting', done: 0, of: 0 });
+    expect(summary.steps.coach).toEqual({ status: 'todo', done: 0, of: 1 });
+  });
+
+  it("ignores reviews of trades that aren't the day's", () => {
+    const summary = todaySummary({ plans: [], trades: [trade()], reviews: [review('other-day'), review(null)] });
+    expect(summary.steps.coach).toEqual({ status: 'waiting', done: 0, of: 0 });
+    expect(summary.rows[0].reviews).toEqual([]);
   });
 
   it('counts a trade reviewed once however many reviews it has', () => {
