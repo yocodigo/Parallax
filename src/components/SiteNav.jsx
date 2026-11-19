@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import DisplayZonePicker from './DisplayZonePicker';
 import ThemePicker from './ThemePicker';
 import { isDemo } from '@/lib/demo';
 
@@ -91,6 +92,7 @@ function SettingsMenu({ signedIn, demo }) {
       {open && (
         <div className="absolute right-0 top-full z-10 mt-1 flex w-44 flex-col gap-3 rounded-md border border-gray-200 bg-white p-3 text-sm shadow-md">
           <ThemePicker />
+          <DisplayZonePicker />
           {signedIn && !demo && <SignOut />}
         </div>
       )}
