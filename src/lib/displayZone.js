@@ -80,7 +80,8 @@ export function toZoneInput(instant, zone) {
 // The instant (ISO string) a datetime-local value means on `zone`'s clock,
 // undefined for a blank one. The value is read as if it were UTC, then moved by
 // how far the zone's clock read from it at that instant; a second pass settles
-// the guess when the move crossed a daylight-time change.
+// the guess when the move crossed a daylight-time change. A time the clocks
+// skip reads an hour earlier; a repeated one is its first occurrence.
 export function fromZoneInput(value, zone) {
   if (!value) return undefined;
   const asUtc = Date.parse(`${value}:00Z`);

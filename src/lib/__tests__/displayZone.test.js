@@ -103,6 +103,12 @@ describe('toZoneInput and fromZoneInput', () => {
     expect(fromZoneInput('2026-03-08T01:30', 'America/New_York')).toBe('2026-03-08T06:30:00.000Z');
   });
 
+  it('puts a time the clocks skip an hour earlier, and a repeated time on its first pass', () => {
+    // 2:30 never happened on 2026-03-08 in New York; 1:30 on 2026-11-01 happened twice.
+    expect(fromZoneInput('2026-03-08T02:30', 'America/New_York')).toBe('2026-03-08T06:30:00.000Z');
+    expect(fromZoneInput('2026-11-01T01:30', 'America/New_York')).toBe('2026-11-01T05:30:00.000Z');
+  });
+
   it('round-trips', () => {
     const iso = '2026-10-23T18:41:00.000Z';
     expect(fromZoneInput(toZoneInput(iso, 'America/Denver'), 'America/Denver')).toBe(iso);
