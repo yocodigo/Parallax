@@ -12,8 +12,9 @@ const buttonClass =
 
 // The coaching pass on a review entry (setups.md section 11). Each pass is a
 // paid call to Claude, so it runs only when asked for; the text is stored on
-// the review, and pressing the button again replaces it.
-export default function EntryCoaching({ entry }) {
+// the review, and pressing the button again replaces it. `onCoached` is called
+// once a pass is stored.
+export default function EntryCoaching({ entry, onCoached }) {
   const zone = useDisplayZone();
   const { mutate } = useSWRConfig();
   // What the last request returned, shown until the journal list reloads.
@@ -39,6 +40,7 @@ export default function EntryCoaching({ entry }) {
 
       setResult(json);
       await mutate('/api/journal');
+      onCoached?.();
     } catch {
       setError("Couldn't write the coaching");
     } finally {

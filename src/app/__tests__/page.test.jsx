@@ -1,13 +1,15 @@
-import { describe, expect, it, vi } from 'vitest';
-import { redirect } from 'next/navigation';
+import { describe, expect, it } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
+import { server } from '@/mocks/server';
 import Home from '../page';
 
-vi.mock('next/navigation', () => ({ redirect: vi.fn() }));
-
 describe('Home', () => {
-  it('sends the landing page to the performance dashboard', () => {
-    Home();
+  it('is the Today page', async () => {
+    server.use(http.get('*/api/today', () => HttpResponse.json({ error: 'not served' }, { status: 500 })));
+    render(<Home />);
 
-    expect(redirect).toHaveBeenCalledWith('/performance');
+    expect(screen.getByRole('heading', { level: 1, name: 'Today' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Day and mode' })).toBeInTheDocument();
   });
 });

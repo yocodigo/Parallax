@@ -23,10 +23,12 @@ async function openSettings(user = userEvent.setup()) {
 }
 
 describe('SiteNav', () => {
-  it('links to the dashboard, the journal, strategies, performance, the performance review, insights, and the import', () => {
-    usePathname.mockReturnValue('/');
+  it('links to today, the dashboard, the journal, strategies, performance, the performance review, insights, and the import', () => {
+    usePathname.mockReturnValue('/journal');
     render(<SiteNav />);
 
+    expect(screen.getAllByRole('link')[0]).toHaveTextContent('Today');
+    expect(screen.getByRole('link', { name: 'Today' })).toHaveAttribute('href', '/');
     expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('href', '/dashboard');
     expect(screen.getByRole('link', { name: 'Journal' })).toHaveAttribute('href', '/journal');
     expect(screen.getByRole('link', { name: 'Strategies' })).toHaveAttribute('href', '/strategies');

@@ -119,8 +119,9 @@ function Leftovers({ unpaired, unreadRows, timeZone }) {
 }
 
 // Imports a thinkorswim account statement: choose the exported CSV, preview
-// what will be created, filled in, or skipped, then confirm.
-export default function ThinkorswimImport() {
+// what will be created, filled in, or skipped, then confirm. `onImported` is
+// called once a confirmed import is saved.
+export default function ThinkorswimImport({ onImported }) {
   const [file, setFile] = useState(null);
   const [timeZone, setTimeZone] = useState('America/Los_Angeles');
   const [mode, setMode] = useState('live');
@@ -158,6 +159,7 @@ export default function ThinkorswimImport() {
       if (confirm) {
         setResult(json);
         mutate('/api/journal');
+        onImported?.();
       }
     } catch {
       setError('The import failed. Check your connection and try again.');

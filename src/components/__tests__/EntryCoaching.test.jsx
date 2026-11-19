@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -36,6 +36,18 @@ describe('EntryCoaching', () => {
 
     expect(screen.getByText(/hold to the first target/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /coach again/i })).toBeInTheDocument();
+  });
+
+  it('tells the page once the coaching is stored', async () => {
+    serveCoaching(() => HttpResponse.json({ coaching: COACHING, coachedAt: '2026-10-29T23:00:00.000Z' }));
+    const onCoached = vi.fn();
+    const user = userEvent.setup();
+    render(<EntryCoaching entry={{ id: 'entry-1', coaching: null, coachedAt: null }} onCoached={onCoached} />);
+
+    await user.click(screen.getByRole('button', { name: /coach this day/i }));
+
+    await screen.findByText(/hold to the first target/i);
+    expect(onCoached).toHaveBeenCalledTimes(1);
   });
 
   it('shows the coaching once it arrives', async () => {

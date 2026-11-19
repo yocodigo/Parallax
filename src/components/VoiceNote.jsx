@@ -37,7 +37,9 @@ const secondaryButtonClass =
 
 // Steps: idle -> recording -> transcribing -> transcript (editable)
 // -> drafting -> draft (confirmed in the plan or review form) -> idle.
-export default function VoiceNote() {
+// Given a `trade` (the Today page's row), the note is that trade's review,
+// whatever kind the draft came back as. `onSaved` is called once it is saved.
+export default function VoiceNote({ trade, onSaved: onSavedByPage }) {
   const { data } = useSWR('/api/journal', fetchJson, { revalidateOnFocus: false });
   const { data: prompts } = useSWR('/api/recording-prompts', fetchJson, { revalidateOnFocus: false });
   const [step, setStep] = useState('idle');
@@ -124,6 +126,7 @@ export default function VoiceNote() {
   const onSaved = () => {
     startOver();
     setSaved(true);
+    onSavedByPage?.();
   };
 
   return (
@@ -131,7 +134,7 @@ export default function VoiceNote() {
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold text-gray-700">Voice note</h2>
         <span className="text-xs text-gray-500">
-          Record a voice note for today’s plan or end-of-day review.
+          {trade ? 'Record your review of this trade.' : 'Record a voice note for today’s plan or end-of-day review.'}
         </span>
       </div>
 
@@ -210,10 +213,10 @@ export default function VoiceNote() {
           <p className="text-sm text-gray-600">
             Check the draft, fill in anything missing, then save it.
           </p>
-          {draft.draft.kind === 'plan' ? (
+          {draft.draft.kind === 'plan' && !trade ? (
             <PlanForm draft={draft.draft} draftErrors={draft.fieldErrors} onSaved={onSaved} />
           ) : (
-            <ReviewForm draft={draft.draft} draftErrors={draft.fieldErrors} onSaved={onSaved} />
+            <ReviewForm draft={draft.draft} draftErrors={draft.fieldErrors} trade={trade} onSaved={onSaved} />
           )}
           <button type="button" onClick={startOver} className={secondaryButtonClass}>
             Start over

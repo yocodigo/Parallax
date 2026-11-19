@@ -44,18 +44,23 @@ function formFromDraft({ entry = {} }) {
 }
 
 // `draft` and `draftErrors` prefill the form for confirming a voice note;
-// `onSaved` receives the saved { entry }.
-export default function ReviewForm({ draft, draftErrors, onSaved }) {
+// `onSaved` receives the saved { entry }. Given a `trade` (the Today page's
+// row), the review is of that trade and the form offers no other.
+export default function ReviewForm({ draft, draftErrors, trade: givenTrade, onSaved }) {
   const { mutate } = useSWRConfig();
   const zone = useDisplayZone();
-  const { data } = useSWR('/api/journal', fetchJson, { revalidateOnFocus: false });
-  const [form, setForm] = useState(() => (draft ? formFromDraft(draft) : EMPTY_FORM));
+  // The journal is read only for the Trade select.
+  const { data } = useSWR(givenTrade ? null : '/api/journal', fetchJson, { revalidateOnFocus: false });
+  const emptyForm = givenTrade ? { ...EMPTY_FORM, tradeId: givenTrade.id } : EMPTY_FORM;
+  const [form, setForm] = useState(() => (draft ? { ...formFromDraft(draft), tradeId: emptyForm.tradeId } : emptyForm));
   // This route's errors are flat; a draft's come as { plan, entry }.
   const [fieldErrors, setFieldErrors] = useState(draftErrors?.entry ?? {});
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
 
   const trades = tradesIn(data?.entries);
+  const tradeLabel = (trade) =>
+    [describeTrade(trade), formatTradeTime(trade.openedAt, zone), capitalize(trade.mode)].filter(Boolean).join(' · ');
 
   const set = (name) => (e) => setForm((current) => ({ ...current, [name]: e.target.value }));
 
@@ -115,7 +120,7 @@ export default function ReviewForm({ draft, draftErrors, onSaved }) {
         return;
       }
 
-      setForm(EMPTY_FORM);
+      setForm(emptyForm);
       setFieldErrors({});
       // Reload the journal list so the new review shows up in it.
       await mutate('/api/journal');
@@ -131,18 +136,20 @@ export default function ReviewForm({ draft, draftErrors, onSaved }) {
     <form onSubmit={submit} className="space-y-4 rounded-lg border border-gray-200 bg-white p-4">
       <h2 className="text-sm font-semibold text-gray-700">Log a review</h2>
 
-      <Field id="review-tradeId" label="Trade" error={errorFor('tradeId')}>
-        <select {...fieldProps('tradeId')} className={inputClass}>
-          <option value="">Not linked to a trade</option>
-          {trades.map((trade) => (
-            <option key={trade.id} value={trade.id}>
-              {[describeTrade(trade), formatTradeTime(trade.openedAt, zone), capitalize(trade.mode)]
-                .filter(Boolean)
-                .join(' · ')}
-            </option>
-          ))}
-        </select>
-      </Field>
+      {givenTrade ? (
+        <p className="text-sm text-gray-800">{tradeLabel(givenTrade)}</p>
+      ) : (
+        <Field id="review-tradeId" label="Trade" error={errorFor('tradeId')}>
+          <select {...fieldProps('tradeId')} className={inputClass}>
+            <option value="">Not linked to a trade</option>
+            {trades.map((trade) => (
+              <option key={trade.id} value={trade.id}>
+                {tradeLabel(trade)}
+              </option>
+            ))}
+          </select>
+        </Field>
+      )}
 
       {!form.tradeId && (
         <Field id="review-mode" label="Mode" error={errorFor('mode')} className="w-48">

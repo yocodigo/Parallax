@@ -148,15 +148,17 @@ function FibFields({ tradeDate, symbol, plan, onDateChange, onSymbolChange, onSa
   return (
     <form onSubmit={submit} className="space-y-3">
       <div className="grid grid-cols-3 gap-3">
-        <Field id="daily-plan-tradeDate" label="Day" error={errorFor('tradeDate')}>
-          <input
-            id="daily-plan-tradeDate"
-            type="date"
-            value={form.tradeDate}
-            onChange={(e) => onDateChange(e.target.value)}
-            className={inputClass}
-          />
-        </Field>
+        {onDateChange && (
+          <Field id="daily-plan-tradeDate" label="Day" error={errorFor('tradeDate')}>
+            <input
+              id="daily-plan-tradeDate"
+              type="date"
+              value={form.tradeDate}
+              onChange={(e) => onDateChange(e.target.value)}
+              className={inputClass}
+            />
+          </Field>
+        )}
         <Field id="daily-plan-symbol" label="Symbol" error={errorFor('symbol')}>
           <input
             {...fieldProps('symbol')}
@@ -243,10 +245,13 @@ function FibFields({ tradeDate, symbol, plan, onDateChange, onSymbolChange, onSa
 
 // The day's overnight highs and lows and its fib extensions for one symbol,
 // anchored by hand around the open. Defaults to today (New York) and SPY, and
-// switching either loads that plan instead.
-export default function DailyPlanForm() {
+// switching either loads that plan instead. A page that picks the day itself
+// (Today) passes it as `tradeDate`, and the form leaves out its own Day field.
+// `onSaved` gets the saved plan.
+export default function DailyPlanForm({ tradeDate: pickedDate, onSaved }) {
   const { mutate } = useSWRConfig();
-  const [tradeDate, setTradeDate] = useState(today);
+  const [ownDate, setOwnDate] = useState(today);
+  const tradeDate = pickedDate ?? ownDate;
   const [symbol, setSymbol] = useState(DEFAULT_SYMBOL);
   const { data, error, isLoading } = useSWR(keyFor(tradeDate, symbol), fetchJson, {
     revalidateOnFocus: false,
@@ -268,9 +273,12 @@ export default function DailyPlanForm() {
         tradeDate={tradeDate}
         symbol={symbol}
         plan={data.plan}
-        onDateChange={setTradeDate}
+        onDateChange={pickedDate ? null : setOwnDate}
         onSymbolChange={setSymbol}
-        onSaved={(plan) => mutate(keyFor(tradeDate, symbol), { plan }, { revalidate: false })}
+        onSaved={(plan) => {
+          mutate(keyFor(tradeDate, symbol), { plan }, { revalidate: false });
+          onSaved?.(plan);
+        }}
       />
     );
   }

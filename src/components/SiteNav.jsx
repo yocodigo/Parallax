@@ -8,6 +8,7 @@ import ThemePicker from './ThemePicker';
 import { isDemo } from '@/lib/demo';
 
 const LINKS = [
+  { href: '/', label: 'Today' },
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/journal', label: 'Journal' },
   { href: '/strategies', label: 'Strategies' },

@@ -101,6 +101,22 @@ describe('ReviewForm', () => {
     ]);
   });
 
+  it('reviews the trade it is given, with no Trade select or mode', async () => {
+    serveJournal([]);
+    const bodies = captureReviews();
+    renderForm(<ReviewForm trade={tsla} />);
+
+    expect(screen.queryByLabelText('Trade')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Mode')).not.toBeInTheDocument();
+    expect(screen.getByText(/Short 5 TSLA/)).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText('Notes'), 'Covered too late.');
+    await save();
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0]).toMatchObject({ kind: 'review', tradeId: tsla.id, notes: 'Covered too late.' });
+    expect(bodies[0].mode).toBeUndefined();
+  });
+
   it('sends the review with its trade, emotion, and mistakes', async () => {
     serveJournal(journalWithTrades());
     const bodies = captureReviews();

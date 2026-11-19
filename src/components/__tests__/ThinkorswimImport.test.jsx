@@ -139,6 +139,20 @@ describe('ThinkorswimImport', () => {
     expect(posted.map((p) => p.confirm)).toEqual([false, true]);
   });
 
+  it('tells the page once a confirmed import is saved, not after a preview', async () => {
+    serveImport();
+    const onImported = vi.fn();
+    render(<ThinkorswimImport onImported={onImported} />);
+    await choosePreview();
+    await screen.findByRole('table');
+    expect(onImported).not.toHaveBeenCalled();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Import 2 trades' }));
+
+    await screen.findByText('Imported: 1 new trade, 1 filled in.');
+    expect(onImported).toHaveBeenCalledTimes(1);
+  });
+
   it('sends the chosen time zone and mode, and asks for a new preview after a change', async () => {
     const posted = serveImport();
     render(<ThinkorswimImport />);

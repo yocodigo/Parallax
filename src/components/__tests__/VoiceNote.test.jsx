@@ -167,6 +167,32 @@ describe('VoiceNote', () => {
     expect(sent.transcribe[0].keyterms).toEqual(['MSFT', 'AAPL']);
   });
 
+  it("with a trade, saves the draft as that trade's review, even one drafted as a plan, and tells the page", async () => {
+    const sent = serveVoiceApis({
+      draft: () =>
+        HttpResponse.json({
+          draft: { kind: 'plan', plan: { symbol: 'SPY' }, entry: { notes: 'Took T1 on the call.', mistakes: [] } },
+          fieldErrors: { plan: {}, entry: {} },
+        }),
+    });
+    const onSaved = vi.fn();
+    const trade = { id: 'trade-1', mode: 'live', symbol: 'SPY', direction: 'long', quantity: 1 };
+    render(
+      <SWRConfig value={{ dedupingInterval: 0, provider: () => new Map() }}>
+        <VoiceNote trade={trade} onSaved={onSaved} />
+      </SWRConfig>
+    );
+
+    expect(screen.getByText('Record your review of this trade.')).toBeInTheDocument();
+    await recordNote();
+    await userEvent.click(await screen.findByRole('button', { name: 'Draft entry' }));
+    expect(await screen.findByLabelText('Notes')).toHaveValue('Took T1 on the call.');
+    await userEvent.click(screen.getByRole('button', { name: 'Save review' }));
+
+    await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+    expect(sent.journal[0]).toMatchObject({ kind: 'review', tradeId: 'trade-1', notes: 'Took T1 on the call.' });
+  });
+
   it('opens a plan draft in the plan form with what it is missing', async () => {
     serveVoiceApis({
       draft: () =>
