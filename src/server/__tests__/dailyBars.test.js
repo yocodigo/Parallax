@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { server } from '@/mocks/server';
-import { fetchDailyBars } from '../dailyBars';
+import { fetchDailyBars, fetchDailyBarsBetween } from '../dailyBars';
 
 const URL_ = 'https://data.alpaca.markets/v2/stocks/bars';
 
@@ -44,5 +44,29 @@ describe('fetchDailyBars', () => {
   it('throws with the status when Alpaca refuses', async () => {
     server.use(http.get(URL_, () => new HttpResponse('forbidden', { status: 403 })));
     await expect(fetchDailyBars('SPY', '2026-11-17')).rejects.toThrow('403 from Alpaca');
+  });
+});
+
+describe('fetchDailyBarsBetween', () => {
+  it('asks for the New York dates from the first through the last, both included', async () => {
+    const requests = [];
+    server.use(
+      http.get(URL_, ({ request }) => {
+        requests.push(request);
+        return HttpResponse.json({ bars: { SPY: [{ t: '2026-01-02T05:00:00Z', o: 1, h: 2, l: 0.5, c: 1.5, v: 10 }] } });
+      })
+    );
+
+    const bars = await fetchDailyBarsBetween('SPY', '2025-11-01', '2026-12-31');
+
+    expect(Object.fromEntries(new URL(requests[0].url).searchParams)).toMatchObject({
+      symbols: 'SPY',
+      timeframe: '1Day',
+      start: '2025-11-01',
+      end: '2026-12-31',
+      adjustment: 'split',
+      feed: 'iex',
+    });
+    expect(bars).toHaveLength(1);
   });
 });
