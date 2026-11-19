@@ -205,8 +205,11 @@ Vitest, JavaScript (not TypeScript).
   the same mode: same symbol, same direction and asset class, and same part of the New York session
   as now (open, midday, close). Each rule uses the 20 most recent matches and warns only with at least
   5 averaging -0.3R or worse. Option plans add days-to-expiration rules (0DTE, 1-7, 8+ DTE at entry,
-  New York date), alone and with the session part. Tests that render `PlanForm` must serve that route
-  and `/api/strategies` (MSW errors on unhandled requests).
+  New York date), alone and with the session part. An option plan also asks for the underlying's invalidation level (`underlyingStop`, the voice
+  draft's stop line too) and shows, from the saved rule settings (`planGuidance`, `src/lib/planGuidance.js`), the backstop
+  premium and the dollars at risk if it fills, with warnings (never blocks) for a premium outside the band or a backstop
+  risk over a set risk per trade. Tests that render `PlanForm` must serve that route, `/api/strategies`, and
+  `/api/rule-settings` (MSW errors on unhandled requests).
 - Circuit breakers: settings live in `circuit_breaker_settings` (one row, id 1; a null limit is off;
   `modes` they apply to, live by default), edited in `CircuitBreakers.jsx` on `/insights` through
   `GET`/`PUT /api/circuit-breakers`. `circuitBreakers` checks today's closed R (New York day), today's

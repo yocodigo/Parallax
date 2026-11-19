@@ -4,6 +4,7 @@ import { useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { apiErrorMessage, fetchJson } from '@/lib/fetchJson';
 import { EMOTION_LABELS, EMOTIONS } from '@/lib/journalEntry';
+import { planGuidance } from '@/lib/planGuidance';
 import { STOP_RULES, STOP_RULE_LABELS } from '@/lib/tradePlan';
 import Field, { inputClass } from './Field';
 import HistoryWarnings from './HistoryWarnings';
@@ -55,6 +56,14 @@ export default function PlanForm({ draft, draftErrors = NO_ERRORS, onSaved }) {
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
   const isOption = form.assetClass === 'option';
+  // The option rules are only needed for an option plan.
+  const { data: ruleData } = useSWR(isOption ? '/api/rule-settings' : null, fetchJson, {
+    revalidateOnFocus: false,
+  });
+  const guidance =
+    isOption && ruleData?.settings
+      ? planGuidance({ plannedEntry: toNumber(form.plannedEntry), quantity: toNumber(form.quantity) }, ruleData.settings)
+      : null;
 
   const set = (name) => (e) => setForm((current) => ({ ...current, [name]: e.target.value }));
 
@@ -252,6 +261,22 @@ export default function PlanForm({ draft, draftErrors = NO_ERRORS, onSaved }) {
         symbol={form.symbol}
         expiration={form.expiration}
       />
+
+      {guidance && (guidance.backstop !== null || guidance.warnings.length > 0) && (
+        <div className="space-y-1 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+          {guidance.backstop !== null && (
+            <p>
+              Backstop at ${guidance.backstop.toFixed(2)}
+              {guidance.riskAtBackstop !== null && <>, risking ${guidance.riskAtBackstop.toFixed(0)} if it fills</>}.
+            </p>
+          )}
+          {guidance.warnings.map((warning) => (
+            <p key={warning} className="text-amber-800">
+              {warning}
+            </p>
+          ))}
+        </div>
+      )}
 
       <Field id="plan-notes" label="Notes" error={errorFor('entry', 'notes')}>
         <textarea

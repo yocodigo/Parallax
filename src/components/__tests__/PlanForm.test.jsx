@@ -5,6 +5,7 @@ import { http, HttpResponse } from 'msw';
 import { SWRConfig } from 'swr';
 import { server } from '@/mocks/server';
 import JournalEntries from '../JournalEntries';
+import { DEFAULT_RULE_SETTINGS } from '@/lib/ruleSettings';
 import PlanForm from '../PlanForm';
 
 // Record the body of each /api/plans request and answer with `response`.
@@ -28,6 +29,10 @@ const STRATEGY_ID = '6f1c2a4e-0000-4000-8000-000000000009';
 beforeEach(() => {
   server.use(
     http.get('*/api/insights/warnings', () => HttpResponse.json({ warnings: [] })),
+    // Asked for only once an option is chosen.
+    http.get('*/api/rule-settings', () =>
+      HttpResponse.json({ settings: { ...DEFAULT_RULE_SETTINGS, premiumMax: 3, riskPerTrade: 50 } })
+    ),
     http.get('*/api/strategies', () =>
       HttpResponse.json({ strategies: [{ id: STRATEGY_ID, name: '15m BB acceptance', description: null, rules: [] }] })
     )
@@ -189,6 +194,36 @@ describe('PlanForm', () => {
 
     await userEvent.selectOptions(screen.getByLabelText('Asset class'), 'stock');
     expect(screen.queryByLabelText('Invalidation (underlying)')).not.toBeInTheDocument();
+  });
+
+  it("shows an option plan's backstop and warns, without blocking the save", async () => {
+    const bodies = capturePlanRequests();
+    renderForm();
+
+    await userEvent.selectOptions(screen.getByLabelText('Asset class'), 'option');
+    expect(screen.queryByText(/Backstop/)).not.toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText('Symbol'), 'SPY');
+    await userEvent.type(screen.getByLabelText('Quantity'), '2');
+    await userEvent.type(screen.getByLabelText('Planned entry'), '1.20');
+    await userEvent.type(screen.getByLabelText('Notes'), 'Call on the break.');
+    await userEvent.type(screen.getByLabelText('Strike'), '761');
+    fireEvent.change(screen.getByLabelText('Expiration'), { target: { value: '2026-10-23' } });
+
+    // 1.20 less 25% is 0.90; 2 contracts risk $60 against the $50 limit.
+    expect(await screen.findByText(/Backstop at \$0\.90/)).toBeInTheDocument();
+    expect(screen.getByText(/risks \$60, over the \$50 risk per trade/)).toBeInTheDocument();
+
+    await save();
+    await waitFor(() => expect(bodies).toHaveLength(1));
+  });
+
+  it('shows no backstop for a stock', async () => {
+    renderForm();
+
+    await userEvent.type(screen.getByLabelText('Planned entry'), '210');
+
+    expect(screen.queryByText(/Backstop/)).not.toBeInTheDocument();
   });
 
   it('sends no contract for a stock', async () => {
