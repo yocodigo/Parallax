@@ -4,6 +4,10 @@ export const metadata = {
   title: 'Today',
 };
 
+// The day picker starts on, and stops at, today's New York date, so the page
+// is built per request: prerendered, it would keep the build's date.
+export const dynamic = 'force-dynamic';
+
 export default function Home() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { SWRConfig } from 'swr';
@@ -206,6 +206,7 @@ describe('Today', () => {
     const panel = within(review).getByRole('group', { name: /review of long 1 spy 585p/i });
     const record = within(panel).getByRole('button', { name: 'Record voice note' });
     const notes = within(panel).getByLabelText('Notes');
+    // The Record button comes before the Notes field in the page.
     expect(record.compareDocumentPosition(notes) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     await user.type(notes, 'Chased the put.');
@@ -238,6 +239,60 @@ describe('Today', () => {
     await vi.waitFor(() => expect(asked).toContain('2026-11-18|paper'));
     expect(asked).toContain('2026-11-18|live');
     expect(screen.getByRole('button', { name: 'Next day' })).toBeEnabled();
+  });
+
+  it('ignores a typed day after today', async () => {
+    const asked = serveToday();
+    renderToday();
+    await screen.findByText('0 trades');
+
+    fireEvent.change(screen.getByLabelText('Day'), { target: { value: '2026-12-25' } });
+
+    expect(screen.getByLabelText('Day')).toHaveValue('2026-11-19');
+    expect(asked).toEqual(['2026-11-19|live']);
+  });
+
+  it('names the display zone beside the times on the trades', async () => {
+    serveToday({ '2026-11-19|live': busyDay });
+    renderToday();
+
+    const review = await screen.findByRole('region', { name: /review/i });
+    expect(await within(review).findByText(/times in Pacific/i)).toBeInTheDocument();
+  });
+
+  describe('in the demo', () => {
+    afterEach(() => vi.unstubAllEnvs());
+
+    it('shows the plan as text and leaves out the forms, the importer, and the Review buttons', async () => {
+      vi.stubEnv('NEXT_PUBLIC_DEMO_MODE', 'true');
+      serveToday({ '2026-11-19|live': busyDay });
+      renderToday();
+
+      const plan = await screen.findByRole('region', { name: /plan/i });
+      expect(within(plan).getByText(/SPY.*590.*595/)).toBeInTheDocument();
+      expect(within(plan).queryByRole('button', { name: /save/i })).not.toBeInTheDocument();
+      await userEvent.click(within(plan).getByRole('button', { name: 'Show' }));
+      expect(within(plan).queryByRole('button', { name: /save/i })).not.toBeInTheDocument();
+
+      const importStep = screen.getByRole('region', { name: /import/i });
+      expect(within(importStep).queryByLabelText('Account statement (CSV)')).not.toBeInTheDocument();
+
+      const review = screen.getByRole('region', { name: /review/i });
+      expect(within(review).queryByRole('button', { name: /review/i })).not.toBeInTheDocument();
+      expect(within(review).getAllByRole('listitem')).toHaveLength(3);
+    });
+
+    it('leaves out the names of reviews with no stored coaching', async () => {
+      vi.stubEnv('NEXT_PUBLIC_DEMO_MODE', 'true');
+      const uncoached = structuredClone(busyDay);
+      uncoached.summary.rows[1].reviews = [{ id: 'r9', kind: 'review', tradeId: 't2', coaching: null }];
+      serveToday({ '2026-11-19|live': uncoached });
+      renderToday();
+
+      const coach = await screen.findByRole('region', { name: /coach/i });
+      expect(await within(coach).findByText('Held to T1.')).toBeInTheDocument();
+      expect(within(coach).queryByText(/585P/)).not.toBeInTheDocument();
+    });
   });
 
   it("doesn't step past today", async () => {

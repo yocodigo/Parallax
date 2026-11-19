@@ -52,6 +52,7 @@ export default function ReviewForm({ draft, draftErrors, trade: givenTrade, onSa
   // The journal is read only for the Trade select.
   const { data } = useSWR(givenTrade ? null : '/api/journal', fetchJson, { revalidateOnFocus: false });
   const emptyForm = givenTrade ? { ...EMPTY_FORM, tradeId: givenTrade.id } : EMPTY_FORM;
+  // A draft never picks the trade: it is the one given, or none.
   const [form, setForm] = useState(() => (draft ? { ...formFromDraft(draft), tradeId: emptyForm.tradeId } : emptyForm));
   // This route's errors are flat; a draft's come as { plan, entry }.
   const [fieldErrors, setFieldErrors] = useState(draftErrors?.entry ?? {});

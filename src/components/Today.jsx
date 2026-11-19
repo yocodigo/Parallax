@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import useSWR from 'swr';
 import { isDemo } from '@/lib/demo';
+import { zoneName } from '@/lib/displayZone';
 import { fetchJson } from '@/lib/fetchJson';
 import { formatProfitLoss, formatTradeTime } from '@/lib/format';
 import DailyPlanForm from './DailyPlanForm';
@@ -122,7 +123,11 @@ export default function Today() {
   } else {
     const { plans, summary } = data;
     const { steps, rows } = summary;
-    const reviews = rows.flatMap((row) => row.reviews.map((review) => ({ review, trade: row.trade })));
+    // The demo shows stored coaching but never offers to write it, so a review
+    // with none has nothing to show there.
+    const reviews = rows
+      .flatMap((row) => row.reviews.map((review) => ({ review, trade: row.trade })))
+      .filter(({ review }) => !isDemo() || review.coaching);
 
     body = (
       <>
@@ -177,37 +182,40 @@ export default function Today() {
             {rows.length === 0 ? (
               <p className="text-sm text-gray-500">No trades on this day.</p>
             ) : (
-              <ul className="divide-y divide-gray-100">
-                {rows.map((row) => (
-                  <li
-                    key={row.trade.id}
-                    className="flex flex-wrap items-baseline gap-x-4 gap-y-1 py-2 text-sm tabular-nums"
-                  >
-                    <span className="w-16 text-gray-500">{formatTradeTime(row.trade.openedAt, zone)}</span>
-                    <span className="text-gray-900">{describeTrade(row.trade)}</span>
-                    {row.pnl != null && <span className={pnlTone(row.pnl)}>{formatProfitLoss(row.pnl)}</span>}
-                    <span className="ml-auto text-gray-500">{reviewStatus(row)}</span>
-                    {!isDemo() && row.trade.closedAt && reviewing !== row.trade.id && (
-                      <button type="button" onClick={() => setReviewing(row.trade.id)} className={buttonClass}>
-                        {row.reviews.length > 0 ? 'Review again' : 'Review'}
-                      </button>
-                    )}
-                    {reviewing === row.trade.id && (
-                      <div
-                        role="group"
-                        aria-label={`Review of ${describeTrade(row.trade)}`}
-                        className="mt-2 w-full basis-full space-y-3"
-                      >
-                        <VoiceNote trade={row.trade} onSaved={reviewSaved} />
-                        <ReviewForm trade={row.trade} onSaved={reviewSaved} />
-                        <button type="button" onClick={() => setReviewing(null)} className={buttonClass}>
-                          Cancel
+              <div>
+                <p className="mb-2 text-xs text-gray-500">Times in {zoneName(zone)}.</p>
+                <ul className="divide-y divide-gray-100">
+                  {rows.map((row) => (
+                    <li
+                      key={row.trade.id}
+                      className="flex flex-wrap items-baseline gap-x-4 gap-y-1 py-2 text-sm tabular-nums"
+                    >
+                      <span className="w-16 text-gray-500">{formatTradeTime(row.trade.openedAt, zone)}</span>
+                      <span className="text-gray-900">{describeTrade(row.trade)}</span>
+                      {row.pnl != null && <span className={pnlTone(row.pnl)}>{formatProfitLoss(row.pnl)}</span>}
+                      <span className="ml-auto text-gray-500">{reviewStatus(row)}</span>
+                      {!isDemo() && row.trade.closedAt && reviewing !== row.trade.id && (
+                        <button type="button" onClick={() => setReviewing(row.trade.id)} className={buttonClass}>
+                          {row.reviews.length > 0 ? 'Review again' : 'Review'}
                         </button>
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
+                      )}
+                      {reviewing === row.trade.id && (
+                        <div
+                          role="group"
+                          aria-label={`Review of ${describeTrade(row.trade)}`}
+                          className="mt-2 w-full basis-full space-y-3"
+                        >
+                          <VoiceNote trade={row.trade} onSaved={reviewSaved} />
+                          <ReviewForm trade={row.trade} onSaved={reviewSaved} />
+                          <button type="button" onClick={() => setReviewing(null)} className={buttonClass}>
+                            Cancel
+                          </button>
+                        </div>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </Step>
 
@@ -243,7 +251,7 @@ export default function Today() {
             aria-label="Day"
             value={day}
             max={today}
-            onChange={(event) => event.target.value && setDay(event.target.value)}
+            onChange={(event) => event.target.value && event.target.value <= today && setDay(event.target.value)}
             className={inputClass}
           />
         </label>
