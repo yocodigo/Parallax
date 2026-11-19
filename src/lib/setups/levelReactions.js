@@ -39,7 +39,8 @@ const PLAN_KINDS = [
 ];
 const KIND_ORDER = [...DAILY_KINDS, ...PLAN_KINDS];
 
-// How reactionAt's answer is counted: its kinds by name, undecided for one still open.
+// How reactionAt's answer is counted: its kinds by name, undecided for one still open (a null
+// kind, which as an object key is the string 'null').
 const OUTCOME = { rejected: 'rejected', ripped: 'ranThrough', oscillating: 'oscillating', none: 'none', null: 'undecided' };
 
 const emptyRow = (kind) => ({

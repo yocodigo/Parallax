@@ -78,7 +78,7 @@ export function dailyLevels(dailyBars, day) {
   ];
 }
 
-export const PLAN_LEVELS = [
+const PLAN_LEVELS = [
   ['asiaHigh', 'asia_high', 1],
   ['asiaLow', 'asia_low', 1],
   ['londonHigh', 'london_high', 1],
