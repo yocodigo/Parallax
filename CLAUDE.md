@@ -130,6 +130,14 @@ Vitest, JavaScript (not TypeScript).
   plan, review), kept mounted while hidden so a draft survives switching tabs or closing; saving on the
   plan or review tab closes it (the voice note stays open to show it saved). It has no focus trap yet.
   Put `hidden` on an element without a display class: Tailwind's `flex` beats it.
+- Display time zone (`src/lib/displayZone.js`, `useDisplayZone.js`, `DisplayZonePicker.jsx` in the nav menu beside the theme):
+  a browser setting (localStorage, Pacific by default, four US zones) for how a moment is shown, so the server never reads it.
+  `formatInZone(instant, zone, options)` formats a moment on that clock and the zone is named where it could be
+  misread (chart tooltips, the exit review's touch time, `WRITTEN`). Used for fill times (`formatTradeTime(openedAt,
+  zone)`, New York when no zone is passed, so the coaching prompt stays New York time), tooltips, journal and coaching
+  times, and the Performance Review's written time. Left in New York on purpose, and captioned so: sessions and month
+  boundaries (`timeOfDay`, the monthly charts, the lockout windows and the typed window times in `RuleSettings.jsx`),
+  and calendar dates (a daily plan's date, an option's expiration). The import's time zone select is the statement's, not this.
 - Theme and dark mode: colors come from CSS variables, so components need no `dark:` classes.
   `src/lib/palette.cjs` (CommonJS, for `tailwind.config.js`) points the gray, red, green, amber, and
   blue classes and white at variables. Light values are Tailwind's own; dark swaps each shade with its

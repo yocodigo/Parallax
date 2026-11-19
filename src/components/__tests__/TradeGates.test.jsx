@@ -99,7 +99,7 @@ describe('TradeGates', () => {
     });
     renderGates();
 
-    expect(await screen.findByText('At the prior day high 681.50, broken and accepted at 10:12 AM')).toBeInTheDocument();
+    expect(await screen.findByText('At the prior day high 681.50, broken and accepted at 7:12 AM')).toBeInTheDocument();
     expect(screen.getByText('Room: 2.25 pts to the round number 685.00, 3.0 times the 0.75 pts to the stop')).toBeInTheDocument();
   });
 

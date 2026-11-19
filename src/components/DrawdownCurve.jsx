@@ -12,7 +12,8 @@ import {
 } from 'recharts';
 import { timeTicks, valueTicks } from '@/lib/chartTicks';
 import { formatProfitLoss } from '@/lib/format';
-import { closeTime } from './EquityCurve';
+import { formatCloseTime } from './EquityCurve';
+import useDisplayZone from './useDisplayZone';
 
 // The same fixed red as the other loss marks (see MonthlyPnl). The curve hangs
 // below the zero line, so the direction never rests on color alone.
@@ -47,6 +48,7 @@ function summary(points) {
 
 // The hover and keyboard readout: the distance from the peak first, then what it belongs to.
 export function DrawdownTooltip({ active, payload }) {
+  const zone = useDisplayZone();
   if (!active || !payload?.length) return null;
   const { closedAt, cumulative, drawdown, index } = payload[0].payload;
   return (
@@ -55,7 +57,7 @@ export function DrawdownTooltip({ active, payload }) {
         {drawdown > 0 ? `${formatProfitLoss(-drawdown)} from peak` : 'At peak'}
       </p>
       <p className="mt-0.5 text-gray-500">
-        Trade {index + 1} · {closeTime.format(new Date(closedAt))} ET
+        Trade {index + 1} · {formatCloseTime(closedAt, zone)}
       </p>
       <p className="text-gray-500 tabular-nums">{formatProfitLoss(cumulative)} net P/L</p>
     </div>

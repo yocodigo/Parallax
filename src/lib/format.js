@@ -1,3 +1,5 @@
+import { formatInZone } from './displayZone';
+
 // Display formats shared by the journal UI and the weekly review.
 
 const money = new Intl.NumberFormat('en-US', {
@@ -35,15 +37,13 @@ export function formatContract({ optionType, strike, expiration }) {
   return `${strike}${optionType === 'call' ? 'C' : 'P'} exp ${MONTHS[month - 1]} ${day}`;
 }
 
-const tradeTime = new Intl.DateTimeFormat('en-US', {
-  timeZone: 'America/New_York',
-  hour: 'numeric',
-  minute: '2-digit',
-});
+const CLOCK = { hour: 'numeric', minute: '2-digit' };
 
-// "10:43 AM": when a trade was filled, in New York time. Empty for a plan
-// with no fill yet.
-export const formatTradeTime = (openedAt) => (openedAt ? tradeTime.format(new Date(openedAt)) : '');
+// "10:43 AM": when a trade was filled, on `zone`'s clock (New York unless the
+// caller passes the display zone, so server-written text stays New York time).
+// Empty for a plan with no fill yet.
+export const formatTradeTime = (openedAt, zone = 'America/New_York') =>
+  openedAt ? formatInZone(openedAt, zone, CLOCK) : '';
 
 // Sort comparator: latest fill first. Trades with no fill sort last, and the
 // sort is stable, so they keep their order.

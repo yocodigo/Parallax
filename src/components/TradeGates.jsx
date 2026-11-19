@@ -6,6 +6,7 @@ import { formatTradeTime } from '@/lib/format';
 import { MET, MISSED } from '@/lib/setups/gates';
 import { DETECTED_MAX_BARS } from '@/lib/setups/settings';
 import { DETECTOR_LABELS } from '@/lib/strategy';
+import useDisplayZone from './useDisplayZone';
 
 // The section 8 table's order; `size` only appears for an option trade
 // (gradeGates only grades it there), and `setup` for a strategy tied to a
@@ -79,9 +80,9 @@ function levelWords({ kind, price }) {
 const EVENT_WORDS = { accepted: 'broken and accepted', swept: 'swept and rejected' };
 
 // [rules-v3 4] Where Location OK was judged, and nothing while it's unknown.
-function locationLine(location) {
+function locationLine(location, zone) {
   if (location?.status === MET) {
-    return `At ${levelWords(location.level)}, ${EVENT_WORDS[location.event]} at ${formatTradeTime(location.at)}`;
+    return `At ${levelWords(location.level)}, ${EVENT_WORDS[location.event]} at ${formatTradeTime(location.at, zone)}`;
   }
   if (location?.status === MISSED) return 'Floating: no tier 1 or 2 level nearby had been broken or swept its way';
   return null;
@@ -127,6 +128,7 @@ function setupLine(gate, setup) {
 // day's plan, and its own plan entry, with where the entry sat among the
 // day's levels.
 export default function TradeGates({ tradeId }) {
+  const zone = useDisplayZone();
   const { data, error, isLoading } = useSWR(`/api/trades/${tradeId}/gates`, fetchJson, {
     revalidateOnFocus: false,
   });
@@ -137,7 +139,7 @@ export default function TradeGates({ tradeId }) {
   const { gates, reason, location, room, setup } = data;
   if (!gates) return <p className="text-xs text-gray-500">{reason ?? 'No gates to grade for this trade.'}</p>;
 
-  const levelLines = [setupLine(gates.setup, setup), locationLine(location), roomLine(room)].filter(Boolean);
+  const levelLines = [setupLine(gates.setup, setup), locationLine(location, zone), roomLine(room)].filter(Boolean);
   return (
     <div className="space-y-1">
       <div className="flex flex-wrap gap-1.5 text-xs">

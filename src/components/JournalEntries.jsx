@@ -1,12 +1,14 @@
 'use client';
 
 import useSWR from 'swr';
+import { formatInZone, WRITTEN } from '@/lib/displayZone';
 import { fetchJson } from '@/lib/fetchJson';
 import { formatContract } from '@/lib/format';
 import { EMOTION_LABELS, MISTAKE_LABELS } from '@/lib/journalEntry';
 import EntryCoaching from './EntryCoaching';
 import EntryDelete from './EntryDelete';
 import TradeProgress from './TradeProgress';
+import useDisplayZone from './useDisplayZone';
 import { isDemo } from '@/lib/demo';
 
 export const capitalize = (word) => word.charAt(0).toUpperCase() + word.slice(1);
@@ -19,6 +21,7 @@ export const describeTrade = (trade) =>
     .join(' ');
 
 export default function JournalEntries() {
+  const zone = useDisplayZone();
   const { data, error, isLoading } = useSWR('/api/journal', fetchJson, {
     revalidateOnFocus: false,
   });
@@ -51,7 +54,7 @@ export default function JournalEntries() {
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-gray-500">
             <span className="font-semibold text-gray-800">{capitalize(entry.kind)}</span>
             {entry.symbol && <span className="font-semibold text-gray-900">{entry.symbol}</span>}
-            <time dateTime={entry.createdAt}>{new Date(entry.createdAt).toLocaleString()}</time>
+            <time dateTime={entry.createdAt}>{formatInZone(entry.createdAt, zone, WRITTEN)}</time>
           </div>
 
           {entry.trade && (

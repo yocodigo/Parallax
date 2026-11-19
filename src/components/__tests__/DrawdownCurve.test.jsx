@@ -54,11 +54,11 @@ describe('DrawdownCurve', () => {
 describe('DrawdownTooltip', () => {
   const at = (p, index) => ({ active: true, payload: [{ payload: { ...p, index } }] });
 
-  it('leads with the distance from the peak, then the trade, its close in New York, and the P/L', () => {
+  it('leads with the distance from the peak, then the trade, its close on the display clock, and the P/L', () => {
     render(<DrawdownTooltip {...at(points[1], 1)} />);
 
     expect(screen.getByText('-$20.00 from peak')).toBeInTheDocument();
-    expect(screen.getByText('Trade 2 · Wed, Mar 11, 4:00 PM ET')).toBeInTheDocument();
+    expect(screen.getByText('Trade 2 · Wed, Mar 11, 1:00 PM PDT')).toBeInTheDocument();
     expect(screen.getByText('+$10.00 net P/L')).toBeInTheDocument();
   });
 

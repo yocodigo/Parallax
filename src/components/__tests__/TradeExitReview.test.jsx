@@ -35,12 +35,12 @@ function renderReview(exitReason = 'fib_rejection') {
 }
 
 describe('TradeExitReview', () => {
-  it('shows the targets, the reaction at T1 with its New York touch time, and the verdict', async () => {
+  it('shows the targets, the reaction at T1 with its touch time, and the verdict', async () => {
     serveReview({ review: review() });
     renderReview();
 
     expect(await screen.findByText('T1 100.00, T2 102.00')).toBeInTheDocument();
-    expect(screen.getByText('Rejected at T1, touched 9:50 AM EDT')).toBeInTheDocument();
+    expect(screen.getByText('Rejected at T1, touched 6:50 AM PDT')).toBeInTheDocument();
     expect(screen.getByText('Exit was not early against step 5')).toBeInTheDocument();
   });
 
@@ -59,7 +59,7 @@ describe('TradeExitReview', () => {
       }),
     });
     const { unmount } = renderReview();
-    expect(await screen.findByText('Ripped through T1, touched 9:50 AM EDT')).toBeInTheDocument();
+    expect(await screen.findByText('Ripped through T1, touched 6:50 AM PDT')).toBeInTheDocument();
     expect(screen.getByText('Exit was early against step 5')).toBeInTheDocument();
     unmount();
 
@@ -75,7 +75,7 @@ describe('TradeExitReview', () => {
       }),
     });
     renderReview();
-    expect(await screen.findByText('Oscillated at T1, drifting the trade’s way, touched 9:50 AM EDT')).toBeInTheDocument();
+    expect(await screen.findByText('Oscillated at T1, drifting the trade’s way, touched 6:50 AM PDT')).toBeInTheDocument();
     expect(screen.getByText('Not judged: one exit per trade can’t show a partial')).toBeInTheDocument();
   });
 
@@ -83,13 +83,13 @@ describe('TradeExitReview', () => {
     const touchAt = '2026-10-27T13:50:00.000Z';
     serveReview({ review: review({ reaction: { kind: 'none', touchAt, decidedAt: touchAt }, verdict: 'no_rule' }) });
     const { unmount } = renderReview();
-    expect(await screen.findByText('Nothing was decided at T1, touched 9:50 AM EDT')).toBeInTheDocument();
+    expect(await screen.findByText('Nothing was decided at T1, touched 6:50 AM PDT')).toBeInTheDocument();
     expect(screen.getByText('Step 5 gave no instruction')).toBeInTheDocument();
     unmount();
 
     serveReview({ review: review({ reaction: { kind: null, touchAt, decidedAt: null }, verdict: 'not_decided' }) });
     renderReview();
-    expect(await screen.findByText('Not decided at T1, touched 9:50 AM EDT')).toBeInTheDocument();
+    expect(await screen.findByText('Not decided at T1, touched 6:50 AM PDT')).toBeInTheDocument();
     expect(screen.getByText('The reaction hadn’t been decided when the bars ended')).toBeInTheDocument();
   });
 

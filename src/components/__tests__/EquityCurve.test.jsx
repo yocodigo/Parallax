@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
+import { act, render, screen } from '@testing-library/react';
 import EquityCurve, { EquityTooltip } from '../EquityCurve';
+import { setDisplayZone } from '../useDisplayZone';
 
 const points = [
   { closedAt: '2026-03-10T20:00:00.000Z', cumulative: 30, drawdown: 0 },
@@ -46,14 +47,27 @@ describe('EquityCurve', () => {
 });
 
 describe('EquityTooltip', () => {
+  // The chosen zone is module state that outlives a test.
+  afterEach(() => {
+    act(() => setDisplayZone('America/Los_Angeles'));
+    localStorage.clear();
+  });
+
   const at = (point, index) => ({ active: true, payload: [{ payload: { ...point, index } }] });
 
-  it('leads with the running P/L, then the trade, its close in New York, and the drawdown', () => {
+  it('leads with the running P/L, then the trade, its close on the display clock, and the drawdown', () => {
     render(<EquityTooltip {...at(points[1], 1)} />);
 
     expect(screen.getByText('+$18.70')).toBeInTheDocument();
-    expect(screen.getByText('Trade 2 · Mon, Apr 13, 4:00 PM ET')).toBeInTheDocument();
+    expect(screen.getByText('Trade 2 · Mon, Apr 13, 1:00 PM PDT')).toBeInTheDocument();
     expect(screen.getByText('-$11.30 from peak')).toBeInTheDocument();
+  });
+
+  it('reads the close on the clock the trader chose', () => {
+    render(<EquityTooltip {...at(points[1], 1)} />);
+    act(() => setDisplayZone('America/New_York'));
+
+    expect(screen.getByText('Trade 2 · Mon, Apr 13, 4:00 PM EDT')).toBeInTheDocument();
   });
 
   it('says the curve is at its peak when there is no drawdown', () => {

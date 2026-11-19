@@ -13,6 +13,8 @@ import {
 } from 'recharts';
 import { timeTicks, valueTicks } from '@/lib/chartTicks';
 import { formatProfitLoss } from '@/lib/format';
+import { formatCloseTime } from './EquityCurve';
+import useDisplayZone from './useDisplayZone';
 
 // Same line blue as EquityCurve (see the note there on contrast in both themes).
 // Gross is the quieter gray, dashed so the two never rely on color alone.
@@ -29,15 +31,6 @@ const compactMoney = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 1,
 });
 
-const closeTime = new Intl.DateTimeFormat('en-US', {
-  timeZone: 'America/New_York',
-  weekday: 'short',
-  month: 'short',
-  day: 'numeric',
-  hour: 'numeric',
-  minute: '2-digit',
-});
-
 // The trend in words: the chart's text alternative, shown to everyone.
 function summary(points) {
   const last = points.at(-1);
@@ -52,6 +45,7 @@ function summary(points) {
 
 // The hover and keyboard readout: the value first, then what it belongs to.
 export function RollingTooltip({ active, payload }) {
+  const zone = useDisplayZone();
   if (!active || !payload?.length) return null;
   const { closedAt, expectancy, netExpectancy, index } = payload[0].payload;
   return (
@@ -60,7 +54,7 @@ export function RollingTooltip({ active, payload }) {
       <p className="text-gray-500 tabular-nums">{formatProfitLoss(expectancy)} gross</p>
       <p className="mt-0.5 text-gray-500">
         {/* The first window ends on trade SIZE, so point i ends on trade i + SIZE. */}
-        Through trade {index + SIZE} · {closeTime.format(new Date(closedAt))} ET
+        Through trade {index + SIZE} · {formatCloseTime(closedAt, zone)}
       </p>
     </div>
   );

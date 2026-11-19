@@ -6,6 +6,7 @@ import { apiErrorMessage, fetchJson } from '@/lib/fetchJson';
 import { byOpenedAtDesc, formatTradeTime } from '@/lib/format';
 import { EMOTION_LABELS, EMOTIONS, MISTAKE_CHOICES, MISTAKE_LABELS } from '@/lib/journalEntry';
 import Field, { inputClass } from './Field';
+import useDisplayZone from './useDisplayZone';
 import { capitalize, describeTrade } from './JournalEntries';
 
 const EMPTY_FORM = {
@@ -46,6 +47,7 @@ function formFromDraft({ entry = {} }) {
 // `onSaved` receives the saved { entry }.
 export default function ReviewForm({ draft, draftErrors, onSaved }) {
   const { mutate } = useSWRConfig();
+  const zone = useDisplayZone();
   const { data } = useSWR('/api/journal', fetchJson, { revalidateOnFocus: false });
   const [form, setForm] = useState(() => (draft ? formFromDraft(draft) : EMPTY_FORM));
   // This route's errors are flat; a draft's come as { plan, entry }.
@@ -134,7 +136,7 @@ export default function ReviewForm({ draft, draftErrors, onSaved }) {
           <option value="">Not linked to a trade</option>
           {trades.map((trade) => (
             <option key={trade.id} value={trade.id}>
-              {[describeTrade(trade), formatTradeTime(trade.openedAt), capitalize(trade.mode)]
+              {[describeTrade(trade), formatTradeTime(trade.openedAt, zone), capitalize(trade.mode)]
                 .filter(Boolean)
                 .join(' · ')}
             </option>

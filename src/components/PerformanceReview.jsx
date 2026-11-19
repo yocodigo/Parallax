@@ -2,11 +2,13 @@
 
 import { useState } from 'react';
 import useSWR from 'swr';
+import { formatInZone, WRITTEN } from '@/lib/displayZone';
 import { apiErrorMessage, fetchJson } from '@/lib/fetchJson';
 import { isDemo } from '@/lib/demo';
 import { formatProfitLoss } from '@/lib/format';
 import { REVIEW_SECTIONS } from '@/lib/reviewSections';
 import { inputClass } from './Field';
+import useDisplayZone from './useDisplayZone';
 
 const buttonClass =
   'rounded-md bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50';
@@ -19,12 +21,6 @@ const RANGES = [
 ];
 
 const MODE_NAMES = { live: 'Live', paper: 'Paper', backtest: 'Backtest' };
-
-const writtenFormat = new Intl.DateTimeFormat('en-US', {
-  timeZone: 'America/New_York',
-  dateStyle: 'medium',
-  timeStyle: 'short',
-});
 
 const alertClass = 'rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800';
 
@@ -63,6 +59,7 @@ function StatsTable({ stats }) {
 }
 
 function ReviewText({ review }) {
+  const zone = useDisplayZone();
   const covers = review.rangeFrom ? `${review.rangeFrom} to ${review.rangeTo}` : 'all time';
   return (
     <div className="space-y-5">
@@ -74,7 +71,7 @@ function ReviewText({ review }) {
         </section>
       ))}
       <p className="text-xs text-gray-500">
-        Written {writtenFormat.format(new Date(review.reviewedAt))} ET from {review.tradeCount} closed{' '}
+        Written {formatInZone(review.reviewedAt, zone, WRITTEN)} from {review.tradeCount} closed{' '}
         {review.tradeCount === 1 ? 'trade' : 'trades'}, {covers}.
       </p>
     </div>

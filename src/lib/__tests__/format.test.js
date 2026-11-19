@@ -52,6 +52,10 @@ describe('formatTradeTime', () => {
     expect(formatTradeTime('2026-07-10T18:05:00.000Z')).toBe('2:05 PM');
   });
 
+  it('shows it on another zone clock when given one', () => {
+    expect(formatTradeTime('2026-11-10T15:43:00.000Z', 'America/Los_Angeles')).toBe('7:43 AM');
+  });
+
   it('is empty for a trade with no fill', () => {
     expect(formatTradeTime(null)).toBe('');
   });

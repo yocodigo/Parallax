@@ -130,7 +130,7 @@ describe('PerformanceReview', () => {
       expect(await screen.findByRole('heading', { name: heading })).toBeInTheDocument();
     }
     expect(screen.getByText(/cap size at 2 contracts/i)).toBeInTheDocument();
-    expect(screen.getByText(/written apr 14, 2026, 4:30 pm et from 15 closed trades, 2026-04-08 to 2026-04-14/i)).toBeInTheDocument();
+    expect(screen.getByText(/written apr 14, 2026, 1:30 pm pdt from 15 closed trades, 2026-04-08 to 2026-04-14/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /refresh analysis/i })).toBeInTheDocument();
   });
 

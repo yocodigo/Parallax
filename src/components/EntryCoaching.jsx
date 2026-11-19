@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import { useSWRConfig } from 'swr';
+import { formatInZone, WRITTEN } from '@/lib/displayZone';
 import { apiErrorMessage } from '@/lib/fetchJson';
 import { isDemo } from '@/lib/demo';
+import useDisplayZone from './useDisplayZone';
 
 const buttonClass =
   'rounded-md bg-blue-600 px-3 py-1 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50';
@@ -12,6 +14,7 @@ const buttonClass =
 // paid call to Claude, so it runs only when asked for; the text is stored on
 // the review, and pressing the button again replaces it.
 export default function EntryCoaching({ entry }) {
+  const zone = useDisplayZone();
   const { mutate } = useSWRConfig();
   // What the last request returned, shown until the journal list reloads.
   const [result, setResult] = useState(null);
@@ -62,7 +65,7 @@ export default function EntryCoaching({ entry }) {
           {/* Plain text with blank lines between paragraphs, like the weekly review. */}
           <p className="whitespace-pre-line text-sm leading-6 text-gray-800">{coaching}</p>
           {coachedAt && (
-            <p className="mt-2 text-xs text-gray-500">Written {new Date(coachedAt).toLocaleString()}.</p>
+            <p className="mt-2 text-xs text-gray-500">Written {formatInZone(coachedAt, zone, WRITTEN)}.</p>
           )}
         </div>
       )}

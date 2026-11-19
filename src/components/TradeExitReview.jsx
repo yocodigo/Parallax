@@ -1,17 +1,14 @@
 'use client';
 
 import useSWR from 'swr';
+import { formatInZone } from '@/lib/displayZone';
 import { fetchJson } from '@/lib/fetchJson';
 import { POST_EXIT_MIN } from '@/lib/setups/settings';
 import { EXIT_REASON_LABELS } from '@/lib/tradeFill';
+import useDisplayZone from './useDisplayZone';
 
-const nyTime = new Intl.DateTimeFormat('en-US', {
-  timeZone: 'America/New_York',
-  hour: 'numeric',
-  minute: '2-digit',
-  // The zone is shown because the trader reads the clock in Pacific.
-  timeZoneName: 'short',
-});
+// The zone is named, since the display zone is the trader's choice.
+const CLOCK = { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' };
 
 const price = (value) => value.toFixed(2);
 
@@ -68,15 +65,16 @@ function afterExitText(after) {
 }
 
 // `touchAt` is the start of the minute bar that first reached T1.
-function reactionText(reaction) {
+function reactionText(reaction, zone) {
   const text = REACTION_TEXT[reaction.kind]?.(reaction) ?? 'Not decided at T1';
-  return `${text}, touched ${nyTime.format(new Date(reaction.touchAt))}`;
+  return `${text}, touched ${formatInZone(reaction.touchAt, zone, CLOCK)}`;
 }
 
 // A closed trade's exit review (setups.md section 10, after the exit): the
 // reaction at T1 and whether the exit matched 3.1 step 5. `exitReason` is the
 // trader's own tag, shown beside the verdict, which is judged from the bars.
 export default function TradeExitReview({ tradeId, exitReason }) {
+  const zone = useDisplayZone();
   const { data, error, isLoading } = useSWR(`/api/trades/${tradeId}/exit-review`, fetchJson, {
     revalidateOnFocus: false,
   });
@@ -102,7 +100,7 @@ export default function TradeExitReview({ tradeId, exitReason }) {
     <div className="space-y-1.5 text-xs text-gray-700">
       <ul className="space-y-0.5 tabular-nums">
         <li>{`T1 ${price(review.t1)}, T2 ${price(review.t2)}`}</li>
-        {review.reaction && <li>{reactionText(review.reaction)}</li>}
+        {review.reaction && <li>{reactionText(review.reaction, zone)}</li>}
         <li>
           {`Underlying at exit ${price(review.exitUnderlying)}, recorded reason: ${EXIT_REASON_LABELS[exitReason] ?? 'none'}`}
         </li>

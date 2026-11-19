@@ -33,6 +33,18 @@ export function saveDisplayZone(storage, zone) {
   }
 }
 
+// "Nov 10, 2026, 7:43 AM PST": when something was written. Spelled out rather
+// than dateStyle/timeStyle, which can't name the zone.
+export const WRITTEN = {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+  timeZoneName: 'short',
+};
+
+// An Intl.DateTimeFormat is slow to build, so one is kept per zone and options.
 const formatters = new Map();
 
 // A moment (ISO string or Date) on `zone`'s clock. `options` are

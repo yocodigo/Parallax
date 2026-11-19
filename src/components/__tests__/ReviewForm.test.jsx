@@ -92,12 +92,12 @@ describe('ReviewForm', () => {
     serveJournal([entry({ tradeId: 'a', trade: early }), entry({ tradeId: 'b', trade: late })]);
     renderForm();
 
-    await screen.findByRole('option', { name: /9:43 AM/ });
+    await screen.findByRole('option', { name: /6:43 AM/ });
     const options = within(screen.getByLabelText('Trade')).getAllByRole('option');
     expect(options.map((option) => option.textContent)).toEqual([
       'Not linked to a trade',
-      'Long 1 SPY 748P exp Nov 10 · 12:10 PM · Live',
-      'Long 1 SPY 748P exp Nov 10 · 9:43 AM · Live',
+      'Long 1 SPY 748P exp Nov 10 · 9:10 AM · Live',
+      'Long 1 SPY 748P exp Nov 10 · 6:43 AM · Live',
     ]);
   });
 

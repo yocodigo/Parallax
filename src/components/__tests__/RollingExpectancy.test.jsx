@@ -42,7 +42,7 @@ describe('RollingTooltip', () => {
 
     expect(screen.getByText('+$9.00 net')).toBeInTheDocument();
     expect(screen.getByText('+$10.00 gross')).toBeInTheDocument();
-    expect(screen.getByText('Through trade 21 · Mon, Apr 13, 4:00 PM ET')).toBeInTheDocument();
+    expect(screen.getByText('Through trade 21 · Mon, Apr 13, 1:00 PM PDT')).toBeInTheDocument();
   });
 
   it('renders nothing while the pointer is off the chart', () => {

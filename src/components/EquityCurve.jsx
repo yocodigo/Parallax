@@ -12,7 +12,9 @@ import {
   YAxis,
 } from 'recharts';
 import { timeTicks, valueTicks } from '@/lib/chartTicks';
+import { formatInZone } from '@/lib/displayZone';
 import { formatProfitLoss } from '@/lib/format';
+import useDisplayZone from './useDisplayZone';
 
 // Theme colors as CSS variables, so the chart follows dark mode. Blue-500 is
 // the middle shade, which the dark theme leaves as is, so the line is the same
@@ -32,7 +34,16 @@ const compactMoney = new Intl.NumberFormat('en-US', {
 });
 
 const nyFormat = (options) => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', ...options });
-export const closeTime = nyFormat({ weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+// A trade's close on the display zone's clock, with the zone named: "Tue, Nov 10, 7:43 AM PST".
+export const formatCloseTime = (closedAt, zone) =>
+  formatInZone(closedAt, zone, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  });
 const monthDay = nyFormat({ month: 'short', day: 'numeric' });
 const fullDate = nyFormat({ month: 'short', day: 'numeric', year: 'numeric' });
 const year = nyFormat({ year: 'numeric' });
@@ -56,13 +67,14 @@ function summary(points) {
 
 // The hover and keyboard readout: the value first, then what it belongs to.
 export function EquityTooltip({ active, payload }) {
+  const zone = useDisplayZone();
   if (!active || !payload?.length) return null;
   const { closedAt, cumulative, drawdown, index } = payload[0].payload;
   return (
     <div className="rounded-md border border-gray-200 bg-white px-3 py-2 text-xs shadow-sm">
       <p className="text-sm font-semibold text-gray-900 tabular-nums">{formatProfitLoss(cumulative)}</p>
       <p className="mt-0.5 text-gray-500">
-        Trade {index + 1} · {closeTime.format(new Date(closedAt))} ET
+        Trade {index + 1} · {formatCloseTime(closedAt, zone)}
       </p>
       <p className="text-gray-500 tabular-nums">{drawdown > 0 ? `${formatProfitLoss(-drawdown)} from peak` : 'At peak'}</p>
     </div>
