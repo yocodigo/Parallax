@@ -317,15 +317,18 @@ export const tradeScreenshots = pgTable(
 // [3.1] The day's fib extensions, anchored by hand around the open. The working
 // lower-timeframe fib gives T1 (its 50%) and T2 (its 100%); the optional
 // higher-timeframe one is the next target if price pivots against the first.
-// One plan per trading day, re-saved when the anchors change. The working fib
-// is optional too: the plan can be started before the open and the fib added
-// once it is anchored.
+// One plan per trading day and symbol, re-saved when the anchors change; the
+// levels are that symbol's, so a trade only ever reads its own symbol's plan.
+// The working fib is optional too: the plan can be started before the open and
+// the fib added once it is anchored.
 export const dailyPlans = pgTable(
   'daily_plans',
   {
     id: uuid('id').primaryKey().defaultRandom(),
     // A New York trading date, kept as a string so it never shifts a day west.
     tradeDate: date('trade_date', { mode: 'string' }).notNull(),
+    // The underlying the levels were read from (SPY).
+    symbol: text('symbol').notNull(),
     ltfDirection: fibDirection('ltf_direction'),
     ltfFib50: price('ltf_fib_50'),
     ltfFib100: price('ltf_fib_100'),
@@ -344,7 +347,7 @@ export const dailyPlans = pgTable(
     ...timestamps,
   },
   (t) => [
-    uniqueIndex('daily_plans_trade_date_key').on(t.tradeDate),
+    uniqueIndex('daily_plans_trade_date_symbol_key').on(t.tradeDate, t.symbol),
     // Half a fib is no target, so each fib's three fields go together.
     check(
       'daily_plans_ltf_fib_complete',

@@ -232,7 +232,7 @@ describe('POST /api/trades/[id]/entry captures the market context', () => {
   });
 
   it("passes the entry day's plan along, for the level map", async () => {
-    await saveDailyPlan(getDb(), { tradeDate: '2026-10-20', premarketHigh: 101.5 });
+    await saveDailyPlan(getDb(), { tradeDate: '2026-10-20', symbol: 'SPY', premarketHigh: 101.5 });
     const trade = await insertTrade();
 
     await post(trade.id, entry);

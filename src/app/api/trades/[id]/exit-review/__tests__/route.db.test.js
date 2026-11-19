@@ -41,7 +41,7 @@ const closedTrade = {
   exitReason: 'fib_rejection',
 };
 
-const plan = { tradeDate: '2026-10-27', ltfDirection: 'bullish', ltfFib50: 100, ltfFib100: 102 };
+const plan = { tradeDate: '2026-10-27', symbol: 'SPY', ltfDirection: 'bullish', ltfFib50: 100, ltfFib100: 102 };
 
 async function insertTrade(values = {}) {
   const [trade] = await getDb().insert(trades).values({ ...closedTrade, ...values }).returning();

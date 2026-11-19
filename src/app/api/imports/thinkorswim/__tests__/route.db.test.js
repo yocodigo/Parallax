@@ -97,7 +97,7 @@ describe('POST /api/imports/thinkorswim', () => {
   });
 
   it('saves the trades when confirmed and captures their context afterwards', async () => {
-    await saveDailyPlan(getDb(), { tradeDate: '2026-10-23', premarketHigh: 762 });
+    await saveDailyPlan(getDb(), { tradeDate: '2026-10-23', symbol: 'SPY', premarketHigh: 762 });
     const body = await (await post({ confirm: true })).json();
 
     expect(body).toMatchObject({ applied: true, created: 2, filled: 0 });

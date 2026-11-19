@@ -227,7 +227,7 @@ describe('GET /api/trades/[id]/gates', () => {
       at: '2026-10-27T14:46:00.000Z',
     });
 
-    await getDb().insert(dailyPlans).values({ tradeDate: '2026-10-27', londonHigh: 11.6 });
+    await getDb().insert(dailyPlans).values({ tradeDate: '2026-10-27', symbol: 'SPY', londonHigh: 11.6 });
     serveBars('SPY', BARS, []);
     const body = await (await get(fromDaily.id)).json();
     expect(body.location).toMatchObject({ status: 'met', level: { kind: 'london_high' } });
@@ -249,6 +249,7 @@ describe('GET /api/trades/[id]/gates', () => {
     serveBars('SPY', BARS);
     await getDb().insert(dailyPlans).values({
       tradeDate: '2026-10-27',
+      symbol: 'SPY',
       ltfDirection: 'bullish',
       ltfFib50: 11,
       ltfFib100: 12,
@@ -257,6 +258,22 @@ describe('GET /api/trades/[id]/gates', () => {
     const response = await get(trade.id);
 
     expect((await response.json()).gates.target).toBe('met');
+  });
+
+  it("never reads another symbol's plan for the day", async () => {
+    const trade = await insertTrade();
+    serveBars('SPY', BARS);
+    await getDb().insert(dailyPlans).values({
+      tradeDate: '2026-10-27',
+      symbol: 'QQQ',
+      ltfDirection: 'bullish',
+      ltfFib50: 11,
+      ltfFib100: 12,
+    });
+
+    const response = await get(trade.id);
+
+    expect((await response.json()).gates.target).not.toBe('met');
   });
 
   it('reads the underlying for an option trade', async () => {

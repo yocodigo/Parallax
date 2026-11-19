@@ -105,6 +105,7 @@ describe('gatherCoachingFacts', () => {
     await db.insert(trades).values(trade({ openedAt: new Date('2026-10-29T16:00:00Z'), closedAt: new Date('2026-10-29T17:00:00Z') }));
     const plan = {
       tradeDate: '2026-10-29',
+      symbol: 'SPY',
       ltfDirection: 'bullish',
       ltfFib50: 101,
       ltfFib100: 103,

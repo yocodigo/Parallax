@@ -48,7 +48,7 @@ export const GET = withErrorLogging('/api/trades/[id]/exit-review', async (reque
   const end = new Date(Math.min(Date.now(), trade.openedAt.getTime() + DAY_MS));
   // `symbol` is the underlying for both stocks and options (domain rules).
   const bars = sessionBars(await fetchMinuteBars(trade.symbol, end));
-  const dailyPlan = await getDailyPlan(getDb(), nyDate.format(trade.openedAt));
+  const dailyPlan = await getDailyPlan(getDb(), nyDate.format(trade.openedAt), trade.symbol);
 
   const review = reviewExit(trade, bars, dailyPlan);
   // An option's underlying in the minutes after its exit (rules-v3 section

@@ -83,11 +83,12 @@ export async function gatherCoachingFacts(
     return dailyByKey.get(key);
   };
 
-  const plansByDay = new Map();
+  const plans = new Map();
   const planFor = (trade) => {
     const date = nyDay(trade.openedAt);
-    if (!plansByDay.has(date)) plansByDay.set(date, getDailyPlan(db, date));
-    return plansByDay.get(date);
+    const key = `${trade.symbol}|${date}`;
+    if (!plans.has(key)) plans.set(key, getDailyPlan(db, date, trade.symbol));
+    return plans.get(key);
   };
 
   // A trade's reviews, gates, setup, and stop adherence, replayed from its

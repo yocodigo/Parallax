@@ -26,7 +26,7 @@ describe('seedDemo', () => {
 
     const [strategy] = await listStrategies(db);
     expect(strategy.name).toBe('Band cross');
-    expect(await getDailyPlan(db, '2026-10-26')).toMatchObject({ ltfFib50: 767.7 });
+    expect(await getDailyPlan(db, '2026-10-26', 'SPY')).toMatchObject({ ltfFib50: 767.7 });
   });
 
   it('records fills, exits, and checklist answers, with one plan left unfilled', async () => {
@@ -77,11 +77,11 @@ describe('seedDemo', () => {
   });
 
   it('refuses a database with a daily plan, and leaves the plan as it was', async () => {
-    const real = { tradeDate: '2026-10-26', ltfDirection: 'bearish', ltfFib50: 760, ltfFib100: 755 };
+    const real = { tradeDate: '2026-10-26', symbol: 'SPY', ltfDirection: 'bearish', ltfFib50: 760, ltfFib100: 755 };
     await saveDailyPlan(db, real);
 
     expect(await seedDemo(db, demo)).toEqual({ seeded: false, reason: 'not_empty' });
-    expect(await getDailyPlan(db, '2026-10-26')).toMatchObject(real);
+    expect(await getDailyPlan(db, '2026-10-26', 'SPY')).toMatchObject(real);
   });
 
   it('refuses a database with a strategy, rather than adding a second', async () => {

@@ -10,11 +10,12 @@ import DailyPlanForm from '../DailyPlanForm';
 beforeEach(() => vi.setSystemTime(new Date('2026-10-28T15:00:00Z')));
 afterEach(() => vi.useRealTimers());
 
-function serveDailyPlan(plansByDate) {
+// Plans keyed by 'date|symbol', e.g. '2026-10-28|SPY'.
+function serveDailyPlan(plansByKey) {
   server.use(
     http.get('*/api/daily-plan', ({ request }) => {
-      const tradeDate = new URL(request.url).searchParams.get('tradeDate');
-      return HttpResponse.json({ plan: plansByDate[tradeDate] ?? null });
+      const params = new URL(request.url).searchParams;
+      return HttpResponse.json({ plan: plansByKey[`${params.get('tradeDate')}|${params.get('symbol')}`] ?? null });
     })
   );
 }
@@ -52,7 +53,7 @@ describe('DailyPlanForm', () => {
 
   it('prefills an existing plan for the day', async () => {
     serveDailyPlan({
-      '2026-10-28': {
+      '2026-10-28|SPY': {
         tradeDate: '2026-10-28',
         ltfDirection: 'bearish',
         ltfFib50: 670.5,
@@ -83,6 +84,7 @@ describe('DailyPlanForm', () => {
     await waitFor(() => expect(bodies).toHaveLength(1));
     expect(bodies[0]).toEqual({
       tradeDate: '2026-10-28',
+      symbol: 'SPY',
       ltfDirection: 'bullish',
       ltfFib50: 670.5,
       ltfFib100: 672,
@@ -99,7 +101,7 @@ describe('DailyPlanForm', () => {
     await save();
 
     await waitFor(() => expect(bodies).toHaveLength(1));
-    expect(bodies[0]).toEqual({ tradeDate: '2026-10-28', notes: 'Asia swept the prior low' });
+    expect(bodies[0]).toEqual({ tradeDate: '2026-10-28', symbol: 'SPY', notes: 'Asia swept the prior low' });
   });
 
   it('saves the overnight highs and lows that are filled in', async () => {
@@ -113,11 +115,11 @@ describe('DailyPlanForm', () => {
     await save();
 
     await waitFor(() => expect(bodies).toHaveLength(1));
-    expect(bodies[0]).toEqual({ tradeDate: '2026-10-28', asiaHigh: 683.1, asiaLow: 679.4, premarketHigh: 684 });
+    expect(bodies[0]).toEqual({ tradeDate: '2026-10-28', symbol: 'SPY', asiaHigh: 683.1, asiaLow: 679.4, premarketHigh: 684 });
   });
 
   it('prefills the overnight levels a saved plan has', async () => {
-    serveDailyPlan({ '2026-10-28': { tradeDate: '2026-10-28', londonLow: 680.5, londonHigh: null } });
+    serveDailyPlan({ '2026-10-28|SPY': { tradeDate: '2026-10-28', londonLow: 680.5, londonHigh: null } });
     renderForm();
 
     expect(await screen.findByLabelText('London low')).toHaveValue(680.5);
@@ -143,7 +145,7 @@ describe('DailyPlanForm', () => {
 
   it('loads a different day when the date changes', async () => {
     serveDailyPlan({
-      '2026-10-27': {
+      '2026-10-27|SPY': {
         tradeDate: '2026-10-27',
         ltfDirection: 'bullish',
         ltfFib50: 650,
@@ -160,5 +162,46 @@ describe('DailyPlanForm', () => {
     fireEvent.change(screen.getByLabelText('Day'), { target: { value: '2026-10-27' } });
 
     expect(await screen.findByLabelText('LTF 50%')).toHaveValue(650);
+  });
+
+  it("defaults to SPY and loads another symbol's plan once the symbol is changed", async () => {
+    serveDailyPlan({ '2026-10-28|QQQ': { tradeDate: '2026-10-28', symbol: 'QQQ', asiaHigh: 612.4 } });
+    renderForm();
+
+    const symbol = await screen.findByLabelText('Symbol');
+    expect(symbol).toHaveValue('SPY');
+    await userEvent.clear(symbol);
+    await userEvent.type(symbol, 'qqq');
+    await userEvent.tab();
+
+    expect(await screen.findByDisplayValue('612.4')).toBeInTheDocument();
+    expect(screen.getByLabelText('Symbol')).toHaveValue('QQQ');
+  });
+
+  it('saves the plan under the symbol shown', async () => {
+    serveDailyPlan({});
+    const bodies = capturePuts();
+    renderForm();
+
+    const symbol = await screen.findByLabelText('Symbol');
+    await userEvent.clear(symbol);
+    await userEvent.type(symbol, 'msft');
+    await userEvent.tab();
+    await userEvent.type(await screen.findByLabelText('Premarket high'), '512');
+    await save();
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0]).toEqual({ tradeDate: '2026-10-28', symbol: 'MSFT', premarketHigh: 512 });
+  });
+
+  it('keeps the symbol when it is cleared and left blank', async () => {
+    serveDailyPlan({});
+    renderForm();
+
+    const symbol = await screen.findByLabelText('Symbol');
+    await userEvent.clear(symbol);
+    await userEvent.tab();
+
+    expect(await screen.findByLabelText('Symbol')).toHaveValue('SPY');
   });
 });

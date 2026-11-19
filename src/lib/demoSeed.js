@@ -296,11 +296,11 @@ export const DEMO_REVIEWS = [
 ];
 
 // The day's working fib, which gives the exit review its T1 (50%) and T2
-// (100%). A daily plan names no symbol, so only 10-26, the one day that
-// traded a single underlying (SPY), has one.
+// (100%) on the plan's symbol. Only 10-26's SPY trades have one.
 export const DEMO_DAILY_PLANS = [
   {
     tradeDate: '2026-10-26',
+    symbol: 'SPY',
     ltfDirection: 'bullish',
     ltfFib50: 767.7,
     ltfFib100: 769.4,

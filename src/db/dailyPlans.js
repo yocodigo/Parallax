@@ -6,6 +6,7 @@ import { dailyPlans } from './schema';
 // never recorded.
 const pickPlan = (row) => ({
   tradeDate: row.tradeDate,
+  symbol: row.symbol,
   ltfDirection: row.ltfDirection ?? null,
   ltfFib50: row.ltfFib50 ?? null,
   ltfFib100: row.ltfFib100 ?? null,
@@ -21,14 +22,17 @@ const pickPlan = (row) => ({
   notes: row.notes ?? null,
 });
 
-// The fibs recorded for a trading day (a 'YYYY-MM-DD' New York date), or null
-// if the day was never planned.
-export async function getDailyPlan(db, tradeDate) {
-  const [row] = await db.select().from(dailyPlans).where(eq(dailyPlans.tradeDate, tradeDate));
+// The plan recorded for `symbol` on a trading day (a 'YYYY-MM-DD' New York
+// date), or null if that symbol's day was never planned.
+export async function getDailyPlan(db, tradeDate, symbol) {
+  const [row] = await db
+    .select()
+    .from(dailyPlans)
+    .where(and(eq(dailyPlans.tradeDate, tradeDate), eq(dailyPlans.symbol, symbol)));
   return row ? pickPlan(row) : null;
 }
 
-// Replaces the day's plan; there's only ever one per day. Writing the optional
+// Replaces the plan of the day and symbol; there's only ever one of each. Writing the optional
 // fields as explicit nulls is what clears a fib that was dropped when the
 // anchors were redrawn.
 export async function saveDailyPlan(db, plan) {
@@ -36,18 +40,19 @@ export async function saveDailyPlan(db, plan) {
   const [row] = await db
     .insert(dailyPlans)
     .values(values)
-    .onConflictDoUpdate({ target: dailyPlans.tradeDate, set: values })
+    .onConflictDoUpdate({ target: [dailyPlans.tradeDate, dailyPlans.symbol], set: values })
     .returning();
   return pickPlan(row);
 }
 
 // The plans of the days from `fromDay` to `toDay` ('YYYY-MM-DD' New York dates,
-// both included), oldest first; a day left null leaves that side open.
+// both included), every symbol's, oldest first; a day left null leaves that
+// side open.
 export async function listDailyPlansBetween(db, { fromDay, toDay }) {
   const rows = await db
     .select()
     .from(dailyPlans)
     .where(and(fromDay ? gte(dailyPlans.tradeDate, fromDay) : undefined, toDay ? lte(dailyPlans.tradeDate, toDay) : undefined))
-    .orderBy(asc(dailyPlans.tradeDate));
+    .orderBy(asc(dailyPlans.tradeDate), asc(dailyPlans.symbol));
   return rows.map(pickPlan);
 }

@@ -91,8 +91,8 @@ describe('gatherReviewFacts', () => {
   it('reads the daily plans of the range and the strategies', async () => {
     await createStrategy(db, { name: 'Band cross', description: '', rules: [{ kind: 'edge', text: 'Cross on 15m' }] });
     await db.insert(trades).values(option('13'));
-    await saveDailyPlan(db, { tradeDate: '2026-04-13', ltfDirection: 'bullish', ltfFib50: 101, ltfFib100: 103, notes: 'Plan notes.' });
-    await saveDailyPlan(db, { tradeDate: '2026-04-01', ltfDirection: 'bullish', ltfFib50: 90, ltfFib100: 92 });
+    await saveDailyPlan(db, { tradeDate: '2026-04-13', symbol: 'SPY', ltfDirection: 'bullish', ltfFib50: 101, ltfFib100: 103, notes: 'Plan notes.' });
+    await saveDailyPlan(db, { tradeDate: '2026-04-01', symbol: 'SPY', ltfDirection: 'bullish', ltfFib50: 90, ltfFib100: 92 });
 
     const facts = await gatherReviewFacts(db, week);
 
@@ -103,8 +103,8 @@ describe('gatherReviewFacts', () => {
   it('reads the plan of the day a trade was opened, even when that is before the range', async () => {
     // Opened Monday the 6th, closed Monday the 13th: a swing, in the range by its close.
     await db.insert(trades).values(option('13', { openedAt: new Date('2026-04-06T14:00:00Z') }));
-    await saveDailyPlan(db, { tradeDate: '2026-04-06', ltfDirection: 'bullish', ltfFib50: 101, ltfFib100: 103 });
-    await saveDailyPlan(db, { tradeDate: '2026-04-01', ltfDirection: 'bullish', ltfFib50: 90, ltfFib100: 92 });
+    await saveDailyPlan(db, { tradeDate: '2026-04-06', symbol: 'SPY', ltfDirection: 'bullish', ltfFib50: 101, ltfFib100: 103 });
+    await saveDailyPlan(db, { tradeDate: '2026-04-01', symbol: 'SPY', ltfDirection: 'bullish', ltfFib50: 90, ltfFib100: 92 });
 
     const facts = await gatherReviewFacts(db, week);
 

@@ -9,7 +9,10 @@ import Field, { inputClass } from './Field';
 const nyDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' });
 const today = () => nyDate.format(new Date());
 
-const keyFor = (tradeDate) => `/api/daily-plan?tradeDate=${tradeDate}`;
+const keyFor = (tradeDate, symbol) => `/api/daily-plan?tradeDate=${tradeDate}&symbol=${encodeURIComponent(symbol)}`;
+
+// The symbol a plan is for unless another is typed in.
+const DEFAULT_SYMBOL = 'SPY';
 
 // Inputs hold strings. Blank becomes undefined, which JSON.stringify leaves
 // out, so a dropped second fib clears rather than saving a price of 0.
@@ -24,9 +27,10 @@ const OVERNIGHT_FIELDS = OVERNIGHT_SESSIONS.flatMap(({ prefix }) => [`${prefix}H
 // anchored leaves the working fib out instead of sending half of one.
 const ltfDirectionOf = (form) => (form.ltfFib50 === '' && form.ltfFib100 === '' ? undefined : form.ltfDirection);
 
-function formFromPlan(tradeDate, plan) {
+function formFromPlan(tradeDate, symbol, plan) {
   return {
     tradeDate,
+    symbol,
     ltfDirection: plan?.ltfDirection ?? 'bullish',
     ltfFib50: plan?.ltfFib50 != null ? String(plan.ltfFib50) : '',
     ltfFib100: plan?.ltfFib100 != null ? String(plan.ltfFib100) : '',
@@ -38,10 +42,11 @@ function formFromPlan(tradeDate, plan) {
   };
 }
 
-// Re-mounted (via `key`) whenever the shown day changes, so its state starts
-// fresh from that day's plan instead of carrying over the last one's inputs.
-function FibFields({ tradeDate, plan, onDateChange, onSaved }) {
-  const [form, setForm] = useState(() => formFromPlan(tradeDate, plan));
+// Re-mounted (via `key`) whenever the shown day or symbol changes, so its
+// state starts fresh from that plan instead of carrying over the last one's
+// inputs.
+function FibFields({ tradeDate, symbol, plan, onDateChange, onSymbolChange, onSaved }) {
+  const [form, setForm] = useState(() => formFromPlan(tradeDate, symbol, plan));
   const [fieldErrors, setFieldErrors] = useState({});
   const [error, setError] = useState(null);
   const [saved, setSaved] = useState(false);
@@ -62,6 +67,14 @@ function FibFields({ tradeDate, plan, onDateChange, onSaved }) {
     };
   };
 
+  // A symbol loads its plan once typed and left, not on every keystroke; left
+  // blank, the symbol shown before stays.
+  const commitSymbol = () => {
+    const typed = form.symbol.trim().toUpperCase();
+    if (typed === '') setForm((current) => ({ ...current, symbol }));
+    else if (typed !== symbol) onSymbolChange(typed);
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -70,6 +83,7 @@ function FibFields({ tradeDate, plan, onDateChange, onSaved }) {
 
     const body = {
       tradeDate: form.tradeDate,
+      symbol,
       ltfDirection: ltfDirectionOf(form),
       ltfFib50: toNumber(form.ltfFib50),
       ltfFib100: toNumber(form.ltfFib100),
@@ -106,15 +120,20 @@ function FibFields({ tradeDate, plan, onDateChange, onSaved }) {
 
   return (
     <form onSubmit={submit} className="space-y-3">
-      <Field id="daily-plan-tradeDate" label="Day" error={errorFor('tradeDate')}>
-        <input
-          id="daily-plan-tradeDate"
-          type="date"
-          value={form.tradeDate}
-          onChange={(e) => onDateChange(e.target.value)}
-          className={inputClass}
-        />
-      </Field>
+      <div className="grid grid-cols-3 gap-3">
+        <Field id="daily-plan-tradeDate" label="Day" error={errorFor('tradeDate')}>
+          <input
+            id="daily-plan-tradeDate"
+            type="date"
+            value={form.tradeDate}
+            onChange={(e) => onDateChange(e.target.value)}
+            className={inputClass}
+          />
+        </Field>
+        <Field id="daily-plan-symbol" label="Symbol" error={errorFor('symbol')}>
+          <input {...fieldProps('symbol')} onBlur={commitSymbol} autoComplete="off" className={inputClass} />
+        </Field>
+      </div>
 
       <p className="text-xs text-gray-500">Overnight highs and lows (optional)</p>
       <div className="grid grid-cols-3 gap-3">
@@ -189,13 +208,14 @@ function FibFields({ tradeDate, plan, onDateChange, onSaved }) {
   );
 }
 
-// The day's overnight highs and lows and its fib extensions, anchored by hand
-// around the open. Defaults to today (New York), and switching the date loads
-// that day's plan instead.
+// The day's overnight highs and lows and its fib extensions for one symbol,
+// anchored by hand around the open. Defaults to today (New York) and SPY, and
+// switching either loads that plan instead.
 export default function DailyPlanForm() {
   const { mutate } = useSWRConfig();
   const [tradeDate, setTradeDate] = useState(today);
-  const { data, error, isLoading } = useSWR(keyFor(tradeDate), fetchJson, {
+  const [symbol, setSymbol] = useState(DEFAULT_SYMBOL);
+  const { data, error, isLoading } = useSWR(keyFor(tradeDate, symbol), fetchJson, {
     revalidateOnFocus: false,
   });
 
@@ -211,11 +231,13 @@ export default function DailyPlanForm() {
   } else {
     body = (
       <FibFields
-        key={tradeDate}
+        key={`${tradeDate}|${symbol}`}
         tradeDate={tradeDate}
+        symbol={symbol}
         plan={data.plan}
         onDateChange={setTradeDate}
-        onSaved={(plan) => mutate(keyFor(tradeDate), { plan }, { revalidate: false })}
+        onSymbolChange={setSymbol}
+        onSaved={(plan) => mutate(keyFor(tradeDate, symbol), { plan }, { revalidate: false })}
       />
     );
   }

@@ -456,9 +456,10 @@ export function buildReviewFacts({ trades, entries, dailyPlans, strategies, rang
     journalEntriesOmitted: entries.length - keptEntries.length,
     dailyPlans: dailyPlans
       .filter((plan) => days.has(plan.tradeDate))
-      .sort((a, b) => a.tradeDate.localeCompare(b.tradeDate))
+      .sort((a, b) => a.tradeDate.localeCompare(b.tradeDate) || a.symbol.localeCompare(b.symbol))
       .map((plan) => ({
         date: plan.tradeDate,
+        symbol: plan.symbol,
         lowerTimeframe: fibOf(plan.ltfDirection, plan.ltfFib50, plan.ltfFib100),
         higherTimeframe: fibOf(plan.htfDirection, plan.htfFib50, plan.htfFib100),
         notes: plan.notes ?? null,

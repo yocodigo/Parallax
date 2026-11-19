@@ -53,7 +53,7 @@ export const GET = withErrorLogging('/api/trades/[id]/gates', async (request, { 
   const [minuteBars, dailyBars, dailyPlan, planEntry, strategy] = await Promise.all([
     fetchMinuteBars(trade.symbol, trade.openedAt),
     fetchDailyBars(trade.symbol, day),
-    getDailyPlan(getDb(), day),
+    getDailyPlan(getDb(), day, trade.symbol),
     getPlanEntry(getDb(), trade.id),
     trade.strategyId ? getStrategy(getDb(), trade.strategyId) : null,
   ]);

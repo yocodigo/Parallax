@@ -12,13 +12,14 @@ vi.mock('@/db', async () => {
 
 const plan = {
   tradeDate: '2026-10-28',
+  symbol: 'SPY',
   ltfDirection: 'bullish',
   ltfFib50: 670.5,
   ltfFib100: 672,
 };
 
-const get = (tradeDate) =>
-  GET(new Request(`http://localhost/api/daily-plan?tradeDate=${tradeDate}`));
+const get = (tradeDate, symbol = 'SPY') =>
+  GET(new Request(`http://localhost/api/daily-plan?tradeDate=${tradeDate}&symbol=${symbol}`));
 const put = (body) =>
   PUT(new Request('http://localhost/api/daily-plan', { method: 'PUT', body: JSON.stringify(body) }));
 
@@ -37,6 +38,19 @@ describe('/api/daily-plan', () => {
     const response = await get('');
 
     expect(response.status).toBe(400);
+  });
+
+  it('rejects a GET with no symbol', async () => {
+    const response = await get('2026-10-28', '');
+
+    expect(response.status).toBe(400);
+    expect((await response.json()).fieldErrors.symbol).toBeDefined();
+  });
+
+  it("answers null for another symbol's day", async () => {
+    await put(plan);
+
+    expect(await (await get('2026-10-28', 'qqq')).json()).toEqual({ plan: null });
   });
 
   it('saves and returns the plan for a day', async () => {

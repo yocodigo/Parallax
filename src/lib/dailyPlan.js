@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { symbolSchema } from './symbol';
 
 const price = z.number().positive();
 
@@ -73,6 +74,8 @@ function checkOvernightOrder(plan, ctx) {
 // higher-timeframe one is the next target if price pivots against it.
 const fields = z.object({
   tradeDate: z.iso.date({ error: 'Enter the day as a date' }),
+  // The levels are read off this symbol's chart.
+  symbol: symbolSchema,
   ltfDirection: fibDirection.optional(),
   ltfFib50: price.optional(),
   ltfFib100: price.optional(),

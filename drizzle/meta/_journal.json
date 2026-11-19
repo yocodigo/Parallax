@@ -148,6 +148,13 @@
       "when": 1794955992922,
       "tag": "0020_strategy_detector",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1795053901808,
+      "tag": "0021_daily_plan_symbol",
+      "breakpoints": true
     }
   ]
 }

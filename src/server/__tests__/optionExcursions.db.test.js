@@ -70,7 +70,7 @@ describe('gatherOptionExcursions', () => {
     const loser = await insert(
       call({ exitPrice: 1.6, openedAt: new Date('2026-11-04T15:38:00Z'), closedAt: new Date('2026-11-04T15:40:20Z') })
     );
-    await db.insert(dailyPlans).values({ tradeDate: '2026-11-04', ltfDirection: 'bullish', ltfFib50: 581.2, ltfFib100: 582 });
+    await db.insert(dailyPlans).values({ tradeDate: '2026-11-04', symbol: 'SPY', ltfDirection: 'bullish', ltfFib50: 581.2, ltfFib100: 582 });
     const fetchBars = vi.fn(async () => SPY_BARS);
     const fetchContractBars = vi.fn(async () => CONTRACT_BARS);
 

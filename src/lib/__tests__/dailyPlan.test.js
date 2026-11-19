@@ -4,6 +4,7 @@ import { parseDailyPlan } from '../dailyPlan';
 // The working fib for the day: bullish, 50% at 681.2, 100% at 684.5.
 const onePlan = {
   tradeDate: '2026-10-28',
+  symbol: 'SPY',
   ltfDirection: 'bullish',
   ltfFib50: 681.2,
   ltfFib100: 684.5,
@@ -21,6 +22,17 @@ const twoPlan = {
 const errorPaths = (result) => result.error.issues.map((issue) => issue.path.join('.'));
 
 describe('parseDailyPlan', () => {
+  it('needs the symbol the levels belong to', () => {
+    const { symbol, ...noSymbol } = onePlan;
+
+    expect(symbol).toBe('SPY');
+    expect(errorPaths(parseDailyPlan(noSymbol))).toEqual(['symbol']);
+  });
+
+  it('uppercases the symbol', () => {
+    expect(parseDailyPlan({ ...onePlan, symbol: ' msft ' }).data.symbol).toBe('MSFT');
+  });
+
   it('accepts a plan with one fib', () => {
     const result = parseDailyPlan(onePlan);
 
@@ -47,14 +59,14 @@ describe('parseDailyPlan', () => {
   });
 
   it('accepts a plan with no fib yet, saved before the open', () => {
-    const result = parseDailyPlan({ tradeDate: '2026-10-28', notes: 'Asia swept the prior low' });
+    const result = parseDailyPlan({ tradeDate: '2026-10-28', symbol: 'SPY', notes: 'Asia swept the prior low' });
 
     expect(result.success).toBe(true);
     expect(result.data.ltfDirection).toBeUndefined();
   });
 
   it('needs the whole working fib once any of it is given', () => {
-    const result = parseDailyPlan({ tradeDate: '2026-10-28', ltfFib50: 681.2 });
+    const result = parseDailyPlan({ tradeDate: '2026-10-28', symbol: 'SPY', ltfFib50: 681.2 });
 
     expect(errorPaths(result)).toEqual(expect.arrayContaining(['ltfDirection', 'ltfFib100']));
   });
@@ -75,6 +87,7 @@ describe('parseDailyPlan', () => {
   it('accepts the overnight highs and lows, each on its own', () => {
     const result = parseDailyPlan({
       tradeDate: '2026-10-28',
+      symbol: 'SPY',
       asiaHigh: 683.1,
       asiaLow: 679.4,
       londonHigh: 684,
@@ -87,13 +100,13 @@ describe('parseDailyPlan', () => {
   });
 
   it('rejects a session high below its low', () => {
-    const result = parseDailyPlan({ tradeDate: '2026-10-28', londonHigh: 679, londonLow: 680 });
+    const result = parseDailyPlan({ tradeDate: '2026-10-28', symbol: 'SPY', londonHigh: 679, londonLow: 680 });
 
     expect(errorPaths(result)).toEqual(['londonHigh']);
   });
 
   it('rejects overnight levels that are not positive prices', () => {
-    expect(errorPaths(parseDailyPlan({ tradeDate: '2026-10-28', premarketHigh: 0 }))).toContain('premarketHigh');
+    expect(errorPaths(parseDailyPlan({ tradeDate: '2026-10-28', symbol: 'SPY', premarketHigh: 0 }))).toContain('premarketHigh');
   });
 
   it('rejects levels that are not positive prices', () => {

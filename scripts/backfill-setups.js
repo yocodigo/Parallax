@@ -50,7 +50,7 @@ async function main() {
         const [bars, dailyBars, dailyPlan] = await Promise.all([
           fetchMinuteBars(symbol, end),
           fetchDailyBars(symbol, day),
-          getDailyPlan(db, day),
+          getDailyPlan(db, day, symbol),
         ]);
         for (const trade of trades) {
           const levels = levelsAt(trade, bars, { dailyBars, dailyPlan });

@@ -65,9 +65,9 @@ export async function gatherOptionExcursions(
   };
   const plans = new Map();
   const planFor = (trade) => {
-    const day = nyDay(trade.openedAt);
-    if (!plans.has(day)) plans.set(day, getDailyPlan(db, day));
-    return plans.get(day);
+    const key = `${trade.symbol}|${nyDay(trade.openedAt)}`;
+    if (!plans.has(key)) plans.set(key, getDailyPlan(db, nyDay(trade.openedAt), trade.symbol));
+    return plans.get(key);
   };
   const ids = closed.map((t) => t.id);
   const [deltas, levels, strategies] = await Promise.all([

@@ -90,7 +90,7 @@ describe('POST /api/imports/fidelity', () => {
   });
 
   it('saves the trade when confirmed, naming Fidelity in its plan entry', async () => {
-    await saveDailyPlan(getDb(), { tradeDate: '2026-10-09', premarketHigh: 31 });
+    await saveDailyPlan(getDb(), { tradeDate: '2026-10-09', symbol: 'WDGT', premarketHigh: 31 });
     const body = await (await post({ confirm: true })).json();
 
     expect(body).toMatchObject({ applied: true, created: 1, filled: 0 });

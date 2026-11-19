@@ -8,6 +8,7 @@ const db = createTestDb();
 // The working fib for the day, bullish from 681.2 to 684.5.
 const onePlan = {
   tradeDate: '2026-10-28',
+  symbol: 'SPY',
   ltfDirection: 'bullish',
   ltfFib50: 681.2,
   ltfFib100: 684.5,
@@ -31,7 +32,7 @@ describe('saveDailyPlan', () => {
     // The overnight levels, left blank, come back as null.
     const read = { ...twoPlan, asiaHigh: null, asiaLow: null, londonHigh: null, londonLow: null, premarketHigh: null, premarketLow: null };
     expect(saved).toEqual(read);
-    expect(await getDailyPlan(db, '2026-10-28')).toEqual(read);
+    expect(await getDailyPlan(db, '2026-10-28', 'SPY')).toEqual(read);
   });
 
   it('leaves the second fib and the notes empty when they are not given', async () => {
@@ -41,7 +42,7 @@ describe('saveDailyPlan', () => {
   });
 
   it('saves a plan with no fib yet, the fields read back as null', async () => {
-    const saved = await saveDailyPlan(db, { tradeDate: '2026-10-28', notes: 'before the open' });
+    const saved = await saveDailyPlan(db, { tradeDate: '2026-10-28', symbol: 'SPY', notes: 'before the open' });
 
     expect(saved).toMatchObject({ ltfDirection: null, ltfFib50: null, ltfFib100: null, notes: 'before the open' });
   });
@@ -49,7 +50,7 @@ describe('saveDailyPlan', () => {
   it('clears the working fib when the day is saved again without one', async () => {
     await saveDailyPlan(db, onePlan);
 
-    const saved = await saveDailyPlan(db, { tradeDate: '2026-10-28' });
+    const saved = await saveDailyPlan(db, { tradeDate: '2026-10-28', symbol: 'SPY' });
 
     expect(saved).toMatchObject({ ltfDirection: null, ltfFib50: null, ltfFib100: null });
   });
@@ -60,16 +61,16 @@ describe('saveDailyPlan', () => {
     const saved = await saveDailyPlan(db, { ...onePlan, ...overnight });
 
     expect(saved).toMatchObject({ ...overnight, premarketLow: null });
-    expect(await getDailyPlan(db, '2026-10-28')).toMatchObject({ ...overnight, premarketLow: null });
+    expect(await getDailyPlan(db, '2026-10-28', 'SPY')).toMatchObject({ ...overnight, premarketLow: null });
   });
 
   it.each(['asia', 'london', 'premarket'])('refuses a %s high below its low', async (session) => {
-    const plan = { tradeDate: '2026-10-28', [`${session}High`]: 679, [`${session}Low`]: 680 };
+    const plan = { tradeDate: '2026-10-28', symbol: 'SPY', [`${session}High`]: 679, [`${session}Low`]: 680 };
     await expect(saveDailyPlan(db, plan)).rejects.toThrow();
   });
 
   it('refuses half a working fib', async () => {
-    await expect(saveDailyPlan(db, { tradeDate: '2026-10-28', ltfFib50: 681.2 })).rejects.toThrow();
+    await expect(saveDailyPlan(db, { tradeDate: '2026-10-28', symbol: 'SPY', ltfFib50: 681.2 })).rejects.toThrow();
   });
 
   it('replaces the plan when the same day is saved again', async () => {
@@ -86,14 +87,28 @@ describe('saveDailyPlan', () => {
     await saveDailyPlan(db, onePlan);
     await saveDailyPlan(db, { ...onePlan, tradeDate: '2026-10-29', ltfDirection: 'bearish', ltfFib100: 677.5 });
 
-    expect(await getDailyPlan(db, '2026-10-28')).toMatchObject({ ltfDirection: 'bullish' });
-    expect(await getDailyPlan(db, '2026-10-29')).toMatchObject({ ltfDirection: 'bearish' });
+    expect(await getDailyPlan(db, '2026-10-28', 'SPY')).toMatchObject({ ltfDirection: 'bullish' });
+    expect(await getDailyPlan(db, '2026-10-29', 'SPY')).toMatchObject({ ltfDirection: 'bearish' });
+  });
+
+  it("keeps each symbol its own plan on the same day", async () => {
+    await saveDailyPlan(db, onePlan);
+    await saveDailyPlan(db, { ...onePlan, symbol: 'QQQ', ltfDirection: 'bearish', ltfFib50: 610, ltfFib100: 605 });
+
+    expect(await getDailyPlan(db, '2026-10-28', 'SPY')).toMatchObject({ symbol: 'SPY', ltfFib50: 681.2 });
+    expect(await getDailyPlan(db, '2026-10-28', 'QQQ')).toMatchObject({ symbol: 'QQQ', ltfFib50: 610 });
   });
 });
 
 describe('getDailyPlan', () => {
   it('has no plan for a day that was never planned', async () => {
-    expect(await getDailyPlan(db, '2026-10-28')).toBeNull();
+    expect(await getDailyPlan(db, '2026-10-28', 'SPY')).toBeNull();
+  });
+
+  it("never answers with another symbol's plan for the day", async () => {
+    await saveDailyPlan(db, onePlan);
+
+    expect(await getDailyPlan(db, '2026-10-28', 'MSFT')).toBeNull();
   });
 });
 

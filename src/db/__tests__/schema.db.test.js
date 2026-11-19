@@ -248,6 +248,7 @@ describe('strategies and rules', () => {
 describe('daily_plans table', () => {
   const dayPlan = {
     tradeDate: '2026-10-28',
+    symbol: 'SPY',
     ltfDirection: 'bullish',
     ltfFib50: 681.2,
     ltfFib100: 684.5,
@@ -265,9 +266,10 @@ describe('daily_plans table', () => {
     });
   });
 
-  it('holds one plan per day', async () => {
+  it('holds one plan per day and symbol', async () => {
     await db.insert(dailyPlans).values(dayPlan);
 
     await expect(db.insert(dailyPlans).values(dayPlan)).rejects.toThrow();
+    await db.insert(dailyPlans).values({ ...dayPlan, symbol: 'QQQ' });
   });
 });
