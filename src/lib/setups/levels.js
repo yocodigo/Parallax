@@ -57,7 +57,7 @@ const highLow = (bars) =>
 
 // Levels from the daily bars: the prior day's, the prior calendar week's, and
 // the prior calendar month's highs and lows. The day's own daily bar is still forming and never read.
-function dailyLevels(dailyBars, day) {
+export function dailyLevels(dailyBars, day) {
   const before = dailyBars.filter((bar) => tradingDay(bar) < day);
   const thisWeek = mondayOf(day);
   // The Monday of the week holding the Sunday before this week's Monday.
@@ -78,7 +78,7 @@ function dailyLevels(dailyBars, day) {
   ];
 }
 
-const PLAN_LEVELS = [
+export const PLAN_LEVELS = [
   ['asiaHigh', 'asia_high', 1],
   ['asiaLow', 'asia_low', 1],
   ['londonHigh', 'london_high', 1],
@@ -93,7 +93,7 @@ const PLAN_LEVELS = [
 
 // The overnight levels Joel records and the day's fibs. `fib_*` is the working
 // (lower-timeframe) fib, `htf_fib_*` the second one. A blank one is absent.
-function planLevels(plan) {
+export function planLevels(plan) {
   if (!plan) return [];
   return PLAN_LEVELS.filter(([field]) => plan[field] != null).map(([field, kind, tier]) => ({
     kind,
