@@ -54,7 +54,7 @@ Vitest, JavaScript (not TypeScript).
 
 - `src/lib/`: pure logic with unit tests (bars, correlation, risk, timeframes, `tradePlan`,
   `journalEntry`, `tradeFill`, `tradeMetrics`, `mistakeLedger`, `excursions`, `historyWarnings`,
-  `circuitBreakers`, `circuitBreakerSettings`, `strategy`, `checklistReport`, `performanceReview`, `reviewCoach`, `reviewRange`, `setupRules`, `format`, `session` (signed sign-in tokens), shared `symbol` validation). Validation uses Zod 4 and returns `safeParse` results.
+  `circuitBreakers`, `circuitBreakerSettings`, `strategy`, `checklistReport`, `performanceReview`, `reviewCoach`, `reviewRange`, `setupRules`, `format`, `session` (signed sign-in tokens), `today`, shared `symbol` validation). Validation uses Zod 4 and returns `safeParse` results.
 - `src/db/schema.js`: Drizzle schema. Migrations live in `drizzle/` (generated and committed,
   including `meta/`). Never hand-edit a migration that has been applied.
 - `src/lib/context/`: pure pieces of the entry context snapshot (indicators, macro calendar, VIX,
@@ -176,6 +176,19 @@ Vitest, JavaScript (not TypeScript).
   `EDGE_MINUTES_HOLD` (2) minutes is flagged `edgeMinutesOnly` (`tradeWindow.js`: the fill and exit minutes hold
   prices from outside the trade) and also measured on the bars strictly between them (`between`). `TradeProgress`
   shows it as points, R, the stop's source, and the flag. Crypto not yet.
+- Today (`/`, the home page and first nav link; `docs/ui-upgrades.md` item 1): the daily loop for one New York day
+  and mode. `Today.jsx` has a day picker (never past today) and a Mode select (live by default) over `GET /api/today`
+  (`?day`, today's New York date by default; `?mode`, live by default), which answers `{ day, mode, plans, summary }`:
+  every symbol's daily plan for the day and `todaySummary` (`src/lib/today.js`) over the trades of that mode opened
+  that day with their review entries. The header line gives the trades, net P/L of the closed ones, and reviewed x of y.
+  Four steps, each with a status: Plan (the daily plan form for the picked day, collapsed to its levels once done; done
+  only with a working fib, started with overnight levels alone), Import (the thinkorswim importer; imports aren't
+  recorded, so done means the day has trades and every one has its exit), Review (the day's trades in order; a closed
+  trade's Review button opens `VoiceNote` then `ReviewForm` for that trade; counts closed trades only), and Coach
+  (`EntryCoaching` on each review of the day's trades, an open trade's included). The forms take optional props for
+  it: `DailyPlanForm` `tradeDate` (leaves out its own Day field) and `onSaved`, `ReviewForm` and `VoiceNote` `trade`
+  (no Trade select; a voice draft becomes that trade's review whatever kind it came back as), and `onSaved`,
+  `onImported`, `onCoached`, so the day reloads. The demo hides the forms and the importer.
 - Insights (`/insights`): history-based views. `MistakeLedger.jsx` loads `GET /api/insights/mistakes`
   (`?mode=` optional), built from `listClosedTradesWithMistakes` and `mistakeLedger`: per mistake,
   the closed trades tagged with it (on any of their entries, once per trade) and their total and
