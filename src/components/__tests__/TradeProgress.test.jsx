@@ -1,10 +1,11 @@
-import { describe, it, expect } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, describe, it, expect } from 'vitest';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { SWRConfig } from 'swr';
 import { server } from '@/mocks/server';
 import JournalEntries from '../JournalEntries';
+import { setDisplayZone } from '../useDisplayZone';
 
 const TRADE_ID = '6f1c2a4e-0000-4000-8000-000000000001';
 
@@ -82,6 +83,26 @@ function renderJournal() {
 }
 
 describe('recording a trade from the journal', () => {
+  // The chosen zone is module state that outlives a test.
+  afterEach(() => {
+    act(() => setDisplayZone('America/Los_Angeles'));
+    localStorage.clear();
+  });
+
+  it('reads the fill time on the display zone clock', async () => {
+    act(() => setDisplayZone('America/New_York'));
+    const posted = serveJournal(plannedTrade());
+    renderJournal();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Record entry' }));
+    await userEvent.type(screen.getByLabelText('Fill price'), '210.5');
+    fireEvent.change(screen.getByLabelText('Fill time (Eastern)'), { target: { value: '2026-10-20T10:00' } });
+    await userEvent.click(screen.getByRole('button', { name: 'Save entry' }));
+
+    await screen.findByText('Open');
+    expect(posted[0].body.openedAt).toBe('2026-10-20T14:00:00.000Z');
+  });
+
   it('records the entry fill of a planned trade', async () => {
     const posted = serveJournal(plannedTrade());
     renderJournal();
@@ -89,7 +110,7 @@ describe('recording a trade from the journal', () => {
     expect(await screen.findByText('Planned')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Record entry' }));
     await userEvent.type(screen.getByLabelText('Fill price'), '210.5');
-    fireEvent.change(screen.getByLabelText('Fill time'), { target: { value: '2026-10-20T10:00' } });
+    fireEvent.change(screen.getByLabelText('Fill time (Pacific)'), { target: { value: '2026-10-20T10:00' } });
     await userEvent.click(screen.getByRole('button', { name: 'Save entry' }));
 
     expect(await screen.findByText('Open')).toBeInTheDocument();
@@ -97,7 +118,7 @@ describe('recording a trade from the journal', () => {
       {
         step: 'entry',
         id: TRADE_ID,
-        body: { entryPrice: 210.5, openedAt: new Date('2026-10-20T10:00').toISOString() },
+        body: { entryPrice: 210.5, openedAt: '2026-10-20T17:00:00.000Z' },
       },
     ]);
     expect(screen.getByText(/filled at 210.5/i)).toBeInTheDocument();
@@ -125,7 +146,7 @@ describe('recording a trade from the journal', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Save entry' }));
 
     expect(await screen.findByText("The fill time can't be in the future")).toBeInTheDocument();
-    expect(screen.getByLabelText('Fill time')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByLabelText('Fill time (Pacific)')).toHaveAttribute('aria-invalid', 'true');
   });
 
   it('closes an open trade and shows its result', async () => {
@@ -134,7 +155,7 @@ describe('recording a trade from the journal', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: 'Record exit' }));
     await userEvent.type(screen.getByLabelText('Exit price'), '220');
-    fireEvent.change(screen.getByLabelText('Exit time'), { target: { value: '2026-10-21T11:30' } });
+    fireEvent.change(screen.getByLabelText('Exit time (Pacific)'), { target: { value: '2026-10-21T11:30' } });
     await userEvent.selectOptions(screen.getByLabelText('Reason'), 'target');
     await userEvent.click(screen.getByRole('radio', { name: 'Yes' }));
     await userEvent.type(screen.getByLabelText('Fees'), '2');
@@ -146,7 +167,7 @@ describe('recording a trade from the journal', () => {
       id: TRADE_ID,
       body: {
         exitPrice: 220,
-        closedAt: new Date('2026-10-21T11:30').toISOString(),
+        closedAt: '2026-10-21T18:30:00.000Z',
         exitReason: 'target',
         exitedPerPlan: true,
         fees: 2,

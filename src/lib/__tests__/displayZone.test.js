@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_ZONE, formatInZone, readDisplayZone, saveDisplayZone } from '../displayZone';
+import {
+  DEFAULT_ZONE,
+  formatInZone,
+  fromZoneInput,
+  readDisplayZone,
+  saveDisplayZone,
+  toZoneInput,
+  WRITTEN,
+} from '../displayZone';
 
 const memory = (initial = {}) => {
   const data = { ...initial };
@@ -68,5 +76,39 @@ describe('formatInZone', () => {
   it('moves the date with the clock', () => {
     // 03:00 UTC is still the evening before in Los Angeles.
     expect(formatInZone('2026-11-11T03:00:00.000Z', 'America/Los_Angeles', { month: 'short', day: 'numeric' })).toBe('Nov 10');
+  });
+});
+
+describe('formatInZone with WRITTEN', () => {
+  it('spells out the date, the clock, and the zone', () => {
+    expect(formatInZone('2026-04-14T20:30:00.000Z', 'America/Los_Angeles', WRITTEN)).toBe('Apr 14, 2026, 1:30 PM PDT');
+  });
+});
+
+// A datetime-local input holds a wall-clock "YYYY-MM-DDTHH:mm" with no zone.
+describe('toZoneInput and fromZoneInput', () => {
+  it('shows an instant as the zone clock reads it', () => {
+    expect(toZoneInput('2026-11-10T15:43:00.000Z', 'America/Los_Angeles')).toBe('2026-11-10T07:43');
+    expect(toZoneInput('2026-11-10T15:43:00.000Z', 'America/New_York')).toBe('2026-11-10T10:43');
+  });
+
+  it('reads what was typed on the zone clock back as the instant', () => {
+    expect(fromZoneInput('2026-11-10T07:43', 'America/Los_Angeles')).toBe('2026-11-10T15:43:00.000Z');
+    expect(fromZoneInput('2026-07-10T14:05', 'America/New_York')).toBe('2026-07-10T18:05:00.000Z');
+  });
+
+  it('handles the day the clocks change', () => {
+    // Daylight time began 2026-03-08 at 2:00 in New York.
+    expect(fromZoneInput('2026-03-08T09:35', 'America/New_York')).toBe('2026-03-08T13:35:00.000Z');
+    expect(fromZoneInput('2026-03-08T01:30', 'America/New_York')).toBe('2026-03-08T06:30:00.000Z');
+  });
+
+  it('round-trips', () => {
+    const iso = '2026-10-23T18:41:00.000Z';
+    expect(fromZoneInput(toZoneInput(iso, 'America/Denver'), 'America/Denver')).toBe(iso);
+  });
+
+  it('is undefined for a blank input', () => {
+    expect(fromZoneInput('', 'America/Chicago')).toBeUndefined();
   });
 });

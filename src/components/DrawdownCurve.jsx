@@ -12,7 +12,7 @@ import {
 } from 'recharts';
 import { timeTicks, valueTicks } from '@/lib/chartTicks';
 import { formatProfitLoss } from '@/lib/format';
-import { formatCloseTime } from './EquityCurve';
+import { formatCloseTime } from '@/lib/displayZone';
 import useDisplayZone from './useDisplayZone';
 
 // The same fixed red as the other loss marks (see MonthlyPnl). The curve hangs

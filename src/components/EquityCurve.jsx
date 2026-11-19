@@ -12,7 +12,7 @@ import {
   YAxis,
 } from 'recharts';
 import { timeTicks, valueTicks } from '@/lib/chartTicks';
-import { formatInZone } from '@/lib/displayZone';
+import { formatCloseTime } from '@/lib/displayZone';
 import { formatProfitLoss } from '@/lib/format';
 import useDisplayZone from './useDisplayZone';
 
@@ -34,16 +34,6 @@ const compactMoney = new Intl.NumberFormat('en-US', {
 });
 
 const nyFormat = (options) => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', ...options });
-// A trade's close on the display zone's clock, with the zone named: "Tue, Nov 10, 7:43 AM PST".
-export const formatCloseTime = (closedAt, zone) =>
-  formatInZone(closedAt, zone, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-    timeZoneName: 'short',
-  });
 const monthDay = nyFormat({ month: 'short', day: 'numeric' });
 const fullDate = nyFormat({ month: 'short', day: 'numeric', year: 'numeric' });
 const year = nyFormat({ year: 'numeric' });

@@ -13,7 +13,7 @@ import {
 } from 'recharts';
 import { timeTicks, valueTicks } from '@/lib/chartTicks';
 import { formatProfitLoss } from '@/lib/format';
-import { formatCloseTime } from './EquityCurve';
+import { formatCloseTime } from '@/lib/displayZone';
 import useDisplayZone from './useDisplayZone';
 
 // Same line blue as EquityCurve (see the note there on contrast in both themes).

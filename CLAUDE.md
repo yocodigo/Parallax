@@ -133,10 +133,10 @@ Vitest, JavaScript (not TypeScript).
 - Display time zone (`src/lib/displayZone.js`, `useDisplayZone.js`, `DisplayZonePicker.jsx` in the nav menu beside the theme):
   a browser setting (localStorage, Pacific by default, four US zones) for how a moment is shown, so the server never reads it.
   `formatInZone(instant, zone, options)` formats a moment on that clock and the zone is named where it could be
-  misread (chart tooltips, the exit review's touch time, `WRITTEN`). Used for fill times (`formatTradeTime(openedAt,
+  misread (chart tooltips via `formatCloseTime`, the exit review's touch time, `WRITTEN`). Used for the fill and exit times typed on a trade (`toZoneInput`, `fromZoneInput`: a datetime-local value is read on the display zone, not the browser's), fill times shown (`formatTradeTime(openedAt,
   zone)`, New York when no zone is passed, so the coaching prompt stays New York time), tooltips, journal and coaching
   times, and the Performance Review's written time. Left in New York on purpose, and captioned so: sessions and month
-  boundaries (`timeOfDay`, the monthly charts, the lockout windows and the typed window times in `RuleSettings.jsx`),
+  boundaries (`timeOfDay`, the monthly charts and the dates in the chart summary sentences, the lockout windows and the typed window times in `RuleSettings.jsx`),
   and calendar dates (a daily plan's date, an option's expiration). The import's time zone select is the statement's, not this.
 - Theme and dark mode: colors come from CSS variables, so components need no `dark:` classes.
   `src/lib/palette.cjs` (CommonJS, for `tailwind.config.js`) points the gray, red, green, amber, and

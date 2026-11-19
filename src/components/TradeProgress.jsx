@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { BREAKER_LABELS, describeBreaker } from '@/lib/circuitBreakers';
+import { fromZoneInput, toZoneInput, zoneName } from '@/lib/displayZone';
 import { apiErrorMessage, fetchJson } from '@/lib/fetchJson';
 import { formatProfitLoss, formatR } from '@/lib/format';
 import { moneyR, profitLoss, rMultiple, tradeStatus } from '@/lib/tradeMetrics';
@@ -14,6 +15,7 @@ import TradeExitReview from './TradeExitReview';
 import TradeGates from './TradeGates';
 import TradeReview from './TradeReview';
 import TradeScreenshots from './TradeScreenshots';
+import useDisplayZone from './useDisplayZone';
 
 const buttonClass =
   'rounded-md bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50';
@@ -30,12 +32,8 @@ const STATUS_STYLES = {
 // out, so the server reports a missing field instead of a price of 0.
 const toNumber = (value) => (value === '' ? undefined : Number(value));
 
-// A datetime-local input wants local "YYYY-MM-DDTHH:mm"; the server wants ISO.
-function toLocalInput(date) {
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 16);
-}
-const toIso = (value) => (value ? new Date(value).toISOString() : undefined);
+// The fill and exit times are typed on the display zone's clock: a
+// datetime-local input holds "YYYY-MM-DDTHH:mm", and the server wants ISO.
 
 // A small form posting one step (entry or exit) of a trade. Fields render
 // through `children({ fieldProps, errorFor, form, setForm })`; `toBody(form)`
@@ -193,6 +191,7 @@ function Checklist({ trade, rules, form, setForm, error }) {
 }
 
 function EntryForm({ trade, onDone }) {
+  const zone = useDisplayZone();
   const { data } = useSWR(trade.strategyId ? '/api/strategies' : null, fetchJson, { revalidateOnFocus: false });
   const rules = data?.strategies.find((s) => s.id === trade.strategyId)?.rules ?? [];
 
@@ -201,10 +200,10 @@ function EntryForm({ trade, onDone }) {
       trade={trade}
       step="entry"
       submitLabel="Save entry"
-      initial={{ entryPrice: '', openedAt: toLocalInput(new Date()), ruleChecks: {} }}
+      initial={{ entryPrice: '', openedAt: toZoneInput(new Date(), zone), ruleChecks: {} }}
       toBody={(form) => ({
         entryPrice: toNumber(form.entryPrice),
-        openedAt: toIso(form.openedAt),
+        openedAt: fromZoneInput(form.openedAt, zone),
         // Only rules answered; the server asks about any left out.
         ...(rules.length > 0 && { ruleChecks: form.ruleChecks }),
       })}
@@ -215,7 +214,7 @@ function EntryForm({ trade, onDone }) {
           <Field id={`${trade.id}-entryPrice`} label="Fill price" error={errorFor('entryPrice')}>
             <input {...fieldProps('entryPrice')} type="number" step="any" required className={inputClass} />
           </Field>
-          <Field id={`${trade.id}-openedAt`} label="Fill time" error={errorFor('openedAt')}>
+          <Field id={`${trade.id}-openedAt`} label={`Fill time (${zoneName(zone)})`} error={errorFor('openedAt')}>
             <input {...fieldProps('openedAt')} type="datetime-local" className={inputClass} />
           </Field>
           {rules.length > 0 && (
@@ -228,15 +227,16 @@ function EntryForm({ trade, onDone }) {
 }
 
 function ExitForm({ trade, onDone }) {
+  const zone = useDisplayZone();
   return (
     <StepForm
       trade={trade}
       step="exit"
       submitLabel="Save exit"
-      initial={{ exitPrice: '', closedAt: toLocalInput(new Date()), exitReason: '', exitedPerPlan: '', fees: '' }}
+      initial={{ exitPrice: '', closedAt: toZoneInput(new Date(), zone), exitReason: '', exitedPerPlan: '', fees: '' }}
       toBody={(form) => ({
         exitPrice: toNumber(form.exitPrice),
-        closedAt: toIso(form.closedAt),
+        closedAt: fromZoneInput(form.closedAt, zone),
         exitReason: form.exitReason || undefined,
         // Unanswered stays undefined, so the server asks rather than assuming.
         exitedPerPlan: form.exitedPerPlan === '' ? undefined : form.exitedPerPlan === 'yes',
@@ -249,7 +249,7 @@ function ExitForm({ trade, onDone }) {
           <Field id={`${trade.id}-exitPrice`} label="Exit price" error={errorFor('exitPrice')}>
             <input {...fieldProps('exitPrice')} type="number" step="any" required className={inputClass} />
           </Field>
-          <Field id={`${trade.id}-closedAt`} label="Exit time" error={errorFor('closedAt')}>
+          <Field id={`${trade.id}-closedAt`} label={`Exit time (${zoneName(zone)})`} error={errorFor('closedAt')}>
             <input {...fieldProps('closedAt')} type="datetime-local" className={inputClass} />
           </Field>
           <Field id={`${trade.id}-exitReason`} label="Reason" error={errorFor('exitReason')}>
