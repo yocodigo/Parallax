@@ -27,7 +27,8 @@ import RollingExpectancy from './RollingExpectancy';
 import OptionExcursions from './OptionExcursions';
 import PerformanceTables from './PerformanceTables';
 import ProfitFactorByMonth from './ProfitFactorByMonth';
-import PlansVsNoPlan from './PlansVsNoPlan';import WinRateVsBreakeven from './WinRateVsBreakeven';
+import PlansVsNoPlan from './PlansVsNoPlan';
+import WinRateVsBreakeven from './WinRateVsBreakeven';
 import WinsLossesScratches from './WinsLossesScratches';
 import TimeOfDay from './TimeOfDay';
 
