@@ -231,4 +231,36 @@ describe('DailyPlanForm', () => {
     expect(screen.getByLabelText('Day')).toBeInTheDocument();
     expect(screen.getByLabelText('Symbol')).toHaveValue('S P Y');
   });
+
+  it('never saves while the symbol field holds one it refused', async () => {
+    serveDailyPlan({});
+    const bodies = capturePuts();
+    renderForm();
+
+    const symbol = await screen.findByLabelText('Symbol');
+    await userEvent.clear(symbol);
+    await userEvent.type(symbol, 'S P Y');
+    await save();
+
+    expect(await screen.findByText('Invalid symbol')).toBeInTheDocument();
+    expect(bodies).toHaveLength(0);
+  });
+
+  it('clears the symbol error once a good symbol is back, shown in capitals', async () => {
+    serveDailyPlan({});
+    renderForm();
+
+    const symbol = await screen.findByLabelText('Symbol');
+    await userEvent.clear(symbol);
+    await userEvent.type(symbol, 'S P Y');
+    await userEvent.tab();
+    expect(await screen.findByText('Invalid symbol')).toBeInTheDocument();
+
+    await userEvent.clear(symbol);
+    await userEvent.type(symbol, 'spy');
+    await userEvent.tab();
+
+    expect(screen.queryByText('Invalid symbol')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Symbol')).toHaveValue('SPY');
+  });
 });

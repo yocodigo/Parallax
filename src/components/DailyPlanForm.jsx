@@ -71,18 +71,25 @@ function FibFields({ tradeDate, symbol, plan, onDateChange, onSymbolChange, onSa
   // A symbol loads its plan once typed and left (or Enter pressed), not on
   // every keystroke; left blank, the symbol shown before stays. It is checked
   // here because a symbol the route refuses would fail the load and take the
-  // form with it.
+  // form with it. True when the field holds the symbol whose plan is shown.
   const commitSymbol = () => {
+    const showSymbol = (shown) => {
+      setForm((current) => ({ ...current, symbol: shown }));
+      setFieldErrors((current) => ({ ...current, symbol: undefined }));
+    };
     if (form.symbol.trim() === '') {
-      setForm((current) => ({ ...current, symbol }));
-      return;
+      showSymbol(symbol);
+      return true;
     }
     const parsed = symbolSchema.safeParse(form.symbol);
     if (!parsed.success) {
       setFieldErrors((current) => ({ ...current, symbol: [parsed.error.issues[0].message] }));
-    } else if (parsed.data !== symbol) {
-      onSymbolChange(parsed.data);
+      return false;
     }
+    showSymbol(parsed.data);
+    if (parsed.data === symbol) return true;
+    onSymbolChange(parsed.data);
+    return false;
   };
 
   // Enter in the symbol loads that symbol's plan instead of saving the form
@@ -95,6 +102,8 @@ function FibFields({ tradeDate, symbol, plan, onDateChange, onSymbolChange, onSa
 
   const submit = async (e) => {
     e.preventDefault();
+    // Never save under a symbol the field doesn't show.
+    if (!commitSymbol()) return;
     setSaving(true);
     setError(null);
     setSaved(false);
