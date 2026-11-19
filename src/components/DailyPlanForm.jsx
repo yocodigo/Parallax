@@ -4,6 +4,7 @@ import { useState } from 'react';
 import useSWR, { useSWRConfig } from 'swr';
 import { OVERNIGHT_SESSIONS } from '@/lib/dailyPlan';
 import { apiErrorMessage, fetchJson } from '@/lib/fetchJson';
+import { symbolSchema } from '@/lib/symbol';
 import Field, { inputClass } from './Field';
 
 const nyDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' });
@@ -67,12 +68,29 @@ function FibFields({ tradeDate, symbol, plan, onDateChange, onSymbolChange, onSa
     };
   };
 
-  // A symbol loads its plan once typed and left, not on every keystroke; left
-  // blank, the symbol shown before stays.
+  // A symbol loads its plan once typed and left (or Enter pressed), not on
+  // every keystroke; left blank, the symbol shown before stays. It is checked
+  // here because a symbol the route refuses would fail the load and take the
+  // form with it.
   const commitSymbol = () => {
-    const typed = form.symbol.trim().toUpperCase();
-    if (typed === '') setForm((current) => ({ ...current, symbol }));
-    else if (typed !== symbol) onSymbolChange(typed);
+    if (form.symbol.trim() === '') {
+      setForm((current) => ({ ...current, symbol }));
+      return;
+    }
+    const parsed = symbolSchema.safeParse(form.symbol);
+    if (!parsed.success) {
+      setFieldErrors((current) => ({ ...current, symbol: [parsed.error.issues[0].message] }));
+    } else if (parsed.data !== symbol) {
+      onSymbolChange(parsed.data);
+    }
+  };
+
+  // Enter in the symbol loads that symbol's plan instead of saving the form
+  // under the one shown before.
+  const symbolKeyDown = (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    commitSymbol();
   };
 
   const submit = async (e) => {
@@ -131,7 +149,13 @@ function FibFields({ tradeDate, symbol, plan, onDateChange, onSymbolChange, onSa
           />
         </Field>
         <Field id="daily-plan-symbol" label="Symbol" error={errorFor('symbol')}>
-          <input {...fieldProps('symbol')} onBlur={commitSymbol} autoComplete="off" className={inputClass} />
+          <input
+            {...fieldProps('symbol')}
+            onBlur={commitSymbol}
+            onKeyDown={symbolKeyDown}
+            autoComplete="off"
+            className={inputClass}
+          />
         </Field>
       </div>
 

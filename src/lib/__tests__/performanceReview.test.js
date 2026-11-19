@@ -555,6 +555,7 @@ describe('buildReviewFacts', () => {
   const range = { label: 'Last 7 days', from: '2026-04-07', to: '2026-04-14' };
   const plan = {
     tradeDate: '2026-04-13',
+    symbol: 'SPY',
     ltfDirection: 'bullish',
     ltfFib50: 101,
     ltfFib100: 103,
@@ -715,7 +716,16 @@ describe('buildReviewFacts', () => {
     });
 
     expect(facts.dailyPlans).toEqual([
-      { date: '2026-04-13', lowerTimeframe: { direction: 'bullish', fib50: 101, fib100: 103 }, higherTimeframe: null, notes: 'Wait for the cross.' },
+      { date: '2026-04-13', symbol: 'SPY', lowerTimeframe: { direction: 'bullish', fib50: 101, fib100: 103 }, higherTimeframe: null, notes: 'Wait for the cross.' },
     ]);
+  });
+
+  it("names each plan's symbol, a day's plans in symbol order", () => {
+    const facts = build({
+      trades: [clean(10, { id: 'a', ...day(13) })],
+      dailyPlans: [plan, { ...plan, symbol: 'QQQ' }],
+    });
+
+    expect(facts.dailyPlans.map(({ date, symbol }) => `${date} ${symbol}`)).toEqual(['2026-04-13 QQQ', '2026-04-13 SPY']);
   });
 });

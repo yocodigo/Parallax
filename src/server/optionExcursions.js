@@ -65,8 +65,9 @@ export async function gatherOptionExcursions(
   };
   const plans = new Map();
   const planFor = (trade) => {
-    const key = `${trade.symbol}|${nyDay(trade.openedAt)}`;
-    if (!plans.has(key)) plans.set(key, getDailyPlan(db, nyDay(trade.openedAt), trade.symbol));
+    const day = nyDay(trade.openedAt);
+    const key = `${trade.symbol}|${day}`;
+    if (!plans.has(key)) plans.set(key, getDailyPlan(db, day, trade.symbol));
     return plans.get(key);
   };
   const ids = closed.map((t) => t.id);

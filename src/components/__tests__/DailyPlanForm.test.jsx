@@ -204,4 +204,31 @@ describe('DailyPlanForm', () => {
 
     expect(await screen.findByLabelText('Symbol')).toHaveValue('SPY');
   });
+
+  it('loads the typed symbol when Enter is pressed in it, rather than saving under the old one', async () => {
+    serveDailyPlan({ '2026-10-28|QQQ': { tradeDate: '2026-10-28', symbol: 'QQQ', asiaHigh: 612.4 } });
+    const bodies = capturePuts();
+    renderForm();
+
+    const symbol = await screen.findByLabelText('Symbol');
+    await userEvent.clear(symbol);
+    await userEvent.type(symbol, 'qqq{Enter}');
+
+    expect(await screen.findByDisplayValue('612.4')).toBeInTheDocument();
+    expect(bodies).toHaveLength(0);
+  });
+
+  it('says a symbol is invalid and keeps the form, instead of loading it', async () => {
+    serveDailyPlan({});
+    renderForm();
+
+    const symbol = await screen.findByLabelText('Symbol');
+    await userEvent.clear(symbol);
+    await userEvent.type(symbol, 'S P Y');
+    await userEvent.tab();
+
+    expect(await screen.findByText('Invalid symbol')).toBeInTheDocument();
+    expect(screen.getByLabelText('Day')).toBeInTheDocument();
+    expect(screen.getByLabelText('Symbol')).toHaveValue('S P Y');
+  });
 });
