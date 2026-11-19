@@ -27,7 +27,7 @@ import RollingExpectancy from './RollingExpectancy';
 import OptionExcursions from './OptionExcursions';
 import PerformanceTables from './PerformanceTables';
 import ProfitFactorByMonth from './ProfitFactorByMonth';
-import WinRateVsBreakeven from './WinRateVsBreakeven';
+import PlansVsNoPlan from './PlansVsNoPlan';import WinRateVsBreakeven from './WinRateVsBreakeven';
 import WinsLossesScratches from './WinsLossesScratches';
 import TimeOfDay from './TimeOfDay';
 
@@ -244,6 +244,7 @@ export default function PerformanceDashboard() {
                 <BySetup rows={data.bySetup} />
                 <ByGrade grades={data.byGrade} />
                 <ByDetected detected={data.byDetected} />
+                <PlansVsNoPlan rows={data.plansVsNoPlan} />
                 <CallsVsPuts sides={data.callsVsPuts} />
                 <ByUnderlying rows={data.byUnderlying} />
                 <FeesVsGross months={data.months} />

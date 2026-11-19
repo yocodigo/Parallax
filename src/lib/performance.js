@@ -162,6 +162,23 @@ export function callsVsPuts(trades) {
   }));
 }
 
+// A plan entry written before the fill: the trade carries `planWrittenAt`, the
+// earliest plan entry's creation time (listPlanFacts). One written after, as
+// an import does, is a record of the trade, not a plan for it.
+export const plannedBeforeFill = (trade) =>
+  Boolean(trade.planWrittenAt && trade.openedAt && new Date(trade.planWrittenAt) < new Date(trade.openedAt));
+
+// summarize() for the trades with a plan written before the fill and for those
+// without, planned first. Both rows are always there, a side with no trades
+// having null figures.
+export function plansVsNoPlan(trades) {
+  const counted = trades.filter(isCounted);
+  return [true, false].map((planned) => ({
+    planned,
+    ...summarize(counted.filter((trade) => plannedBeforeFill(trade) === planned)),
+  }));
+}
+
 // summarize() per underlying symbol (dashboard.md section 4, chart 4), the best
 // net P/L first and ties by symbol, so the order is stable. A symbol with no
 // closed trade has no row.

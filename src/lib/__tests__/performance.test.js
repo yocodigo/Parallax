@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DETECTED_MAX_BARS } from '../setups/settings';
-import { byDetected, byGrade, bySetup, byUnderlying, callsVsPuts, equityCurve, GRAD_N, graduation, modeComparison, monthlySummary, rDistribution, rollingExpectancy, summarize, timeOfDay } from '../performance';
+import { byDetected, byGrade, bySetup, byUnderlying, callsVsPuts, equityCurve, GRAD_N, graduation, modeComparison, monthlySummary, plansVsNoPlan, rDistribution, rollingExpectancy, summarize, timeOfDay } from '../performance';
 
 // A closed long option, 1 contract: gross P/L is (exit - entry) * 100.
 function option(gross, fees = 0, closedAt = '2026-04-13T20:00:00Z') {
@@ -231,6 +231,32 @@ describe('callsVsPuts', () => {
     const stock = { ...option(50, 0), assetClass: 'stock', optionType: null };
     const open = { ...side('call', 10), exitPrice: null, closedAt: null };
     expect(callsVsPuts([stock, open]).map((r) => r.trades)).toEqual([0, 0]);
+  });
+});
+
+describe('plansVsNoPlan', () => {
+  // The fixture options open at 14:00 UTC.
+  const written = (gross, planWrittenAt) => ({ ...option(gross, 0), planWrittenAt: planWrittenAt && new Date(planWrittenAt) });
+
+  it('puts a plan entry written before the fill against the rest, planned first', () => {
+    const rows = plansVsNoPlan([
+      written(30, '2026-04-13T13:00:00Z'),
+      written(-10, '2026-04-13T13:30:00Z'),
+      written(-20, null), // no plan entry
+      written(5, '2026-04-13T15:00:00Z'), // written after the fill: a record, not a plan
+    ]);
+
+    expect(rows.map((r) => r.planned)).toEqual([true, false]);
+    expect(rows[0]).toMatchObject({ trades: 2, wins: 1, losses: 1, netPnl: 20, winRate: 0.5, netExpectancy: 10 });
+    expect(rows[1]).toMatchObject({ trades: 2, netPnl: -15 });
+  });
+
+  it('keeps both rows when one side has no trades, and leaves out trades still open', () => {
+    const open = { ...written(10, '2026-04-13T13:00:00Z'), exitPrice: null, closedAt: null };
+    const rows = plansVsNoPlan([written(10, '2026-04-13T13:00:00Z'), open]);
+
+    expect(rows.map((r) => r.trades)).toEqual([1, 0]);
+    expect(rows[1].winRate).toBeNull();
   });
 });
 

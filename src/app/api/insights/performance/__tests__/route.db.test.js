@@ -229,6 +229,19 @@ describe('GET /api/insights/performance', () => {
     expect(body.byDetected.unknown).toBe(1);
   });
 
+  it('returns results with a plan written before the fill against without one, in the filters', async () => {
+    await closedOption(30, '2026-04-13T20:00:00Z', { planned: true });
+    await closedOption(-20, '2026-04-14T20:00:00Z');
+    await closedOption(-5, '2026-04-15T20:00:00Z', { planned: true, mode: 'paper' });
+
+    const body = await (await get('?year=2026')).json();
+
+    expect(body.plansVsNoPlan.map((r) => [r.planned, r.trades, r.netPnl])).toEqual([
+      [true, 1, 30],
+      [false, 1, -20],
+    ]);
+  });
+
   it('returns the discipline score of each month, from the option trades closed in it', async () => {
     const strategy = await createStrategy(getDb(), { name: 'Band cross', description: '', rules: [{ text: 'Trend aligned', kind: 'edge' }] });
     // A planned trade with a strategy: Plan OK met. No stop and no exit reason, so nothing else applies.
