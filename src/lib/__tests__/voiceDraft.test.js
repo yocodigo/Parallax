@@ -9,6 +9,7 @@ const emptyPlan = {
   quantity: null,
   plannedEntry: null,
   initialStop: null,
+  underlyingStop: null,
   target: null,
   stopRule: null,
 };
@@ -41,7 +42,7 @@ describe('toDraft', () => {
     };
 
     const { draft, fieldErrors } = toDraft(
-      output({ kind: 'plan', notes: 'Breakout over 210.', emotion: 'calm', plan })
+      output({ kind: 'plan', notes: 'Breakout over 210.', emotion: 'calm', plan: { ...emptyPlan, ...plan } })
     );
 
     expect(draft).toEqual({
@@ -50,6 +51,17 @@ describe('toDraft', () => {
       entry: { notes: 'Breakout over 210.', emotion: 'calm', mistakes: [] },
     });
     expect(fieldErrors).toEqual({ plan: {}, entry: {} });
+  });
+
+  it("keeps the SPY level an option plan says it is wrong at", () => {
+    const { draft } = toDraft(
+      output({
+        kind: 'plan',
+        plan: { ...emptyPlan, symbol: 'SPY', assetClass: 'option', underlyingStop: 761.4 },
+      })
+    );
+
+    expect(draft.plan.underlyingStop).toBe(761.4);
   });
 
   it('leaves out what the note did not say and reports what a plan still needs', () => {

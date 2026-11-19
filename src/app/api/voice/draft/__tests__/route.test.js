@@ -100,6 +100,7 @@ describe('POST /api/voice/draft', () => {
             quantity: 100,
             plannedEntry: 210,
             initialStop: null,
+            underlyingStop: null,
             target: null,
             stopRule: null,
           },

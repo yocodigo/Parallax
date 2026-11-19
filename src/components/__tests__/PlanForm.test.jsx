@@ -172,6 +172,25 @@ describe('PlanForm', () => {
     expect(bodies[0].plan).not.toHaveProperty('initialStop');
   });
 
+  it("sends an option's SPY invalidation level and asks for none on a stock", async () => {
+    const bodies = capturePlanRequests();
+    renderForm();
+
+    expect(screen.queryByLabelText('Invalidation (underlying)')).not.toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText('Asset class'), 'option');
+    await fillRequiredFields();
+    await userEvent.type(screen.getByLabelText('Strike'), '761');
+    fireEvent.change(screen.getByLabelText('Expiration'), { target: { value: '2026-10-23' } });
+    await userEvent.type(screen.getByLabelText('Invalidation (underlying)'), '760.5');
+    await save();
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0].plan.underlyingStop).toBe(760.5);
+
+    await userEvent.selectOptions(screen.getByLabelText('Asset class'), 'stock');
+    expect(screen.queryByLabelText('Invalidation (underlying)')).not.toBeInTheDocument();
+  });
+
   it('sends no contract for a stock', async () => {
     const bodies = capturePlanRequests();
     renderForm();

@@ -21,6 +21,10 @@ export const draftOutputSchema = z.object({
       quantity: z.number().nullable(),
       plannedEntry: z.number().nullable(),
       initialStop: z.number().nullable(),
+      underlyingStop: z
+        .number()
+        .nullable()
+        .describe("For an option: the underlying's price level where they're wrong (the SPY level), not the option's premium"),
       target: z.number().nullable(),
       stopRule: z.enum(STOP_RULES).nullable().describe('The stop rule they chose: S1, S2, or S3 (setups.md section 5)'),
     })

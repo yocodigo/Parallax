@@ -16,6 +16,7 @@ const EMPTY_FORM = {
   quantity: '',
   plannedEntry: '',
   initialStop: '',
+  underlyingStop: '',
   target: '',
   notes: '',
   emotion: '',
@@ -96,6 +97,7 @@ export default function PlanForm({ draft, draftErrors = NO_ERRORS, onSaved }) {
           optionType: form.optionType,
           strike: toNumber(form.strike),
           expiration: orUndefined(form.expiration),
+          underlyingStop: toNumber(form.underlyingStop),
         }),
       },
       entry: { notes: form.notes, emotion: orUndefined(form.emotion) },
@@ -210,6 +212,22 @@ export default function PlanForm({ draft, draftErrors = NO_ERRORS, onSaved }) {
             className={inputClass}
           />
         </Field>
+
+        {isOption && (
+          <Field
+            id="plan-underlyingStop"
+            label="Invalidation (underlying)"
+            error={errorFor('plan', 'underlyingStop')}
+          >
+            <input
+              {...fieldProps('plan', 'underlyingStop')}
+              type="number"
+              step="any"
+              placeholder="Level where you're wrong"
+              className={inputClass}
+            />
+          </Field>
+        )}
 
         <Field id="plan-target" label="Target" error={errorFor('plan', 'target')}>
           <input {...fieldProps('plan', 'target')} type="number" step="any" placeholder="Optional" className={inputClass} />
