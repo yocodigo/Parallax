@@ -192,7 +192,7 @@ Vitest, JavaScript (not TypeScript).
   baked into the picker's limit). The Review step names the display zone its times are on ("Times in Pacific"). The demo
   hides the forms and the importer, and Coach lists only the reviews that have stored coaching.
 - Insights (the old `/insights` redirects to `/performance`; its reports sit in the Charts tab's Discipline section): history-based views. `MistakeLedger.jsx` (headed "Mistakes in R") loads `GET /api/insights/mistakes`
-  (`?mode=` optional), built from `listClosedTradesWithMistakes` and `mistakeLedger`: per mistake,
+  (`?mode=` optional; the Discipline section passes the page's Mode), built from `listClosedTradesWithMistakes` and `mistakeLedger`: per mistake,
   the closed trades tagged with it (on any of their entries, once per trade) and their total and
   average R, plus the average R of trades with no mistakes as a baseline.
   `ChecklistReport.jsx` loads `GET /api/insights/checklist` (`?mode=` optional), built from
@@ -215,7 +215,7 @@ Vitest, JavaScript (not TypeScript).
   are presentational Recharts
   components taking route data as props, with round ticks from `chartTicks.js`; `TimeOfDay` shades the
   `LOCKOUTS` windows on a hidden clock axis, which needs `allowDataOverflow` or it drifts off the bars.
-  The Charts tab groups them under Overview (headline strip, equity, drawdown, monthly and rolling stats), Breakdowns (time of day, setup, grade, detected setup, plan vs no plan, calls vs puts, underlying, fees vs gross, R distribution), and Discipline (mistake cost, discipline and emotional control by month, then the R reports that were on Insights: mistakes in R, the entry checklist, and the stop rules replayed, each with its own Mode select).
+  The Charts tab groups them under Overview (headline strip, equity, drawdown, monthly and rolling stats), Breakdowns (time of day, setup, grade, detected setup, plan vs no plan, calls vs puts, underlying, fees vs gross, R distribution), and Discipline (mistake cost, discipline and emotional control by month, then the R reports that were on Insights: mistakes in R, the entry checklist, and the stop rules replayed, following the page's Mode, not Year or Asset).
   Below them, in a Modes section, `AllModes` loads `GET /api/insights/modes` (`?asset`, `?strategyId`, `?optionType`, as above; every closed trade, all years
   and modes, since modes are compared with each other and graduation counts build up): `ModeComparison`
   (`modeComparison`) and `GraduationTracker` (`graduation`). A setup is a strategy (trades with none are
