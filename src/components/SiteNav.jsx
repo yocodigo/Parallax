@@ -14,7 +14,6 @@ const LINKS = [
   { href: '/rules', label: 'Rules' },
   { href: '/performance', label: 'Performance' },
   { href: '/performance-review', label: 'Performance Review' },
-  { href: '/insights', label: 'Insights' },
   { href: '/import', label: 'Import' },
 ];
 

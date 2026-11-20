@@ -11,6 +11,7 @@ import ByDetected from './ByDetected';
 import ByGrade from './ByGrade';
 import BySetup from './BySetup';
 import ByUnderlying from './ByUnderlying';
+import ChecklistReport from './ChecklistReport';
 import DisciplineByMonth from './DisciplineByMonth';
 import EmotionalControlByMonth from './EmotionalControlByMonth';
 import DrawdownCurve from './DrawdownCurve';
@@ -21,10 +22,12 @@ import FeesVsGross from './FeesVsGross';
 import GraduationTracker from './GraduationTracker';
 import LevelReactions from './LevelReactions';
 import MistakeCostLedger from './MistakeCostLedger';
+import MistakeLedger from './MistakeLedger';
 import ModeComparison from './ModeComparison';
 import MonthlyPnl from './MonthlyPnl';
 import RDistribution from './RDistribution';
 import RollingExpectancy from './RollingExpectancy';
+import StopReplay from './StopReplay';
 import OptionExcursions from './OptionExcursions';
 import PerformanceTables from './PerformanceTables';
 import ProfitFactorByMonth from './ProfitFactorByMonth';
@@ -260,6 +263,10 @@ export default function PerformanceDashboard() {
                 <DisciplineByMonth months={data.months} discipline={data.disciplineByMonth} />
                 <EmotionalControlByMonth months={data.months} ratings={data.emotionalControlByMonth} />
               </div>
+              {/* The reports that were on Insights keep their own routes: they read in R, over every year, and follow the page's Mode. */}
+              <MistakeLedger mode={mode} />
+              <ChecklistReport mode={mode} />
+              <StopReplay mode={mode} />
             </Section>
             <Section title="Heat and after the exit">
               <OptionExcursions mode={mode} year={year} />

@@ -28,8 +28,10 @@ function Th({ children, left }) {
 
 // Which stop rule would have served your closed SPY trades best, replayed on
 // SPY 1m bars (setups.md section 5), with R measured against S2's stop.
-export default function StopReplay() {
-  const [mode, setMode] = useState('');
+// `mode`, when the page passes its own, replaces the Mode select.
+export default function StopReplay({ mode: pageMode }) {
+  const [ownMode, setMode] = useState('');
+  const mode = pageMode ?? ownMode;
   const { data, error, isLoading } = useSWR(`/api/insights/stops${mode ? `?mode=${mode}` : ''}`, fetchJson, {
     revalidateOnFocus: false,
   });
@@ -89,16 +91,18 @@ export default function StopReplay() {
     <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-4">
       <div className="flex items-center justify-between gap-4">
         <h2 className="text-sm font-semibold text-gray-700">Stop rules, replayed</h2>
-        <label className="flex items-center gap-2 text-xs text-gray-500">
-          Mode
-          <select value={mode} onChange={(e) => setMode(e.target.value)} className={`${inputClass} w-36`}>
-            {MODES.map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
+        {pageMode === undefined && (
+          <label className="flex items-center gap-2 text-xs text-gray-500">
+            Mode
+            <select value={mode} onChange={(e) => setMode(e.target.value)} className={`${inputClass} w-36`}>
+              {MODES.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
       {body}
     </section>

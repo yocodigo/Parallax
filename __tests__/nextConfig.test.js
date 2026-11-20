@@ -10,4 +10,10 @@ describe('next.config redirects', () => {
 
     expect(redirects).toContainEqual({ source: '/strategies', destination: '/rules', permanent: false });
   });
+
+  it('sends Insights to Performance, where its reports now live', async () => {
+    const redirects = await nextConfig.redirects();
+
+    expect(redirects).toContainEqual({ source: '/insights', destination: '/performance', permanent: false });
+  });
 });

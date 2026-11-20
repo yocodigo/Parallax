@@ -36,8 +36,10 @@ function GroupRow({ label, group }) {
 
 // Whether following the entry checklist pays: trades with every rule met
 // against those entered anyway, and per rule how often it was skipped.
-export default function ChecklistReport() {
-  const [mode, setMode] = useState('');
+// `mode`, when the page passes its own, replaces the Mode select.
+export default function ChecklistReport({ mode: pageMode }) {
+  const [ownMode, setMode] = useState('');
+  const mode = pageMode ?? ownMode;
   const { data, error, isLoading } = useSWR(
     `/api/insights/checklist${mode ? `?mode=${mode}` : ''}`,
     fetchJson,
@@ -110,16 +112,18 @@ export default function ChecklistReport() {
     <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-4">
       <div className="flex items-center justify-between gap-4">
         <h2 className="text-sm font-semibold text-gray-700">Entry checklist</h2>
-        <label className="flex items-center gap-2 text-xs text-gray-500">
-          Mode
-          <select value={mode} onChange={(e) => setMode(e.target.value)} className={`${inputClass} w-36`}>
-            {MODES.map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
+        {pageMode === undefined && (
+          <label className="flex items-center gap-2 text-xs text-gray-500">
+            Mode
+            <select value={mode} onChange={(e) => setMode(e.target.value)} className={`${inputClass} w-36`}>
+              {MODES.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
       {body}
     </section>

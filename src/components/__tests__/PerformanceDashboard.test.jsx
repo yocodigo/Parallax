@@ -134,6 +134,12 @@ describe('PerformanceDashboard', () => {
   // Every test has the modes route answering; the ones about it serve their own.
   beforeEach(() => {
     serveModes();
+    // The Discipline section's reports each ask their own route; none has trades here.
+    server.use(
+      http.get('*/api/insights/mistakes', () => HttpResponse.json({ trades: 0 })),
+      http.get('*/api/insights/checklist', () => HttpResponse.json({ trades: 0 })),
+      http.get('*/api/insights/stops', () => HttpResponse.json({ replayed: 0 }))
+    );
     server.use(
       http.get('*/api/strategies', () =>
         HttpResponse.json({
@@ -163,7 +169,7 @@ describe('PerformanceDashboard', () => {
     expect(screen.getByText('-$11.30')).toBeInTheDocument();
   });
 
-  it('groups the charts under Overview, Breakdowns, Discipline, Heat and after the exit, and Modes', async () => {
+  it('groups the charts under Overview, Breakdowns, Discipline (with the R reports from Insights), Heat and after the exit, and Modes', async () => {
     servePerformance();
     renderDashboard();
 
@@ -194,6 +200,9 @@ describe('PerformanceDashboard', () => {
       'Mistake cost ledger',
       'Discipline score by month',
       'Emotional control by month',
+      'Mistakes in R',
+      'Entry checklist',
+      'Stop rules, replayed',
       'Heat and after the exit',
       'Plans not taken',
       'Level reactions',
@@ -201,6 +210,24 @@ describe('PerformanceDashboard', () => {
       'Mode comparison',
       'Graduation tracker',
     ]);
+  });
+
+  it("asks the Discipline reports for the page's Mode, which they don't offer a second time", async () => {
+    servePerformance();
+    const asked = [];
+    server.use(
+      http.get('*/api/insights/mistakes', ({ request }) => {
+        asked.push(new URL(request.url).searchParams.get('mode'));
+        return HttpResponse.json({ trades: 0 });
+      })
+    );
+    renderDashboard();
+    await screen.findByText('Net P/L (net)');
+
+    expect(asked).toEqual(['live']);
+    await userEvent.selectOptions(screen.getByLabelText('Mode'), 'paper');
+
+    await waitFor(() => expect(asked).toContain('paper'));
   });
 
   it('asks for live trades of the current year, then for what the filters say', async () => {

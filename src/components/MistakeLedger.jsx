@@ -24,8 +24,10 @@ function Baseline({ baseline }) {
 
 // What each tagged mistake has cost in R, costliest first, next to the
 // average of trades without mistakes.
-export default function MistakeLedger() {
-  const [mode, setMode] = useState('');
+// `mode`, when the page passes its own, replaces the Mode select.
+export default function MistakeLedger({ mode: pageMode }) {
+  const [ownMode, setMode] = useState('');
+  const mode = pageMode ?? ownMode;
   const { data, error, isLoading } = useSWR(
     `/api/insights/mistakes${mode ? `?mode=${mode}` : ''}`,
     fetchJson,
@@ -85,17 +87,19 @@ export default function MistakeLedger() {
   return (
     <section className="space-y-4 rounded-lg border border-gray-200 bg-white p-4">
       <div className="flex items-center justify-between gap-4">
-        <h2 className="text-sm font-semibold text-gray-700">Mistake cost ledger</h2>
-        <label className="flex items-center gap-2 text-xs text-gray-500">
-          Mode
-          <select value={mode} onChange={(e) => setMode(e.target.value)} className={`${inputClass} w-36`}>
-            {MODES.map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <h2 className="text-sm font-semibold text-gray-700">Mistakes in R</h2>
+        {pageMode === undefined && (
+          <label className="flex items-center gap-2 text-xs text-gray-500">
+            Mode
+            <select value={mode} onChange={(e) => setMode(e.target.value)} className={`${inputClass} w-36`}>
+              {MODES.map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
       {body}
     </section>
