@@ -1,7 +1,5 @@
 import ChecklistReport from '@/components/ChecklistReport';
-import CircuitBreakers from '@/components/CircuitBreakers';
 import MistakeLedger from '@/components/MistakeLedger';
-import RuleSettings from '@/components/RuleSettings';
 import StopReplay from '@/components/StopReplay';
 
 export const metadata = {
@@ -17,8 +15,6 @@ export default function InsightsPage() {
       </header>
 
       <div className="space-y-6">
-        <CircuitBreakers />
-        <RuleSettings />
         <MistakeLedger />
         <ChecklistReport />
         <StopReplay />

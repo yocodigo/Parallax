@@ -234,7 +234,7 @@ Vitest, JavaScript (not TypeScript).
   risk over a set risk per trade. Tests that render `PlanForm` must serve that route, `/api/strategies`, and
   `/api/rule-settings` (MSW errors on unhandled requests).
 - Circuit breakers: settings live in `circuit_breaker_settings` (one row, id 1; a null limit is off;
-  `modes` they apply to, live by default), edited in `CircuitBreakers.jsx` on `/insights` through
+  `modes` they apply to, live by default), edited in `CircuitBreakers.jsx` on `/rules` through
   `GET`/`PUT /api/circuit-breakers`. `circuitBreakers` checks today's closed R (New York day), today's
   entries, and the losing streak. `POST /api/trades/[id]/entry` answers 409 `{ error, breakers }`
   while one is tripped for the trade's mode; resending with `override: true` records the entry and
@@ -331,7 +331,7 @@ Vitest, JavaScript (not TypeScript).
   backstop, and time stop, each with an `*On` flag whose values are kept while it is off. `ruleSettings.js` has
   the defaults (from `settings.js`) and `parseRuleSettings`; `getRuleSettings`/`saveRuleSettings` in
   `src/db/settings.js` (defaults until the first save; the route validates before saving); edited in
-  `RuleSettings.jsx` on `/insights` through `GET`/`PUT /api/rule-settings`.
+  `RuleSettings.jsx` on `/rules` through `GET`/`PUT /api/rule-settings`.
   Windows raise the bar instead of closing the door (an option rule; stock trades get no Window gate):
   `windowGate(openedAt, detected)` is met outside every
   window, and inside one only when a detected setup clears it (`clearsWindow`); missing it is the
@@ -342,7 +342,7 @@ Vitest, JavaScript (not TypeScript).
   (nor does Size OK read the saved contract range). `inWindow` keeps the recorded fact for the entry
   review's flag.
 - Strategies and the entry checklist: `strategies` with ordered `strategy_rules` (kind `edge` for the
-  setup or `discipline` for risk and process), edited on `/strategies` (`Strategies.jsx`, `GET`/`POST
+  setup or `discipline` for risk and process), edited on `/rules` (`/strategies` redirects there) (`Strategies.jsx`, `GET`/`POST
   /api/strategies`, `PUT /api/strategies/[id]`). Editing keeps the ids of rules sent back with one.
   A strategy may name its `detector` (`band_cross`, `four_touch`, `reversal`, `three_gate`; null for a
   hand-written checklist, rules-v3 section 6). Its trades then get a Setup gate (`setupGate`: met when

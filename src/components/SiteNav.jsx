@@ -11,7 +11,7 @@ const LINKS = [
   { href: '/', label: 'Today' },
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/journal', label: 'Journal' },
-  { href: '/strategies', label: 'Strategies' },
+  { href: '/rules', label: 'Rules' },
   { href: '/performance', label: 'Performance' },
   { href: '/performance-review', label: 'Performance Review' },
   { href: '/insights', label: 'Insights' },

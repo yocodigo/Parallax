@@ -23,7 +23,7 @@ async function openSettings(user = userEvent.setup()) {
 }
 
 describe('SiteNav', () => {
-  it('links to today, the dashboard, the journal, strategies, performance, the performance review, insights, and the import', () => {
+  it('links to today, the dashboard, the journal, rules, performance, the performance review, insights, and the import', () => {
     usePathname.mockReturnValue('/journal');
     render(<SiteNav />);
 
@@ -31,7 +31,7 @@ describe('SiteNav', () => {
     expect(screen.getByRole('link', { name: 'Today' })).toHaveAttribute('href', '/');
     expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('href', '/dashboard');
     expect(screen.getByRole('link', { name: 'Journal' })).toHaveAttribute('href', '/journal');
-    expect(screen.getByRole('link', { name: 'Strategies' })).toHaveAttribute('href', '/strategies');
+    expect(screen.getByRole('link', { name: 'Rules' })).toHaveAttribute('href', '/rules');
     expect(screen.getByRole('link', { name: 'Performance' })).toHaveAttribute('href', '/performance');
     expect(screen.getByRole('link', { name: 'Performance Review' })).toHaveAttribute('href', '/performance-review');
     expect(screen.getByRole('link', { name: 'Insights' })).toHaveAttribute('href', '/insights');
