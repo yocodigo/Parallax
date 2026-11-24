@@ -23,13 +23,13 @@ async function openSettings(user = userEvent.setup()) {
 }
 
 describe('SiteNav', () => {
-  it('links to today, the dashboard, the journal, rules, performance, the performance review, and the import', () => {
+  it('links to today, markets, the journal, rules, performance, the performance review, and the import', () => {
     usePathname.mockReturnValue('/journal');
     render(<SiteNav />);
 
     expect(screen.getAllByRole('link')[0]).toHaveTextContent('Today');
     expect(screen.getByRole('link', { name: 'Today' })).toHaveAttribute('href', '/');
-    expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('href', '/dashboard');
+    expect(screen.getByRole('link', { name: 'Markets' })).toHaveAttribute('href', '/markets');
     expect(screen.getByRole('link', { name: 'Journal' })).toHaveAttribute('href', '/journal');
     expect(screen.getByRole('link', { name: 'Rules' })).toHaveAttribute('href', '/rules');
     expect(screen.getByRole('link', { name: 'Performance' })).toHaveAttribute('href', '/performance');
@@ -75,7 +75,7 @@ describe('SiteNav', () => {
     render(<SiteNav />);
 
     expect(screen.getByRole('link', { name: 'Journal' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('link', { name: 'Dashboard' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('link', { name: 'Markets' })).not.toHaveAttribute('aria-current');
   });
 
   it('signs out and goes to the login page', async () => {

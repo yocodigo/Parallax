@@ -5,6 +5,7 @@ const nextConfig = {
     return [
       { source: '/strategies', destination: '/rules', permanent: false },
       { source: '/insights', destination: '/performance', permanent: false },
+      { source: '/dashboard', destination: '/markets', permanent: false },
     ];
   },
 };

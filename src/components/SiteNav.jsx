@@ -9,7 +9,7 @@ import { isDemo } from '@/lib/demo';
 
 const LINKS = [
   { href: '/', label: 'Today' },
-  { href: '/dashboard', label: 'Dashboard' },
+  { href: '/markets', label: 'Markets' },
   { href: '/journal', label: 'Journal' },
   { href: '/rules', label: 'Rules' },
   { href: '/performance', label: 'Performance' },
