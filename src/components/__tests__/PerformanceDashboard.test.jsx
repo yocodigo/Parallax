@@ -1,10 +1,13 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { SWRConfig } from 'swr';
 import { server } from '@/mocks/server';
 import PerformanceDashboard from '../PerformanceDashboard';
+
+// A stand-in: the review has its own tests and its own range, not the page's filters.
+vi.mock('../PerformanceReview', () => ({ default: () => <p>performance review</p> }));
 
 // The page's default year is the New York one, which differs from the local year around New Year's.
 const nyYear = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric' }).format(new Date());
@@ -450,6 +453,19 @@ describe('PerformanceDashboard', () => {
     expect(screen.getByLabelText('Asset')).toHaveValue('option');
     expect(await screen.findByRole('heading', { name: 'Equity curve' })).toBeInTheDocument();
     expect(queries).toHaveLength(asked);
+  });
+
+  it('shows the Performance Review on its own tab, without the filters', async () => {
+    servePerformance();
+    renderDashboard();
+    await screen.findByRole('heading', { name: 'Equity curve' });
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Review' }));
+
+    expect(screen.getByRole('tab', { name: 'Review' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByText('performance review')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Mode')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Equity curve' })).not.toBeInTheDocument();
   });
 
   it('shows the empty prompt on the Tables tab too', async () => {

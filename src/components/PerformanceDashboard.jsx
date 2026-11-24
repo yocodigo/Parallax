@@ -29,6 +29,7 @@ import RDistribution from './RDistribution';
 import RollingExpectancy from './RollingExpectancy';
 import StopReplay from './StopReplay';
 import OptionExcursions from './OptionExcursions';
+import PerformanceReview from './PerformanceReview';
 import PerformanceTables from './PerformanceTables';
 import ProfitFactorByMonth from './ProfitFactorByMonth';
 import PlansNotTaken from './PlansNotTaken';
@@ -69,9 +70,11 @@ const nyYear = () =>
 const TABS = [
   ['charts', 'Charts'],
   ['tables', 'Tables'],
+  ['review', 'Review'],
 ];
 
-// Charts or the full tables (dashboard.md section 3) over the same filters.
+// Charts or the full tables (dashboard.md section 3) over the same filters, or the Performance Review,
+// which keeps its own date range.
 function Tabs({ value, onChange }) {
   return (
     <div role="tablist" aria-label="View" className="flex gap-1 border-b border-gray-200">
@@ -291,6 +294,15 @@ export default function PerformanceDashboard() {
             />
           </>
         )}
+      </div>
+    );
+  }
+
+  if (tab === 'review') {
+    return (
+      <div className="space-y-6">
+        <Tabs value={tab} onChange={setTab} />
+        <PerformanceReview />
       </div>
     );
   }
