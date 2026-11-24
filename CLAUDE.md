@@ -47,6 +47,13 @@ Vitest, JavaScript (not TypeScript).
 - Refactors get their own commits, separate from behavior changes.
 - After each commit, stop and summarize what changed and why, so I can review before we move on.
   Explain anything non-obvious; I need to be able to explain this code myself.
+- After a change that affects what renders in the browser — components, layout, styles, nav,
+  forms, or user-facing copy — stop at the first reviewable change, name the route to open and
+  what to try, and wait. Don't batch UI changes and stop once at the end. If a UI file changed
+  with no visible effect, say so in one line and keep going.
+- Problems you notice outside the current task go to the Roadmap as deferred cleanup, not fixed.
+- Never commit broker statements, exported trade data, or recorded audio. Import fixtures are
+  synthetic: files matching the real format with invented accounts and symbols.
 - Ask before pushing.
 - New dependencies: pin to a release at least two weeks old.
 
