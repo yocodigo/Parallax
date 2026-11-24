@@ -19,12 +19,19 @@ describe('JournalPage', () => {
     for (const text of [...FORMS, 'journal entries']) expect(screen.getByText(text)).toBeInTheDocument();
   });
 
+  it('links to the import page', () => {
+    render(<JournalPage />);
+
+    expect(screen.getByRole('link', { name: 'Import trades' })).toHaveAttribute('href', '/import');
+  });
+
   it('shows only the entries in the demo', () => {
     vi.stubEnv('NEXT_PUBLIC_DEMO_MODE', 'true');
     render(<JournalPage />);
 
     expect(screen.getByText('journal entries')).toBeInTheDocument();
     for (const text of FORMS) expect(screen.queryByText(text)).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Import trades' })).not.toBeInTheDocument();
     expect(screen.getByText(/in the demo/i)).toBeInTheDocument();
   });
 });

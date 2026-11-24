@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import JournalEntries from '@/components/JournalEntries';
 import NewEntry from '@/components/NewEntry';
 import WeeklyReview from '@/components/WeeklyReview';
@@ -17,7 +18,14 @@ export default function JournalPage() {
             Trade plans, reviews, and investment theses, newest first.
           </p>
         </div>
-        {!isDemo() && <NewEntry />}
+        {!isDemo() && (
+          <div className="flex items-center gap-3">
+            <Link href="/import" className="text-sm text-blue-600 hover:underline">
+              Import trades
+            </Link>
+            <NewEntry />
+          </div>
+        )}
       </header>
 
       {isDemo() ? (
