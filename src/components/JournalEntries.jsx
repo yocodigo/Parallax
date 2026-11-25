@@ -123,6 +123,7 @@ export default function JournalEntries() {
             {formatDay(day.day)}
           </h2>
           <p className="mt-0.5 text-sm tabular-nums text-gray-500">{summarizeDay(day.summary)}</p>
+          {/* A trade row holds its plan and reviews together; flattened back into cards until the compact rows. */}
           <ul className="mt-3 space-y-4">
             {day.items.flatMap((item) => (item.type === 'trade' ? item.entries : [item.entry])).map((entry) => (
               <EntryCard key={entry.id} entry={entry} zone={zone} />
