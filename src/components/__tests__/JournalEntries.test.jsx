@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
+import userEvent from '@testing-library/user-event';
 import { SWRConfig } from 'swr';
 import { server } from '@/mocks/server';
 import JournalEntries from '../JournalEntries';
@@ -158,5 +159,55 @@ describe('JournalEntries', () => {
 
     expect(await screen.findByText('Filled')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /^delete$/i })).toHaveLength(2);
+  });
+
+  describe('by day', () => {
+    // A closed trade bought at 1.00 and sold at 1.50: $48.70 net.
+    const closed = {
+      ...trade,
+      assetClass: 'option',
+      multiplier: 100,
+      quantity: 1,
+      entryPrice: 1,
+      exitPrice: 1.5,
+      fees: 1.3,
+      openedAt: '2026-11-19T14:40:00.000Z',
+      closedAt: '2026-11-19T14:52:00.000Z',
+    };
+
+    it('heads each New York day with its trades, net P/L, and reviewed count', async () => {
+      serveJournal(
+        HttpResponse.json({
+          entries: [
+            entry({ kind: 'review', notes: 'Took profit.', tradeId: closed.id, trade: closed, createdAt: '2026-11-19T21:00:00.000Z' }),
+            entry({ kind: 'plan', notes: 'Breakout plan.', tradeId: closed.id, trade: closed, createdAt: '2026-11-19T14:30:00.000Z' }),
+            entry({ kind: 'thesis', symbol: 'MSFT', notes: 'Cloud.', createdAt: '2026-11-18T15:00:00.000Z' }),
+          ],
+        })
+      );
+      renderEntries();
+
+      const first = await screen.findByRole('heading', { name: /Nov 19/ });
+      expect(first).toHaveTextContent('Thu, Nov 19, 2026');
+      expect(screen.getByText('1 trade · net +$48.70 · reviewed 1 of 1')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /Nov 18/ })).toBeInTheDocument();
+      expect(screen.getByText('No trades')).toBeInTheDocument();
+    });
+
+    it('shows the 10 most recent days and the rest after "Show earlier days"', async () => {
+      const entries = Array.from({ length: 12 }, (_, i) =>
+        entry({ kind: 'thesis', symbol: 'MSFT', notes: `Note ${i}`, createdAt: `2026-11-${String(20 - i).padStart(2, '0')}T15:00:00.000Z` })
+      );
+      serveJournal(HttpResponse.json({ entries }));
+      renderEntries();
+
+      expect(await screen.findByText('Note 9')).toBeInTheDocument();
+      expect(screen.queryByText('Note 10')).not.toBeInTheDocument();
+
+      await userEvent.setup().click(screen.getByRole('button', { name: 'Show earlier days' }));
+
+      expect(screen.getByText('Note 11')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Show earlier days' })).not.toBeInTheDocument();
+    });
   });
 });
