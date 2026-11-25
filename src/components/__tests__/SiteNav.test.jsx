@@ -23,19 +23,18 @@ async function openSettings(user = userEvent.setup()) {
 }
 
 describe('SiteNav', () => {
-  it('links to today, markets, the journal, rules, performance, the performance review, and the import', () => {
+  it('links to today, the journal, performance, rules, and markets, in that order', () => {
     usePathname.mockReturnValue('/journal');
     render(<SiteNav />);
 
-    expect(screen.getAllByRole('link')[0]).toHaveTextContent('Today');
-    expect(screen.getByRole('link', { name: 'Today' })).toHaveAttribute('href', '/');
-    expect(screen.getByRole('link', { name: 'Markets' })).toHaveAttribute('href', '/markets');
-    expect(screen.getByRole('link', { name: 'Journal' })).toHaveAttribute('href', '/journal');
-    expect(screen.getByRole('link', { name: 'Rules' })).toHaveAttribute('href', '/rules');
-    expect(screen.getByRole('link', { name: 'Performance' })).toHaveAttribute('href', '/performance');
-    expect(screen.getByRole('link', { name: 'Performance Review' })).toHaveAttribute('href', '/performance-review');
-    expect(screen.queryByRole('link', { name: 'Insights' })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Import' })).toHaveAttribute('href', '/import');
+    const links = screen.getAllByRole('link').map((a) => [a.textContent, a.getAttribute('href')]);
+    expect(links).toEqual([
+      ['Today', '/'],
+      ['Journal', '/journal'],
+      ['Performance', '/performance'],
+      ['Rules', '/rules'],
+      ['Markets', '/markets'],
+    ]);
   });
 
   it('keeps the theme picker and Sign out out of the bar until the settings gear is opened', async () => {

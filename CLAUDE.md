@@ -198,6 +198,7 @@ Vitest, JavaScript (not TypeScript).
   `onImported`, `onCoached`, so the day reloads. The page is `force-dynamic` (prerendered, the build's date would be
   baked into the picker's limit). The Review step names the display zone its times are on ("Times in Pacific"). The demo
   hides the forms and the importer, and Coach lists only the reviews that have stored coaching.
+- Nav (`SiteNav.jsx`): Today, Journal, Performance, Rules, Markets (`/markets`; `/dashboard` redirects). Import is not a nav item: Today's second step holds the importer and the Journal header links to `/import`, which stays a route.
 - Insights (the old `/insights` redirects to `/performance`; its reports sit in the Charts tab's Discipline section): history-based views. `MistakeLedger.jsx` (headed "Mistakes in R") loads `GET /api/insights/mistakes`
   (`?mode=` optional; the Discipline section passes the page's Mode), built from `listClosedTradesWithMistakes` and `mistakeLedger`: per mistake,
   the closed trades tagged with it (on any of their entries, once per trade) and their total and
@@ -441,7 +442,7 @@ Vitest, JavaScript (not TypeScript).
   with a stop; options on their underlying through `underlyingGiveback`: points, and R with an underlying stop), `stopAdherence.js` (S1-S3 replayed against the exit), `whatsWorking.js` (R where a
   trade has a stop, dollar P/L where it has none, never mixed). A day with no trades returns a null
   coaching without calling Claude; a failed call keeps the earlier text.
-- Performance Review (`/performance-review`, in the nav; separate from the per-trade coaching pass): an aggregate
+- Performance Review (the Review tab on `/performance`; `/performance-review` redirects there; separate from the per-trade coaching pass): an aggregate
   coach over closed trades and journal entries in a date range. `PerformanceReview.jsx` has a Range select (last 7
   or 30 days counting today, all time, or custom dates; New York days, by the day a trade closed;
   `reviewRange.js` parses them and names the range key), a table of each mode's trades, win rate (gross),
@@ -533,7 +534,7 @@ Vitest, JavaScript (not TypeScript).
    - Done: dark mode, following the system setting, with a picker in the nav to override it.
    - Done: setup detectors, gates, voice flows, and the entry and exit review, following the build
      order in `docs/private/setups.md` (steps 1 to 11, the coaching pass included).
-   - Done: Performance Review at `/performance-review`, an aggregate coach over a date range (separate from the
+   - Done: Performance Review (a tab on `/performance`), an aggregate coach over a date range (separate from the
      per-trade coaching).
 5. Last, once the product is polished: deploy to Vercel plus Neon (Postgres 17). Done: Next.js
    upgraded to 16.4.1 for the security advisories. Two deployments of the same code:

@@ -9,12 +9,10 @@ import { isDemo } from '@/lib/demo';
 
 const LINKS = [
   { href: '/', label: 'Today' },
-  { href: '/markets', label: 'Markets' },
   { href: '/journal', label: 'Journal' },
-  { href: '/rules', label: 'Rules' },
   { href: '/performance', label: 'Performance' },
-  { href: '/performance-review', label: 'Performance Review' },
-  { href: '/import', label: 'Import' },
+  { href: '/rules', label: 'Rules' },
+  { href: '/markets', label: 'Markets' },
 ];
 
 // Clears the session cookie, then shows the login page. If the request fails
