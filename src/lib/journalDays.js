@@ -5,7 +5,9 @@ import { todaySummary } from './today';
 // (plan, reviews) fold into one row, filed under the day it was opened, or the
 // day its first entry was written when it was never filled. An entry with no
 // trade is its own row on the day it was written. Rows within a day are newest
-// first by that same moment (`at`).
+// first by that same moment (`at`). Entries need `tradeId` as well as `trade`
+// (`todaySummary` matches reviews by it), and `mode` isn't looked at, so a
+// caller that filters by mode does it before grouping.
 export function journalDays(entries) {
   const tradeRows = new Map();
   const items = [];
