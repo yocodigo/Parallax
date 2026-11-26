@@ -6,6 +6,7 @@ import { formatInZone, WRITTEN } from '@/lib/displayZone';
 import { fetchJson } from '@/lib/fetchJson';
 import { formatContract, formatProfitLoss, formatTradeTime } from '@/lib/format';
 import { journalDays } from '@/lib/journalDays';
+import { filterJournal, isFiltering, NO_FILTERS } from '@/lib/journalFilters';
 import { profitLoss, tradeStatus } from '@/lib/tradeMetrics';
 import { EMOTION_LABELS, MISTAKE_LABELS } from '@/lib/journalEntry';
 import EntryCoaching from './EntryCoaching';
@@ -141,10 +142,47 @@ function TradeRow({ row, zone, strategyName, open, onToggle }) {
   );
 }
 
+const selectClass = 'rounded-md border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900';
+
+// Mode, result, reviewed, and setup narrow the list in the browser.
+function Filters({ filters, onChange, strategies }) {
+  const select = (key, label, options) => (
+    <label className="flex flex-col gap-1 text-xs text-gray-500">
+      {label}
+      <select value={filters[key]} onChange={(e) => onChange({ ...filters, [key]: e.target.value })} className={selectClass}>
+        {options.map(([value, text]) => (
+          <option key={value} value={value}>
+            {text}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+
+  return (
+    <div className="mb-6 flex flex-wrap items-end gap-3">
+      {select('mode', 'Mode', [['all', 'All modes'], ['live', 'Live'], ['paper', 'Paper'], ['backtest', 'Backtest']])}
+      {select('result', 'Result', [['all', 'Any result'], ['win', 'Win'], ['loss', 'Loss'], ['scratch', 'Scratch']])}
+      {select('reviewed', 'Reviewed', [['all', 'Reviewed or not'], ['reviewed', 'Reviewed'], ['unreviewed', 'Not reviewed']])}
+      {select('setup', 'Setup', [
+        ['all', 'Any setup'],
+        ['none', 'No setup'],
+        ...strategies.map((strategy) => [strategy.id, strategy.name]),
+      ])}
+      {isFiltering(filters) && (
+        <button type="button" onClick={() => onChange(NO_FILTERS)} className="pb-1 text-sm text-blue-600 hover:underline">
+          Clear filters
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function JournalEntries() {
   const zone = useDisplayZone();
   const [shown, setShown] = useState(DAYS_SHOWN);
   const [openTrades, setOpenTrades] = useState(() => new Set());
+  const [filters, setFilters] = useState(NO_FILTERS);
   const { data: strategyData } = useSWR('/api/strategies', fetchJson, { revalidateOnFocus: false });
   const { data, error, isLoading } = useSWR('/api/journal', fetchJson, {
     revalidateOnFocus: false,
@@ -171,7 +209,7 @@ export default function JournalEntries() {
     );
   }
 
-  const days = journalDays(entries);
+  const days = journalDays(filterJournal(entries, filters));
   const toggleTrade = (id) =>
     setOpenTrades((open) => {
       const next = new Set(open);
@@ -181,40 +219,44 @@ export default function JournalEntries() {
   const strategyNames = new Map((strategyData?.strategies ?? []).map((strategy) => [strategy.id, strategy.name]));
 
   return (
-    <div className="space-y-8">
-      {days.slice(0, shown).map((day) => (
-        <section key={day.day} aria-labelledby={`day-${day.day}`}>
-          <h2 id={`day-${day.day}`} className="text-base font-semibold text-gray-900">
-            {formatDay(day.day)}
-          </h2>
-          <p className="mt-0.5 text-sm tabular-nums text-gray-500">{summarizeDay(day.summary)}</p>
-          <ul className="mt-3 space-y-3">
-            {day.items.map((item) =>
-              item.type === 'trade' ? (
-                <TradeRow
-                  key={item.trade.id}
-                  row={item}
-                  zone={zone}
-                  strategyName={strategyNames.get(item.trade.strategyId)}
-                  open={openTrades.has(item.trade.id)}
-                  onToggle={() => toggleTrade(item.trade.id)}
-                />
-              ) : (
-                <EntryCard key={item.entry.id} entry={item.entry} zone={zone} />
-              )
-            )}
-          </ul>
-        </section>
-      ))}
-      {shown < days.length && (
-        <button
-          type="button"
-          onClick={() => setShown((n) => n + DAYS_SHOWN)}
-          className="text-sm text-blue-600 hover:underline"
-        >
-          Show earlier days
-        </button>
-      )}
+    <div>
+      <Filters filters={filters} onChange={setFilters} strategies={strategyData?.strategies ?? []} />
+      {days.length === 0 && <p className="text-sm text-gray-500">No entries match these filters.</p>}
+      <div className="space-y-8">
+        {days.slice(0, shown).map((day) => (
+          <section key={day.day} aria-labelledby={`day-${day.day}`}>
+            <h2 id={`day-${day.day}`} className="text-base font-semibold text-gray-900">
+              {formatDay(day.day)}
+            </h2>
+            <p className="mt-0.5 text-sm tabular-nums text-gray-500">{summarizeDay(day.summary)}</p>
+            <ul className="mt-3 space-y-3">
+              {day.items.map((item) =>
+                item.type === 'trade' ? (
+                  <TradeRow
+                    key={item.trade.id}
+                    row={item}
+                    zone={zone}
+                    strategyName={strategyNames.get(item.trade.strategyId)}
+                    open={openTrades.has(item.trade.id)}
+                    onToggle={() => toggleTrade(item.trade.id)}
+                  />
+                ) : (
+                  <EntryCard key={item.entry.id} entry={item.entry} zone={zone} />
+                )
+              )}
+            </ul>
+          </section>
+        ))}
+        {shown < days.length && (
+          <button
+            type="button"
+            onClick={() => setShown((n) => n + DAYS_SHOWN)}
+            className="text-sm text-blue-600 hover:underline"
+          >
+            Show earlier days
+          </button>
+        )}
+      </div>
     </div>
   );
 }

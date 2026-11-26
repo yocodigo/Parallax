@@ -79,7 +79,7 @@ describe('JournalEntries', () => {
     renderEntries();
 
     expect(await screen.findByText('Long 100 AAPL')).toBeInTheDocument();
-    expect(screen.getByText('Paper')).toBeInTheDocument();
+    expect(screen.getByText('Paper', { selector: 'span' })).toBeInTheDocument();
   });
 
   it('shows the emotion and mistakes with friendly labels', async () => {
@@ -249,6 +249,71 @@ describe('JournalEntries', () => {
 
       await userEvent.setup().click(row);
       expect(screen.queryByText('Breakout plan.')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('filters', () => {
+    const base = { assetClass: 'option', optionType: 'call', strike: 590, expiration: '2026-11-19', multiplier: 100, quantity: 1, fees: 1.3 };
+    const won = { ...base, id: 'won', mode: 'live', symbol: 'SPY', direction: 'long', entryPrice: 1, exitPrice: 1.5, strategyId: 's1', openedAt: '2026-11-19T17:40:00.000Z', closedAt: '2026-11-19T17:50:00.000Z' };
+    const lost = { ...base, id: 'lost', mode: 'paper', symbol: 'QQQ', direction: 'long', entryPrice: 1, exitPrice: 0.5, strategyId: null, openedAt: '2026-11-19T18:40:00.000Z', closedAt: '2026-11-19T18:50:00.000Z' };
+    const plan = (t, at) => entry({ kind: 'plan', notes: `Plan ${t.id}`, tradeId: t.id, trade: t, mode: t.mode, createdAt: at });
+    const serve = () =>
+      serveJournal(
+        HttpResponse.json({
+          entries: [
+            plan(lost, '2026-11-19T18:30:00.000Z'),
+            plan(won, '2026-11-19T17:30:00.000Z'),
+            entry({ kind: 'thesis', symbol: 'MSFT', notes: 'Cloud.', mode: 'live', createdAt: '2026-11-19T16:00:00.000Z' }),
+          ],
+        }),
+        [{ id: 's1', name: 'Band cross' }]
+      );
+
+    it('narrows the rows and recomputes the day, then clears', async () => {
+      serve();
+      renderEntries();
+      const user = userEvent.setup();
+
+      expect(await screen.findByText('2 trades · net -$2.60 · reviewed 0 of 2')).toBeInTheDocument();
+
+      await user.selectOptions(screen.getByLabelText('Mode'), 'live');
+      expect(screen.getByText('1 trade · net +$48.70 · reviewed 0 of 1')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /SPY/ })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /QQQ/ })).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+      expect(screen.getByRole('button', { name: /QQQ/ })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Clear filters' })).not.toBeInTheDocument();
+    });
+
+    it('filters by result and by setup, and lists the strategies', async () => {
+      serve();
+      renderEntries();
+      const user = userEvent.setup();
+      await screen.findByRole('button', { name: /QQQ/ });
+
+      await user.selectOptions(screen.getByLabelText('Result'), 'loss');
+      expect(screen.queryByRole('button', { name: /SPY/ })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /QQQ/ })).toBeInTheDocument();
+      expect(screen.queryByText('Cloud.')).not.toBeInTheDocument();
+
+      await user.selectOptions(screen.getByLabelText('Result'), 'all');
+      await waitFor(() => expect(screen.getByRole('option', { name: 'Band cross' })).toBeInTheDocument());
+      await user.selectOptions(screen.getByLabelText('Setup'), 's1');
+      expect(screen.getByRole('button', { name: /SPY/ })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /QQQ/ })).not.toBeInTheDocument();
+    });
+
+    it('says so when nothing matches, and keeps the filters to change', async () => {
+      serve();
+      renderEntries();
+      const user = userEvent.setup();
+      await screen.findByRole('button', { name: /QQQ/ });
+
+      await user.selectOptions(screen.getByLabelText('Mode'), 'backtest');
+
+      expect(screen.getByText('No entries match these filters.')).toBeInTheDocument();
+      expect(screen.getByLabelText('Mode')).toBeInTheDocument();
     });
   });
 
