@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
+import userEvent from '@testing-library/user-event';
 import { SWRConfig } from 'swr';
 import { usePathname, useRouter } from 'next/navigation';
 import { server } from '@/mocks/server';
@@ -52,8 +53,12 @@ describe('in the demo', () => {
         openedAt: null,
       },
     };
-    server.use(http.get('*/api/journal', () => HttpResponse.json({ entries: [plan] })));
+    server.use(
+      http.get('*/api/strategies', () => HttpResponse.json({ strategies: [] })),
+      http.get('*/api/journal', () => HttpResponse.json({ entries: [plan] }))
+    );
     render(withSwr(<JournalEntries />));
+    await userEvent.click(await screen.findByRole('button', { name: /Long 100 AAPL/ }));
 
     expect(await screen.findByText('Breakout over 210.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^delete$/i })).not.toBeInTheDocument();

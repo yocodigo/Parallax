@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import userEvent from '@testing-library/user-event';
 import { SWRConfig } from 'swr';
@@ -36,8 +36,11 @@ function entry(overrides = {}) {
   };
 }
 
-function serveJournal(response) {
-  server.use(http.get('*/api/journal', () => response));
+function serveJournal(response, strategies = []) {
+  server.use(
+    http.get('*/api/journal', () => response),
+    http.get('*/api/strategies', () => HttpResponse.json({ strategies }))
+  );
 }
 
 function renderEntries() {
@@ -149,16 +152,104 @@ describe('JournalEntries', () => {
       HttpResponse.json({
         entries: [
           entry({ kind: 'review', notes: 'A review' }),
-          entry({ kind: 'plan', notes: 'Unfilled', trade: { ...trade, openedAt: null } }),
-          entry({ kind: 'plan', notes: 'Filled', trade: { ...trade, openedAt: '2026-10-20T14:35:00.000Z' } }),
+          entry({ kind: 'plan', notes: 'Unfilled', trade: { ...trade, id: 'unfilled', openedAt: null } }),
+          entry({ kind: 'plan', notes: 'Filled', trade: { ...trade, id: 'filled', openedAt: '2026-10-20T14:35:00.000Z' } }),
         ],
       })
     );
 
     renderEntries();
 
+    // Trades fold into rows; open both to reach their entries.
+    for (const row of await screen.findAllByRole('button', { name: /Long 100 AAPL/ })) {
+      await userEvent.setup().click(row);
+    }
     expect(await screen.findByText('Filled')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /^delete$/i })).toHaveLength(2);
+  });
+
+  describe('trade rows', () => {
+    const strategyId = '9a000000-0000-4000-8000-000000000009';
+    const closed = {
+      ...trade,
+      assetClass: 'option',
+      optionType: 'call',
+      strike: 590,
+      expiration: '2026-11-19',
+      multiplier: 100,
+      quantity: 2,
+      entryPrice: 1,
+      exitPrice: 1.5,
+      fees: 1.3,
+      strategyId,
+      openedAt: '2026-11-19T17:40:00.000Z',
+      closedAt: '2026-11-19T17:52:00.000Z',
+    };
+    const withTrade = (extra = []) => [
+      entry({ kind: 'plan', notes: 'Breakout plan.', tradeId: closed.id, trade: closed, createdAt: '2026-11-19T17:30:00.000Z' }),
+      ...extra,
+    ];
+
+    it('shows one compact row per trade: time, contract, result, setup, and review status', async () => {
+      serveJournal(
+        HttpResponse.json({
+          entries: withTrade([
+            entry({ kind: 'review', notes: 'Took profit.', tradeId: closed.id, trade: closed, createdAt: '2026-11-19T21:00:00.000Z' }),
+          ]),
+        }),
+        [{ id: strategyId, name: 'Band cross' }]
+      );
+      renderEntries();
+
+      const row = await screen.findByRole('button', { name: /Long 2 AAPL/ });
+      expect(row).toHaveTextContent('9:40 AM');
+      expect(row).toHaveTextContent('+$98.70');
+      expect(row).toHaveTextContent('Reviewed');
+      await waitFor(() => expect(row).toHaveTextContent('Band cross'));
+      // One row for the trade, its notes folded away until it is opened.
+      expect(screen.getAllByRole('button', { name: /Long 2 AAPL/ })).toHaveLength(1);
+      expect(screen.queryByText('Breakout plan.')).not.toBeInTheDocument();
+    });
+
+    it('says a closed trade with no review needs one, and a trade not filled yet is not filled', async () => {
+      const planned = { ...trade, id: 'planned-1', openedAt: null, closedAt: null, entryPrice: null, exitPrice: null };
+      serveJournal(
+        HttpResponse.json({
+          entries: [
+            ...withTrade(),
+            entry({ kind: 'plan', notes: 'Another.', tradeId: planned.id, trade: planned, createdAt: '2026-11-19T18:00:00.000Z' }),
+          ],
+        })
+      );
+      renderEntries();
+
+      expect(await screen.findByRole('button', { name: /Long 2 AAPL/ })).toHaveTextContent('Needs review');
+      expect(screen.getByRole('button', { name: /Long 100 AAPL/ })).toHaveTextContent('Not filled');
+    });
+
+    it('opens a row to show the trade and all its entries, and closes it again', async () => {
+      serveJournal(
+        HttpResponse.json({
+          entries: withTrade([
+            entry({ kind: 'review', notes: 'Took profit.', tradeId: closed.id, trade: closed, createdAt: '2026-11-19T21:00:00.000Z' }),
+          ]),
+        })
+      );
+      renderEntries();
+
+      const row = await screen.findByRole('button', { name: /Long 2 AAPL/ });
+      expect(row).toHaveAttribute('aria-expanded', 'false');
+      await userEvent.setup().click(row);
+
+      expect(row).toHaveAttribute('aria-expanded', 'true');
+      expect(screen.getByText('Breakout plan.')).toBeInTheDocument();
+      expect(screen.getByText('Took profit.')).toBeInTheDocument();
+      // The trade's progress shows once for the row, not once per entry.
+      expect(screen.getAllByRole('button', { name: 'Screenshots' })).toHaveLength(1);
+
+      await userEvent.setup().click(row);
+      expect(screen.queryByText('Breakout plan.')).not.toBeInTheDocument();
+    });
   });
 
   describe('by day', () => {

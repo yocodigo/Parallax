@@ -1,4 +1,4 @@
-import { afterEach, describe, it, expect } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect } from 'vitest';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -74,13 +74,21 @@ function serveJournal(trade, { kinds = ['plan'], respond, excursions = null } = 
   return posted;
 }
 
-function renderJournal() {
-  return render(
+// Renders the list with the trade's row opened, which is where its controls are.
+async function renderJournal() {
+  const view = render(
     <SWRConfig value={{ dedupingInterval: 0, provider: () => new Map() }}>
       <JournalEntries />
     </SWRConfig>
   );
+  await userEvent.click(await screen.findByRole('button', { expanded: false, name: /(Long|Short) \d/ }));
+  return view;
 }
+
+// The rows ask for strategy names; a test that cares serves its own after this.
+beforeEach(() => {
+  server.use(http.get('*/api/strategies', () => HttpResponse.json({ strategies: [] })));
+});
 
 describe('recording a trade from the journal', () => {
   // The chosen zone is module state that outlives a test.
@@ -92,7 +100,7 @@ describe('recording a trade from the journal', () => {
   it('reads the fill time on the display zone clock', async () => {
     act(() => setDisplayZone('America/New_York'));
     const posted = serveJournal(plannedTrade());
-    renderJournal();
+    await renderJournal();
 
     await userEvent.click(await screen.findByRole('button', { name: 'Record entry' }));
     await userEvent.type(screen.getByLabelText('Fill price'), '210.5');
@@ -105,7 +113,7 @@ describe('recording a trade from the journal', () => {
 
   it('records the entry fill of a planned trade', async () => {
     const posted = serveJournal(plannedTrade());
-    renderJournal();
+    await renderJournal();
 
     expect(await screen.findByText('Planned')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Record entry' }));
@@ -126,7 +134,7 @@ describe('recording a trade from the journal', () => {
 
   it('leaves the stop out of the summary when there is none', async () => {
     serveJournal(plannedTrade({ assetClass: 'option', initialStop: null, target: null, plannedEntry: 1.3 }));
-    renderJournal();
+    await renderJournal();
 
     expect(await screen.findByText('Entry 1.3')).toBeInTheDocument();
   });
@@ -139,7 +147,7 @@ describe('recording a trade from the journal', () => {
           { status: 400 }
         ),
     });
-    renderJournal();
+    await renderJournal();
 
     await userEvent.click(await screen.findByRole('button', { name: 'Record entry' }));
     await userEvent.type(screen.getByLabelText('Fill price'), '210');
@@ -151,7 +159,7 @@ describe('recording a trade from the journal', () => {
 
   it('closes an open trade and shows its result', async () => {
     const posted = serveJournal(plannedTrade(opened));
-    renderJournal();
+    await renderJournal();
 
     await userEvent.click(await screen.findByRole('button', { name: 'Record exit' }));
     await userEvent.type(screen.getByLabelText('Exit price'), '220');
@@ -174,7 +182,8 @@ describe('recording a trade from the journal', () => {
       },
     });
     // (220 - 210) x 100 - 2 = $998, against $500 of risk.
-    expect(screen.getByText('+$998.00')).toBeInTheDocument();
+    // Once on the row, once in the trade's progress.
+    expect(screen.getAllByText('+$998.00')).toHaveLength(2);
     expect(screen.getByText('+2.0R')).toBeInTheDocument();
   });
 
@@ -186,7 +195,7 @@ describe('recording a trade from the journal', () => {
           { status: 400 }
         ),
     });
-    renderJournal();
+    await renderJournal();
 
     await userEvent.click(await screen.findByRole('button', { name: 'Record exit' }));
     await userEvent.type(screen.getByLabelText('Exit price'), '220');
@@ -206,21 +215,27 @@ describe('recording a trade from the journal', () => {
         exitedPerPlan: true,
       })
     );
-    renderJournal();
+    await renderJournal();
 
-    expect(await screen.findByText('-$500.00')).toBeInTheDocument();
+    expect(await screen.findAllByText('-$500.00')).toHaveLength(2);
     expect(screen.getByText('-1.0R')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /record/i })).not.toBeInTheDocument();
   });
 
-  it("offers recording only on the plan, not on a review of the same trade", async () => {
+  it('offers recording once for a trade that has a plan and a review', async () => {
     serveJournal(plannedTrade(), { kinds: ['review', 'plan'] });
-    renderJournal();
+    await renderJournal();
 
-    const [review, plan] = await screen.findAllByRole('listitem');
-    expect(within(review).getByText('Planned')).toBeInTheDocument();
-    expect(within(review).queryByRole('button', { name: 'Record entry' })).not.toBeInTheDocument();
-    expect(within(plan).getByRole('button', { name: 'Record entry' })).toBeInTheDocument();
+    expect(await screen.findAllByRole('listitem')).toHaveLength(3);
+    expect(screen.getAllByRole('button', { name: 'Record entry' })).toHaveLength(1);
+  });
+
+  it('offers no recording for a trade known only by a review', async () => {
+    serveJournal(plannedTrade(), { kinds: ['review'] });
+    await renderJournal();
+
+    expect(await screen.findByText('Planned')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Record entry' })).not.toBeInTheDocument();
   });
 });
 
@@ -253,7 +268,7 @@ describe('money R for an option', () => {
   it('shows R assumed from the backstop when the plan had no stop, labelled as assumed', async () => {
     serveJournal(option());
     serveRules();
-    renderJournal();
+    await renderJournal();
 
     expect(await screen.findByText('+0.4R')).toBeInTheDocument();
     expect(screen.getByTitle(/assumed from the backstop/i)).toHaveTextContent('assumed');
@@ -262,7 +277,7 @@ describe('money R for an option', () => {
   it('shows no assumed R when the backstop rule is off', async () => {
     serveJournal(option());
     serveRules(false);
-    renderJournal();
+    await renderJournal();
 
     expect(await screen.findByText('Closed')).toBeInTheDocument();
     expect(screen.queryByText('+0.4R')).not.toBeInTheDocument();
@@ -270,7 +285,7 @@ describe('money R for an option', () => {
 
   it('shows the recorded stop as plain R, with no assumed label', async () => {
     serveJournal(option({ initialStop: 0.8 }));
-    renderJournal();
+    await renderJournal();
 
     expect(await screen.findByText('+0.5R')).toBeInTheDocument();
     expect(screen.queryByTitle(/assumed from the backstop/i)).not.toBeInTheDocument();
@@ -290,7 +305,7 @@ describe('MAE and MFE', () => {
     serveJournal(plannedTrade(closed), {
       excursions: { excursions: { mae: 4, mfe: 12.5, maeR: 0.8, mfeR: 2.5 }, timeframe: '1Min' },
     });
-    renderJournal();
+    await renderJournal();
 
     expect(await screen.findByText('-0.8R')).toBeInTheDocument();
     expect(screen.getByText('+2.5R')).toBeInTheDocument();
@@ -306,7 +321,7 @@ describe('MAE and MFE', () => {
       })
     );
     serveJournal(plannedTrade());
-    renderJournal();
+    await renderJournal();
 
     await screen.findByText('Planned');
     expect(requested).toEqual([]);
@@ -349,7 +364,7 @@ describe('MAE and MFE', () => {
     it("shows the underlying's move in points and in R, naming where the stop came from", async () => {
       serveJournal(option, { excursions: measured() });
       serveRules();
-      renderJournal();
+      await renderJournal();
 
       const line = await screen.findByTestId('underlying-excursions');
       expect(line).toHaveTextContent('SPY MAE -0.50 pts (-0.5R) · MFE +1.50 pts (+1.5R) · derived stop');
@@ -358,7 +373,7 @@ describe('MAE and MFE', () => {
     it('shows points only when there is no stop', async () => {
       serveJournal(option, { excursions: measured({ maeR: null, mfeR: null, stopSource: null, stopRule: null }) });
       serveRules();
-      renderJournal();
+      await renderJournal();
 
       const line = await screen.findByTestId('underlying-excursions');
       expect(line).toHaveTextContent('SPY MAE -0.50 pts · MFE +1.50 pts');
@@ -369,7 +384,7 @@ describe('MAE and MFE', () => {
       const between = { mae: 0.2, mfe: 0.4, maeR: 0.2, mfeR: 0.4 };
       serveJournal(option, { excursions: measured({ edgeMinutesOnly: true, stopSource: 'plan', stopRule: null, between }) });
       serveRules();
-      renderJournal();
+      await renderJournal();
 
       const line = await screen.findByTestId('underlying-excursions');
       expect(line).toHaveTextContent('planned stop');
@@ -380,7 +395,7 @@ describe('MAE and MFE', () => {
 
   it('shows nothing when there is nothing to measure', async () => {
     serveJournal(plannedTrade(closed));
-    renderJournal();
+    await renderJournal();
 
     await screen.findByText('Closed');
     expect(screen.queryByText(/MAE/)).not.toBeInTheDocument();
@@ -397,7 +412,7 @@ describe('circuit breakers', () => {
           ? undefined
           : HttpResponse.json({ error: 'Circuit breaker tripped', breakers: tripped }, { status: 409 }),
     });
-    renderJournal();
+    await renderJournal();
 
     await userEvent.click(await screen.findByRole('button', { name: 'Record entry' }));
     await userEvent.type(screen.getByLabelText('Fill price'), '210');
@@ -416,7 +431,7 @@ describe('circuit breakers', () => {
 
   it('marks a trade whose entry overrode a breaker', async () => {
     serveJournal(plannedTrade({ ...opened, overriddenBreakers: ['dailyLoss', 'cooldown'] }));
-    renderJournal();
+    await renderJournal();
 
     expect(await screen.findByText('Overrode: Daily loss limit, Cool-down')).toBeInTheDocument();
   });
@@ -443,7 +458,7 @@ describe('the strategy checklist', () => {
   it("asks for each of the strategy's rules and sends the answers", async () => {
     serveStrategies();
     const posted = serveJournal(plannedTrade({ strategyId: STRATEGY_ID }));
-    renderJournal();
+    await renderJournal();
 
     await userEvent.click(await screen.findByRole('button', { name: 'Record entry' }));
     await screen.findByRole('group', { name: 'Accepted above the 15m band' });
@@ -467,7 +482,7 @@ describe('the strategy checklist', () => {
               { status: 409 }
             ),
     });
-    renderJournal();
+    await renderJournal();
 
     await userEvent.click(await screen.findByRole('button', { name: 'Record entry' }));
     await screen.findByRole('group', { name: 'Accepted above the 15m band' });
@@ -495,7 +510,7 @@ describe('the strategy checklist', () => {
           { status: 400 }
         ),
     });
-    renderJournal();
+    await renderJournal();
 
     await userEvent.click(await screen.findByRole('button', { name: 'Record entry' }));
     await screen.findByRole('group', { name: 'Accepted above the 15m band' });
@@ -518,7 +533,7 @@ describe('context at entry', () => {
       })
     );
     serveJournal(plannedTrade(opened));
-    renderJournal();
+    await renderJournal();
 
     await userEvent.click(await screen.findByRole('button', { name: 'Context at entry' }));
 
@@ -528,7 +543,7 @@ describe('context at entry', () => {
 
   it('is not offered before the trade is entered', async () => {
     serveJournal(plannedTrade());
-    renderJournal();
+    await renderJournal();
 
     await screen.findByText('Planned');
     expect(screen.queryByRole('button', { name: 'Context at entry' })).not.toBeInTheDocument();
@@ -545,7 +560,7 @@ describe('gates', () => {
       })
     );
     serveJournal(plannedTrade(opened));
-    renderJournal();
+    await renderJournal();
 
     await userEvent.click(await screen.findByRole('button', { name: 'Gates' }));
 
@@ -555,7 +570,7 @@ describe('gates', () => {
 
   it('is not offered before the trade is entered', async () => {
     serveJournal(plannedTrade());
-    renderJournal();
+    await renderJournal();
 
     await screen.findByText('Planned');
     expect(screen.queryByRole('button', { name: 'Gates' })).not.toBeInTheDocument();
@@ -572,7 +587,7 @@ describe('entry review', () => {
       })
     );
     serveJournal(plannedTrade(opened));
-    renderJournal();
+    await renderJournal();
 
     await screen.findByRole('button', { name: 'Entry review' });
     expect(requested).toEqual([]);
@@ -585,7 +600,7 @@ describe('entry review', () => {
 
   it('is not offered before the trade is entered', async () => {
     serveJournal(plannedTrade());
-    renderJournal();
+    await renderJournal();
 
     await screen.findByText('Planned');
     expect(screen.queryByRole('button', { name: 'Entry review' })).not.toBeInTheDocument();
@@ -604,7 +619,7 @@ describe('exit review', () => {
       })
     );
     serveJournal(plannedTrade(closed));
-    renderJournal();
+    await renderJournal();
 
     await screen.findByRole('button', { name: 'Exit review' });
     expect(requested).toEqual([]);
@@ -617,7 +632,7 @@ describe('exit review', () => {
 
   it('is not offered until the trade is closed', async () => {
     serveJournal(plannedTrade(opened));
-    renderJournal();
+    await renderJournal();
 
     await screen.findByText('Open');
     expect(screen.queryByRole('button', { name: 'Exit review' })).not.toBeInTheDocument();
@@ -634,7 +649,7 @@ describe('screenshots', () => {
       })
     );
     serveJournal(plannedTrade());
-    renderJournal();
+    await renderJournal();
 
     await screen.findByText('Planned');
     expect(requested).toEqual([]);
