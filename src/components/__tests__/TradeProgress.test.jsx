@@ -535,7 +535,7 @@ describe('context at entry', () => {
     serveJournal(plannedTrade(opened));
     await renderJournal();
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Context at entry' }));
+    await userEvent.click(await screen.findByRole('tab', { name: 'Context' }));
 
     expect(await screen.findByText('No context was captured for this entry.')).toBeInTheDocument();
     expect(requested).toEqual([TRADE_ID]);
@@ -546,7 +546,7 @@ describe('context at entry', () => {
     await renderJournal();
 
     await screen.findByText('Planned');
-    expect(screen.queryByRole('button', { name: 'Context at entry' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Context' })).not.toBeInTheDocument();
   });
 });
 
@@ -557,12 +557,13 @@ describe('gates', () => {
       http.get('*/api/trades/:id/gates', ({ params }) => {
         requested.push(params.id);
         return HttpResponse.json({ gates: null, reason: 'No gates to grade for this trade.' });
-      })
+      }),
+      http.get('*/api/trades/:id/review', () => HttpResponse.json({ review: null, reason: 'Nothing to review.' }))
     );
     serveJournal(plannedTrade(opened));
     await renderJournal();
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Gates' }));
+    await userEvent.click(await screen.findByRole('tab', { name: 'Entry' }));
 
     expect(await screen.findByText('No gates to grade for this trade.')).toBeInTheDocument();
     expect(requested).toEqual([TRADE_ID]);
@@ -573,7 +574,7 @@ describe('gates', () => {
     await renderJournal();
 
     await screen.findByText('Planned');
-    expect(screen.queryByRole('button', { name: 'Gates' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Entry' })).not.toBeInTheDocument();
   });
 });
 
@@ -584,15 +585,16 @@ describe('entry review', () => {
       http.get('*/api/trades/:id/review', ({ params }) => {
         requested.push(params.id);
         return HttpResponse.json({ review: null, reason: 'Nothing to review.' });
-      })
+      }),
+      http.get('*/api/trades/:id/gates', () => HttpResponse.json({ gates: null, reason: 'No gates to grade for this trade.' }))
     );
     serveJournal(plannedTrade(opened));
     await renderJournal();
 
-    await screen.findByRole('button', { name: 'Entry review' });
+    await screen.findByRole('tab', { name: 'Entry' });
     expect(requested).toEqual([]);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Entry review' }));
+    await userEvent.click(screen.getByRole('tab', { name: 'Entry' }));
 
     expect(await screen.findByText('Nothing to review.')).toBeInTheDocument();
     expect(requested).toEqual([TRADE_ID]);
@@ -603,7 +605,7 @@ describe('entry review', () => {
     await renderJournal();
 
     await screen.findByText('Planned');
-    expect(screen.queryByRole('button', { name: 'Entry review' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Entry' })).not.toBeInTheDocument();
   });
 });
 
@@ -621,10 +623,10 @@ describe('exit review', () => {
     serveJournal(plannedTrade(closed));
     await renderJournal();
 
-    await screen.findByRole('button', { name: 'Exit review' });
+    await screen.findByRole('tab', { name: 'Exit' });
     expect(requested).toEqual([]);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Exit review' }));
+    await userEvent.click(screen.getByRole('tab', { name: 'Exit' }));
 
     expect(await screen.findByText('Nothing to grade.')).toBeInTheDocument();
     expect(requested).toEqual([TRADE_ID]);
@@ -635,7 +637,7 @@ describe('exit review', () => {
     await renderJournal();
 
     await screen.findByText('Open');
-    expect(screen.queryByRole('button', { name: 'Exit review' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Exit' })).not.toBeInTheDocument();
   });
 });
 
@@ -653,9 +655,46 @@ describe('screenshots', () => {
 
     await screen.findByText('Planned');
     expect(requested).toEqual([]);
-    await userEvent.click(screen.getByRole('button', { name: 'Screenshots' }));
+    await userEvent.click(screen.getByRole('tab', { name: 'Screenshots' }));
 
     expect(await screen.findByText('No screenshots yet.')).toBeInTheDocument();
     expect(requested).toEqual([TRADE_ID]);
+  });
+});
+
+describe('tabs on an opened trade', () => {
+  it('lists Summary, Entry, Exit, Context, and Screenshots once the trade is closed, with Summary showing', async () => {
+    serveJournal(plannedTrade({ ...opened, exitPrice: 220, closedAt: '2026-10-21T15:00:00.000Z' }));
+    await renderJournal();
+
+    const tabs = await screen.findAllByRole('tab');
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Summary', 'Entry', 'Exit', 'Context', 'Screenshots']);
+    expect(screen.getByRole('tab', { name: 'Summary' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tabpanel')).toHaveTextContent('Closed');
+  });
+
+  it('offers only Summary and Screenshots for a plan', async () => {
+    serveJournal(plannedTrade());
+    await renderJournal();
+
+    const tabs = await screen.findAllByRole('tab');
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Summary', 'Screenshots']);
+  });
+
+  it('shows one tab at a time and keeps a half-typed fill while another tab is open', async () => {
+    server.use(http.get('*/api/trades/:id/screenshots', () => HttpResponse.json({ screenshots: [] })));
+    serveJournal(plannedTrade());
+    await renderJournal();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Record entry' }));
+    await userEvent.type(screen.getByLabelText('Fill price'), '210.5');
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Screenshots' }));
+    expect(await screen.findByText('No screenshots yet.')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Screenshots' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByLabelText('Fill price')).not.toBeVisible();
+
+    await userEvent.click(screen.getByRole('tab', { name: 'Summary' }));
+    expect(screen.getByLabelText('Fill price')).toHaveValue(210.5);
   });
 });

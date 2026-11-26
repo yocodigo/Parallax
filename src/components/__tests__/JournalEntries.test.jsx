@@ -245,7 +245,7 @@ describe('JournalEntries', () => {
       expect(screen.getByText('Breakout plan.')).toBeInTheDocument();
       expect(screen.getByText('Took profit.')).toBeInTheDocument();
       // The trade's progress shows once for the row, not once per entry.
-      expect(screen.getAllByRole('button', { name: 'Screenshots' })).toHaveLength(1);
+      expect(screen.getAllByRole('tab', { name: 'Screenshots' })).toHaveLength(1);
 
       await userEvent.setup().click(row);
       expect(screen.queryByText('Breakout plan.')).not.toBeInTheDocument();

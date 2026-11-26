@@ -410,115 +410,96 @@ function Excursions({ trade, status }) {
   );
 }
 
-// A trade's status and result on a journal entry. `canRecord` (the plan's own
-// entry) adds the buttons to record its entry fill and exit.
+// The tabs an opened trade offers, in order. What needs a fill or a close
+// waits for it: Entry (the gates and the entry review) and Context after the
+// fill, Exit after the close.
+function tabsFor(status) {
+  return [
+    ['summary', 'Summary'],
+    status !== 'planned' && ['entry', 'Entry'],
+    status === 'closed' && ['exit', 'Exit'],
+    status !== 'planned' && ['context', 'Context'],
+    ['screenshots', 'Screenshots'],
+  ].filter(Boolean);
+}
+
+// A trade's status and result on a journal entry, as tabs. Summary is the
+// status line and, for the plan's own entry (`canRecord`), the buttons to
+// record its entry fill and exit; the others load when opened.
 export default function TradeProgress({ trade, canRecord }) {
   const [recording, setRecording] = useState(false);
-  const [showContext, setShowContext] = useState(false);
-  const [showGates, setShowGates] = useState(false);
-  const [showReview, setShowReview] = useState(false);
-  const [showExitReview, setShowExitReview] = useState(false);
-  const [showScreenshots, setShowScreenshots] = useState(false);
+  const [tab, setTab] = useState('summary');
   const status = tradeStatus(trade);
   const nextStep = { planned: 'entry', open: 'exit' }[status];
 
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm tabular-nums text-gray-700">
-        <span className={`rounded px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[status]}`}>
-          {status.charAt(0).toUpperCase() + status.slice(1)}
-        </span>
-        <Summary trade={trade} status={status} />
-        <Excursions trade={trade} status={status} />
-        {trade.overriddenBreakers?.length > 0 && (
-          <span className="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-900">
-            {`Overrode: ${trade.overriddenBreakers.map((b) => BREAKER_LABELS[b] ?? b).join(', ')}`}
+      <div role="tablist" aria-label="Trade details" className="flex flex-wrap gap-2">
+        {tabsFor(status).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            id={`${trade.id}-tab-${id}`}
+            aria-selected={tab === id}
+            aria-controls={`${trade.id}-panel-${id}`}
+            onClick={() => setTab(id)}
+            className={tab === id ? buttonClass : secondaryButtonClass}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Kept mounted while another tab is open, so a half-typed fill survives. */}
+      <div
+        role="tabpanel"
+        id={`${trade.id}-panel-summary`}
+        aria-labelledby={`${trade.id}-tab-summary`}
+        hidden={tab !== 'summary'}
+        className="mt-3"
+      >
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm tabular-nums text-gray-700">
+          <span className={`rounded px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[status]}`}>
+            {status.charAt(0).toUpperCase() + status.slice(1)}
           </span>
-        )}
-      </div>
-      {/* What can be opened or recorded, on its own row so the facts above stay readable. */}
-      <div className="mt-3 flex flex-wrap gap-2">
-        {status !== 'planned' && (
-          <button
-            type="button"
-            onClick={() => setShowContext((shown) => !shown)}
-            aria-expanded={showContext}
-            className={secondaryButtonClass}
-          >
-            Context at entry
-          </button>
-        )}
-        {status !== 'planned' && (
-          <button
-            type="button"
-            onClick={() => setShowGates((shown) => !shown)}
-            aria-expanded={showGates}
-            className={secondaryButtonClass}
-          >
-            Gates
-          </button>
-        )}
-        {status !== 'planned' && (
-          <button
-            type="button"
-            onClick={() => setShowReview((shown) => !shown)}
-            aria-expanded={showReview}
-            className={secondaryButtonClass}
-          >
-            Entry review
-          </button>
-        )}
-        {status === 'closed' && (
-          <button
-            type="button"
-            onClick={() => setShowExitReview((shown) => !shown)}
-            aria-expanded={showExitReview}
-            className={secondaryButtonClass}
-          >
-            Exit review
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={() => setShowScreenshots((shown) => !shown)}
-          aria-expanded={showScreenshots}
-          className={secondaryButtonClass}
-        >
-          Screenshots
-        </button>
+          <Summary trade={trade} status={status} />
+          <Excursions trade={trade} status={status} />
+          {trade.overriddenBreakers?.length > 0 && (
+            <span className="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-900">
+              {`Overrode: ${trade.overriddenBreakers.map((b) => BREAKER_LABELS[b] ?? b).join(', ')}`}
+            </span>
+          )}
+        </div>
         {canRecord && nextStep && !recording && (
-          <button type="button" onClick={() => setRecording(true)} className={secondaryButtonClass}>
-            {`Record ${nextStep}`}
-          </button>
+          <div className="mt-3">
+            <button type="button" onClick={() => setRecording(true)} className={secondaryButtonClass}>
+              {`Record ${nextStep}`}
+            </button>
+          </div>
         )}
+        {recording && nextStep === 'entry' && <EntryForm trade={trade} onDone={() => setRecording(false)} />}
+        {recording && nextStep === 'exit' && <ExitForm trade={trade} onDone={() => setRecording(false)} />}
       </div>
-      {showContext && (
-        <div className="mt-2">
-          <TradeContext tradeId={trade.id} />
+
+      {tab !== 'summary' && (
+        <div
+          role="tabpanel"
+          id={`${trade.id}-panel-${tab}`}
+          aria-labelledby={`${trade.id}-tab-${tab}`}
+          className="mt-3 space-y-3"
+        >
+          {tab === 'entry' && (
+            <>
+              <TradeGates tradeId={trade.id} />
+              <TradeReview tradeId={trade.id} />
+            </>
+          )}
+          {tab === 'exit' && <TradeExitReview tradeId={trade.id} exitReason={trade.exitReason} />}
+          {tab === 'context' && <TradeContext tradeId={trade.id} />}
+          {tab === 'screenshots' && <TradeScreenshots tradeId={trade.id} />}
         </div>
       )}
-      {showGates && (
-        <div className="mt-2">
-          <TradeGates tradeId={trade.id} />
-        </div>
-      )}
-      {showReview && (
-        <div className="mt-2">
-          <TradeReview tradeId={trade.id} />
-        </div>
-      )}
-      {showExitReview && (
-        <div className="mt-2">
-          <TradeExitReview tradeId={trade.id} exitReason={trade.exitReason} />
-        </div>
-      )}
-      {showScreenshots && (
-        <div className="mt-2">
-          <TradeScreenshots tradeId={trade.id} />
-        </div>
-      )}
-      {recording && nextStep === 'entry' && <EntryForm trade={trade} onDone={() => setRecording(false)} />}
-      {recording && nextStep === 'exit' && <ExitForm trade={trade} onDone={() => setRecording(false)} />}
     </div>
   );
 }
